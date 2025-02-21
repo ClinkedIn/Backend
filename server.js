@@ -5,10 +5,10 @@ const express = require('express');
 const app = express();
 const mongoose = require('mongoose');  
 
-const userRouter = require('./routes/User');
-const postRouter = require('./routes/Post');
-const reportRouter = require('./routes/Report');
-const repostRouter = require('./routes/Repost');
+const userRouter = require('./routes/userRoutes');
+const postRouter = require('./routes/postRoutes');
+const reportRouter = require('./routes/reportRoutes');
+const repostRouter = require('./routes/repostRoutes');
 
 
 mongoose.connect(process.env.DATABASE_URL);
