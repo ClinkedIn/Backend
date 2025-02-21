@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const repost = require('../controllers/Repost');
+
+
+const user = require('../controllers/userController');
+
 
 
 module.exports = router;

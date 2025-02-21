@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const comment = require("../controllers/Comment");
+const repost = require('../controllers/repostController');
 
 
 module.exports = router;

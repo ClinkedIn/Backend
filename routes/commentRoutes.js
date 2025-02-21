@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const report = require('../controllers/Report')
+const comment = require("../controllers/commentController");
 
 
 module.exports = router;
