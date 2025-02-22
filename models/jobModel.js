@@ -1,0 +1,31 @@
+const mongoose = require("mongoose");
+
+const jobSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true }, // Company offering the job
+  workplaceType: {
+    type: String,
+    enum: ["Onsite", "Hybrid", "Remote"],
+    required: true,
+  }, // Work location type
+  jobLocation: { type: String, required: true }, // Location of the job
+  jobType: {
+    type: String,
+    enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"],
+    required: true,
+  }, // Job classification
+  description: { type: String, required: true }, // Job details
+  applicationEmail: { type: String, required: true }, // Email for job applications
+  screeningQuestions: [
+    {
+      question: { type: String, required: true }, // Screening question
+      mustHave: { type: Boolean, default: false }, // Must-have requirement
+    },
+  ],
+  autoRejectMustHave: { type: Boolean, default: false }, // Auto-reject if must-have not met
+  rejectPreview: { type: String }, // Message for rejected applicants
+  applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who applied
+  accepted: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users accepted
+  rejected: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users rejected
+}, { timestamps: true }); // Adds createdAt & updatedAt timestamps
+
+module.exports = mongoose.model("Job", jobSchema);
