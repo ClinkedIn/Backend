@@ -1,15 +1,17 @@
 require('dotenv').config();
 
-
 const express = require('express');
-const app = express();
-const mongoose = require('mongoose');  
+const swaggerUI = require('swagger-ui-express');
+const { swaggerSpec } = require('./swagger');
 
 const userRouter = require('./routes/userRoutes');
 const postRouter = require('./routes/postRoutes');
 const reportRouter = require('./routes/reportRoutes');
 const repostRouter = require('./routes/repostRoutes');
 
+const app = express();
+  
+const mongoose = require('mongoose');
 
 mongoose.connect(process.env.DATABASE_URL);
 const db = mongoose.connection;
@@ -23,6 +25,9 @@ app.use('/user', userRouter);
 app.use('/post', postRouter);
 app.use('/report', reportRouter);
 app.use('/repost', repostRouter);
+
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
+
 app.listen(3000, () => {
   console.log('server started');
 });

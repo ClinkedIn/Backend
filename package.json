@@ -19,7 +19,9 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "express": "^4.21.2",
-    "mongoose": "^8.10.1"
+    "mongoose": "^8.10.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "dotenv": "^16.4.7",
