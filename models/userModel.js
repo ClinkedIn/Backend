@@ -48,7 +48,10 @@ const userSchema = new mongoose.Schema({
 
     profilePrivacySettings: { type: String, enum: ["public", "private", "connectionsOnly"], default: "public" },
     connectionRequestPrivacySetting: { type: String, enum: ["everyone", "connectionsOnly"], default: "everyone" },
-
+    impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
+    posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
+    comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+    reposts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Repost" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     connectionList: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

@@ -4,6 +4,8 @@ const commentSchema = new mongoose.Schema({
     postId: { type: mongoose.Schema.Types.ObjectId, ref: "Post", required: true },
     commentContent: { type: String, required: true },
     commentAttachment: { type: String },
+    impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
+    replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
     parentComment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment", default: null }, // Self-reference for nested comments
     isActive: { type: Boolean, default: true }
   }, { timestamps: true }); // Adds createdAt & updatedAt automatically
