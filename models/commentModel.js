@@ -4,6 +4,7 @@ const commentSchema = new mongoose.Schema({
     postId: { type: mongoose.Schema.Types.ObjectId, ref: "Post", required: true },
     commentContent: { type: String, required: true },
     commentAttachment: { type: String },
+    taggedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],  ///// 
     impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
     replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
     parentComment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment", default: null }, // Self-reference for nested comments

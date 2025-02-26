@@ -8,6 +8,7 @@ const userRouter = require('./routes/userRoutes');
 const postRouter = require('./routes/postRoutes');
 const reportRouter = require('./routes/reportRoutes');
 const repostRouter = require('./routes/repostRoutes');
+const commentRouter = require('./routes/commentRoutes');
 
 const app = express();
   
@@ -22,9 +23,11 @@ db.once('open', () => console.log('connected to database'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/user', userRouter);
-app.use('/post', postRouter);
+app.use('/posts', postRouter);
 app.use('/report', reportRouter);
 app.use('/repost', repostRouter);
+app.use('/comments', commentRouter);
+
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 

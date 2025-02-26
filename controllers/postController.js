@@ -43,16 +43,6 @@ const unlikePost = async (req, res) => {
     res.status(200).json({ message: 'Dummy data' });
 };
 
-
-// Comment on a post
-const commentPost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
-};
-
-const deleteComment = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
-};
-
 // Reposting a post
 const repostPost = async (req, res) => {
     res.status(200).json({ message: 'Dummy data' });
@@ -77,8 +67,6 @@ module.exports = {
     unsavePost,
     likePost,
     unlikePost,
-    commentPost,
-    deleteComment,
     repostPost,
     deleteRepost,
     reportPost,

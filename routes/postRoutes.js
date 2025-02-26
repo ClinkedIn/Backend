@@ -24,14 +24,6 @@ router.route('/:postId/like')
 router.route('/:postId/like/:userId')
     .delete(postController.unlikePost);
 
-router.route('/:postId/comment')
-    .post(postController.commentPost);
-
-
-router.route('/:postId/comment/:commentId')
-    .delete(postController.deleteComment);
-
-
 router.route('/:postId/repost')
     .post(postController.repostPost);
 
