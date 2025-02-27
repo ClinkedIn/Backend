@@ -35,3 +35,4 @@ const verifyGoogleToken = async (req, res, next) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 }
+module.exports = { isLoggedIn, verifyToken, verifyGoogleToken };
