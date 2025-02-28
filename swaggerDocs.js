@@ -1,24 +1,10 @@
 /**
  * @swagger
  * components:
- *   securitySchemes:
- *     BearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- * 
  *   schemas:
- *     Post:
+ *     PostBase:
  *       type: object
  *       properties:
- *         _id:
- *           type: string
- *           description: Unique ID of the post
- *           format: objectId
- *         userId:
- *           type: string
- *           description: ID of the user who created the post
- *           format: objectId
  *         description:
  *           type: string
  *           description: Text content of the post
@@ -33,29 +19,35 @@
  *           items:
  *             type: string
  *             format: ObjectId
- *         isActive:
- *           type: boolean
- *           description: Indicates if the post is active
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: Timestamp when the post was created
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: Timestamp when the post was last updated
- * 
- *     Comment:
+ *
+ *     Post:
+ *       allOf:
+ *         - $ref: '#/components/schemas/PostBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the post
+ *               format: objectId
+ *             userId:
+ *               type: string
+ *               description: ID of the user who created the post
+ *               format: objectId
+ *             isActive:
+ *               type: boolean
+ *               description: Indicates if the post is active
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the post was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the post was last updated
+ *
+ *     CommentBase:
  *       type: object
  *       properties:
- *         _id:
- *           type: string
- *           description: Unique ID of the comment
- *           format: objectId
- *         userId:
- *           type: string
- *           description: ID of the user who created the comment
- *           format: objectId
  *         postId:
  *           type: string
  *           description: ID of the post the comment is on
@@ -74,33 +66,98 @@
  *           items:
  *             type: string
  *             format: ObjectId
- *         impressions:
- *           type: array
- *           description: "List of user impressions (likes, reactions, etc.)"
- *           items:
- *             type: string
- *             format: ObjectId
- *         replies:
- *           type: array
- *           description: "Replies to this comment (nested comments)"
- *           items:
- *             type: string
  *         parentComment:
  *           type: string
  *           format: ObjectId
  *           nullable: true
  *           description: "Parent comment ID if this is a reply"
- *         isActive:
- *           type: boolean
- *           description: Indicates if the post is active
- *         createdAt:
+ *
+ *     Comment:
+ *       allOf:
+ *         - $ref: '#/components/schemas/CommentBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the comment
+ *               format: objectId
+ *             userId:
+ *               type: string
+ *               description: ID of the user who created the comment
+ *               format: objectId
+ *             impressions:
+ *               type: array
+ *               description: "List of user impressions (likes, reactions, etc.)"
+ *               items:
+ *                 type: string
+ *                 format: ObjectId
+ *             replies:
+ *               type: array
+ *               description: "Replies to this comment (nested comments)"
+ *               items:
+ *                 type: string
+ *             isActive:
+ *               type: boolean
+ *               description: Indicates if the post is active
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the post was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the post was last updated
+ *
+ *     DirectChatBase:
+ *       type: object
+ *       properties:
+ *         secondUserId:
  *           type: string
- *           format: date-time
- *           description: Timestamp when the post was created
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: Timestamp when the post was last updated
+ *           description: Id of the other user (other than the user with the tokne)
+ *           format: objectID
+ *     
+ *     DirectChat:
+ *       allOf:
+ *         - $ref: '#/components/schemas/DirectChatBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the direct chat
+ *               format: objectId
+ *             messages:
+ *               type: array
+ *               description: List of messages in the chat
+ *               items:
+ *                 type: string
+ *                 format: ObjectId
+ *               default: []
+ *
+ *     GroupChatBase:
+ *       type: object
+ *       properties:
+ *         members:
+ *           type: array
+ *           description: List of user IDs included in the chat group
+ *           items:
+ *             type: string
+ *             format: ObjectId
+ *     
+ *     GroupChat:
+ *       allOf:
+ *         - $ref: '#/components/schemas/DirectChatBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the GroupChat chat
+ *               format: objectId
+ *             messages:
+ *               type: array
+ *               description: List of messages in the chat
+ *               items:
+ *                 type: string
+ *                 format: ObjectId
  * 
  *   requestBodies:
  *     CreatePostRequest:
@@ -109,20 +166,31 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *               description:
- *                 type: string
- *               attachments:
- *                 type: array
- *                 items:
- *                   type: string
- *               taggedUsers:
- *                 type: array
- *                 items:
- *                   type: string
+ *             $ref: '#/components/schemas/PostBase'
+ *
+ *     CreateCommentRequest:
+ *       description: Request body for creating a new comment or reply
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CommentBase'
+ * 
+ *     CreateDirectChatRequest:
+ *       description: Request body for creating a new direct chat
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/DirectChatBase'
+ * 
+ *     CreateGroupChatRequest:
+ *       description: Request body for creating a new chat group
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/GroupChatBase'
  */
 
 /**
@@ -160,7 +228,7 @@
  *   get:
  *     summary: Get all posts
  *     tags: [Posts]
- *     description: Retrieve all posts
+ *     description: Retrieve all posts for a specific user
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -199,6 +267,10 @@
  *     responses:
  *       200:
  *         description: Post retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Post'
  *       401:
  *         description: Unauthorized, invalid or missing token
  *       404:
@@ -216,6 +288,8 @@
  *         schema:
  *           type: string
  *         description: The post ID
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreatePostRequest'
  *     responses:
  *       200:
  *         description: Post updated successfully
@@ -307,11 +381,7 @@
  *         description: Post liked successfully
  *       401:
  *         description: Unauthorized, invalid or missing token
- */
-
-/**
- * @swagger
- * /posts/{postId}/like/{userId}:
+ * 
  *   delete:
  *     summary: Unlike a post
  *     tags: [Posts]
@@ -325,18 +395,13 @@
  *         schema:
  *           type: string
  *         description: The post ID
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: The user ID
  *     responses:
  *       200:
  *         description: Post unliked successfully
  *       401:
  *         description: Unauthorized, invalid or missing token
  */
+
 
 
 /**
@@ -424,18 +489,14 @@
 
 /**
  * @swagger
- * /commnets:
+ * /comments:
  *  post:
  *      summary: Add comment
  *      tags: [Comments]
  *      security:
  *          - BearerAuth: []
  *      requestBody:
- *          required: true
- *          content:
- *              application/json:
- *                  schema:
- *                      $ref: '#/components/schemas/Comment'
+ *          $ref: '#/components/requestBodies/CreateCommentRequest'
  *      responses:
  *          201:
  *              description: Comment added successfully
@@ -464,6 +525,8 @@
  *         schema:
  *           type: string
  *         description: The comment ID
+ *     requestBody:
+ *      $ref: '#/components/requestBodies/CreateCommentRequest'
  *     responses:
  *       200:
  *         description: Comment updated successfully
@@ -521,3 +584,208 @@
  *         description: Post not found
  */
 
+/**
+ ************************************* Chat APIs *************************************
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Chats
+ *     description: API endpoints for managing chats
+ */
+
+/**
+ * @swagger
+ * /chats/direct-chat:
+ *   post:
+ *     summary: Create a new direct chat
+ *     tags: [Chats]
+ *     description: Create a new direct chat between two users
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *     responses:
+ *       201:
+ *        description: Direct chat created successfully
+ *        content:
+ *          application/json:
+ *            schema:
+ *              $ref: '#/components/schemas/DirectChat'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /chats/direct-chat/{chatId}:
+ *   get:
+ *    summary: Get a direct chat
+ *    tags: [Chats]
+ *    description: Get a direct chat by its ID
+ *    security:
+ *      - BearerAuth: []
+ *    parameters:
+ *      - in: path
+ *        name: chatId
+ *        required: true
+ *        schema:
+ *          type: string
+ *          description: The direct chat ID
+ *    responses:
+ *     200:
+ *      description: Direct chat retrieved successfully
+ *      content:
+ *       application/json:
+ *        schema:
+ *         $ref: '#/components/schemas/DirectChat'
+ *    401:
+ *     description: Unauthorized, invalid or missing token
+ *    404:
+ *     description: Chat not found
+ *    500:
+ *     description: Internal server error
+ * 
+ *   put:
+ *     summary: Edit a direct chat
+ *     tags: [Chats]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           description: The direct chat ID
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *     responses:
+ *       200:
+ *         description: Chat updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DirectChat'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Chat not found
+ */
+
+
+/**
+ * @swagger
+ * /chats/group-chat:
+ *   post:
+ *     summary: Create a new chat group
+ *     tags: [Chats]
+ *     description: Create a new chat group between many users
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *     responses:
+ *       201:
+ *        description: Group chat created successfully
+ *        content:
+ *          application/json:
+ *            schema:
+ *              $ref: '#/components/schemas/GroupChat'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /chats/group-chat/{chatId}:
+ *   get:
+ *    summary: Get a group chat
+ *    tags: [Chats]
+ *    description: Get a group chat by its ID
+ *    security:
+ *      - BearerAuth: []
+ *    parameters:
+ *      - in: path
+ *        name: chatId
+ *        required: true
+ *        schema:
+ *          type: string
+ *          description: Chat ID
+ *    responses:
+ *     200:
+ *      description: Group chat retrieved successfully
+ *      content:
+ *       application/json:
+ *        schema:
+ *         $ref: '#/components/schemas/GroupChat'
+ *    401:
+ *     description: Unauthorized, invalid or missing token
+ *    404:
+ *     description: Chat not found
+ *    500:
+ *     description: Internal server error
+ * 
+ *   put:
+ *     summary: Edit a chat group
+ *     tags: [Chats]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *     - in: path
+ *       name: chatId
+ *       required: true
+ *       schema:
+ *         type: string
+ *         description: The chat group ID
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *     responses:
+ *       200:
+ *         description: Chat updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GroupChat'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Chat not found
+ */
+
+/**
+ * @swagger
+ * /chats/all-chats:
+ *   get:
+ *     summary: Get all chats for a user
+ *     tags: [Chats]
+ *     description: Retrieve all chats for a user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of chats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 oneOf:
+ *                   - $ref: '#/components/schemas/DirectChat'
+ *                   - $ref: '#/components/schemas/GroupChat'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: No chats found
+ *       500:
+ *         description: Internal server error
+ */

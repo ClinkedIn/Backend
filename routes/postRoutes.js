@@ -12,21 +12,16 @@ router.route('/:postId')
     .put(postController.updatePost)
     .delete(postController.deletePost);
 
-
 router.route('/:postId/save')
     .post(postController.savePost)
     .delete(postController.unsavePost);
 
-
 router.route('/:postId/like')
     .post(postController.likePost)
-
-router.route('/:postId/like/:userId')
-    .delete(postController.unlikePost);
+    .delete(postController.unlikePost); 
 
 router.route('/:postId/repost')
     .post(postController.repostPost);
-
 
 router.route('/:postId/repost/:repostId')
     .delete(postController.deleteRepost);
@@ -34,8 +29,7 @@ router.route('/:postId/repost/:repostId')
 
 router.route('/:postId/report')
     .post(postController.reportPost);
-
-
+    
 
 module.exports = router;
 
