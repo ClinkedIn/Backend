@@ -2,6 +2,45 @@
  * @swagger
  * components:
  *   schemas:
+ * 
+ *     ImpressionBase:
+ *       type: object
+ *       properties:
+ *         targetId:
+ *           type: string
+ *           description: Id for the post or the comment
+ *         targetType:
+ *           type: string
+ *           enum: ["Post", "Comment"]
+ *           description: Impression for post or comment
+ *         type:
+ *           type: string
+ *           enum: ["Like", "Celebrate", "Support", "Insightful", "Funny"]
+ *           description: Type of the impression
+ * 
+ *     Impression:
+ *       allOf:
+ *         - $ref: '#/components/schemas/ImpressionBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the impression
+ *               format: objectId
+ *             userId:
+ *               type: string
+ *               description: ID of the user who made the impression
+ *               format: objectId
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the impression was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the impression was last updated   
+ *          
+ * 
  *     PostBase:
  *       type: object
  *       properties:
@@ -218,6 +257,15 @@
  * 
  * 
  *   requestBodies:
+ * 
+ *     CreateImpressionRequest:
+ *       description: Request body for adding an impression
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ImpressionBase' 
+ * 
  *     CreatePostRequest:
  *       description: Request body for creating a new post
  *       required: true
@@ -243,8 +291,8 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/MessageBase'
- * 
- * 
+ *  
+ *  
  *     CreateDirectChatRequest:
  *       description: Request body for creating a new direct chat
  *       required: true
@@ -262,6 +310,98 @@
  *           schema:
  *             $ref: '#/components/schemas/GroupChatBase'
  */
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Impressions
+ *     description: API endpoints for managing impressions
+ */
+
+/**
+ * @swagger
+ * /impressions:
+ *   post:
+ *     summary: Add an impression
+ *     tags: [Impressions]
+ *     description: Add a new impression
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateImpressionRequest'
+ *     responses:
+ *       201:
+ *         description: Post created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Impression'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ *       
+ */
+
+/**
+ * @swagger
+ * /impressions/{id}:
+ *   get:
+ *     summary: Retrieve all impression for a specific post or comment
+ *     tags: [Impressions]
+ *     description: Retrieve all impression for a specific post or comment
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: targetId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The target post or comment ID
+ *     responses:
+ *       200:
+ *         description: List of posts retrieved successfully
+ *         content:
+ *           application/json:
+ *            schema:
+ *             type: array
+ *             items:
+ *              $ref: '#/components/schemas/Impression'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *        description: No Impressions found
+ *       500:
+ *        description: Internal server error
+ * 
+ *   delete:
+ *     summary: Delete an impression
+ *     tags: [Impressions]
+ *     description: Remove an impression by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: impressionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The impression ID
+ *     responses:
+ *       200:
+ *         description: Impression deleted successfully
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Impression not found
+ */
+
+
+// ******************************************* Posts APIs ************************************* //
+
 
 /**
  * @swagger
@@ -446,6 +586,8 @@
  *         schema:
  *           type: string
  *         description: The post ID
+ *     requestBody:
+ *       
  *     responses:
  *       200:
  *         description: Post liked successfully
