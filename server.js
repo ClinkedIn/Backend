@@ -10,6 +10,7 @@ const reportRouter = require('./routes/reportRoutes');
 const repostRouter = require('./routes/repostRoutes');
 const commentRouter = require('./routes/commentRoutes');
 const chatRouter = require('./routes/chatRoutes');
+const messageRouter = require('./routes/messageRoutes');
 
 const app = express();
   
@@ -29,6 +30,7 @@ app.use('/report', reportRouter);
 app.use('/repost', repostRouter);
 app.use('/comments', commentRouter);
 app.use('/chats', chatRouter);
+app.use('/messages', messageRouter);
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 

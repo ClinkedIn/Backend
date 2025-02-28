@@ -70,6 +70,7 @@
  *           type: string
  *           format: ObjectId
  *           nullable: true
+ *           default: null
  *           description: "Parent comment ID if this is a reply"
  *
  *     Comment:
@@ -108,13 +109,68 @@
  *               format: date-time
  *               description: Timestamp when the post was last updated
  *
+ *     MessageBase:
+ *       type: object
+ *       properties:
+ *         senderId:
+ *           type: string
+ *           description: ID of the sender
+ *           format: objectId
+ *         chatId:
+ *           type: string
+ *           description: ID of the chat
+ *           format: objectId
+ *         chatType:
+ *           type: string
+ *           enum: ["direct", "group"]
+ *           description: Chat type (direct chat or chat group)
+ *         messageText:
+ *           type: string
+ *           description: Content of the message
+ *         messageAttachment:
+ *           type: string
+ *           description: Can be a file URL or path
+ *           nullable: true
+ *           default: null
+ *         replyTo:
+ *           type: string
+ *           format: objectId
+ *           description: References another message if it's a reply
+ *           nullable: true
+ *           default: null
+ * 
+ *     Message:
+ *       allOf:
+ *         - $ref: '#/components/schemas/MessageBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the direct chat
+ *               format: objectId
+ *             readBy:
+ *               type: array
+ *               items: 
+ *                 type: string
+ *                 format: objectId
+ *               description: List of user IDs who have read the message
+ *             timeStamp:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the message was sent
+ *             isDeleted:
+ *               type: boolean
+ *               description: Indicates if the message was deleted
+ *               default: false
+ * 
+ * 
  *     DirectChatBase:
  *       type: object
  *       properties:
  *         secondUserId:
  *           type: string
  *           description: Id of the other user (other than the user with the tokne)
- *           format: objectID
+ *           format: objectId
  *     
  *     DirectChat:
  *       allOf:
@@ -158,6 +214,8 @@
  *               items:
  *                 type: string
  *                 format: ObjectId
+ *               default: []
+ * 
  * 
  *   requestBodies:
  *     CreatePostRequest:
@@ -167,6 +225,7 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/PostBase'
+ * 
  *
  *     CreateCommentRequest:
  *       description: Request body for creating a new comment or reply
@@ -176,6 +235,16 @@
  *           schema:
  *             $ref: '#/components/schemas/CommentBase'
  * 
+ *   
+ *     CreateMessageRequest:
+ *       description: Request body for sending a new message
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MessageBase'
+ * 
+ * 
  *     CreateDirectChatRequest:
  *       description: Request body for creating a new direct chat
  *       required: true
@@ -183,6 +252,7 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/DirectChatBase'
+ * 
  * 
  *     CreateGroupChatRequest:
  *       description: Request body for creating a new chat group
@@ -558,6 +628,7 @@
  *         description: Unauthorized, invalid or missing token
  *       404:
  *         description: Comment not found
+ * 
  *  get:
  *     summary: Get a specific comment
  *     tags: [Comments]
@@ -584,9 +655,140 @@
  *         description: Post not found
  */
 
+//************************************ Messages APIs ******************************************//
+
 /**
- ************************************* Chat APIs *************************************
+ * @swagger
+ * tags:
+ *   - name: Messages
+ *     description: API endpoints for managing messages
  */
+
+/**
+ * @swagger
+ * /messages:
+ *   post:
+ *     summary: Send a message
+ *     tags: [Messages]
+ *     description: Send a message to a chat
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateMessageRequest'
+ *     responses:
+ *       201:
+ *         description: Message created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /messages/{messageId}:
+ *   get:
+ *     summary: Get a message
+ *     tags: [Messages]
+ *     description: Get a message by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The MongoDB ObjectId of the message
+ *     responses:
+ *       200:
+ *         description: Message retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Unauthorized, invalid, or missing token
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Internal server error
+ * 
+ *   put:
+ *     summary: Update a message
+ *     tags: [Messages]
+ *     description: Edit a message by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The MongoDB ObjectId of the message
+ *     requestBody:
+ *       description: Request body for editing a message
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               messageText:
+ *                 type: string
+ *                 description: The new text content of the message
+ *               messageAttachment:
+ *                 type: string
+ *                 description: The new attachments of the message
+ *     responses:
+ *       200:
+ *         description: Message updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'         
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid, or missing token
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Internal server error
+ * 
+ *
+ *   delete:
+ *     summary: Delete a message
+ *     tags: [Messages]
+ *     description: Delete a message by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The MongoDB ObjectId of the message 
+ *     responses:
+ *       200:
+ *         description: Message deleted successfully
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Message not found
+ */
+
+
+
+// *********************************** Chat APIs ***************************************//
 
 /**
  * @swagger
