@@ -255,6 +255,140 @@
  *                 format: ObjectId
  *               default: []
  * 
+ *     JobBase:
+ *       type: object
+ *       properties:
+ *         companyId:
+ *           type: string
+ *           description: ID of the company offering the job
+ *         workplaceType:
+ *           type: string
+ *           enum: ["Onsite", "Hybrid", "Remote"]
+ *           description: Work location type
+ *         jobLocation:
+ *           type: string
+ *           description: Location of the job
+ *         jobType:
+ *           type: string
+ *           enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *           description: Classification of the job
+ *         description:
+ *           type: string
+ *           description: Details about the job
+ *         applicationEmail:
+ *           type: string
+ *           description: Email to which job applications should be sent
+ *         screeningQuestions:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               question:
+ *                 type: string
+ *                 description: The screening question
+ *               mustHave:
+ *                 type: boolean
+ *                 description: Indicates if the question is a must-have requirement
+ *         autoRejectMustHave:
+ *           type: boolean
+ *           description: Whether to automatically reject applicants who do not meet must-have criteria
+ *         rejectPreview:
+ *           type: string
+ *           description: Message to display for rejected applicants
+ *
+ *     Job:
+ *       allOf:
+ *         - $ref: '#/components/schemas/JobBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the job
+ *             applicants:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of users who applied
+ *             accepted:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of accepted applicants
+ *             rejected:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of rejected applicants
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the job was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the job was last updated
+ *
+ *     CompanyBase:
+ *       type: object
+ *       properties:
+ *         userId:
+ *           type: string
+ *           description: ID of the company creator
+ *         name:
+ *           type: string
+ *           description: Name of the company
+ *         address:
+ *           type: string
+ *           description: Unique LinkedIn-style URL of the company
+ *         website:
+ *           type: string
+ *           description: Company website
+ *         industry:
+ *           type: string
+ *           description: Industry the company belongs to
+ *         organizationSize:
+ *           type: string
+ *           enum: ["1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"]
+ *           description: Size of the organization
+ *         organizationType:
+ *           type: string
+ *           enum: ["Public", "Private", "Nonprofit", "Government", "Educational", "Self-employed"]
+ *           description: Type of the organization
+ *         logo:
+ *           type: string
+ *           description: URL to the company's logo
+ *         tagLine:
+ *           type: string
+ *           description: Short company description or tagline
+ *
+ *     Company:
+ *       allOf:
+ *         - $ref: '#/components/schemas/CompanyBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the company
+ *               format: objectId
+ *             followers:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of users following the company
+ *             visitors:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of users who visited the company profile
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the company was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the company was last updated
+ *
  * 
  *   requestBodies:
  * 
@@ -309,6 +443,22 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/GroupChatBase'
+ *     CreateJobRequest:
+ *       description: Request body for creating a new job
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/JobBase'
+ *
+ *     CreateCompanyRequest:
+ *       description: Request body for creating a new company
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CompanyBase'
+ *
  */
 
 /**
@@ -1130,6 +1280,565 @@
  *         description: Unauthorized, invalid or missing token
  *       404:
  *         description: No chats found
+ *       500:
+ *         description: Internal server error
+ */
+
+// *********************************** jobs APIs ***************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Jobs
+ *     description: API endpoints for managing jobs
+ */
+
+/**
+ * @swagger
+ * /jobs:
+ *   post:
+ *     summary: Create a new job
+ *     tags: [Jobs]
+ *     description: Create a new job posting
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *     responses:
+ *       201:
+ *         description: Job created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ *
+ *   get:
+ *     summary: Retrieve all jobs
+ *     tags: [Jobs]
+ *     description: Retrieve a list of all job postings
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}:
+ *   get:
+ *     summary: Retrieve a specific job
+ *     tags: [Jobs]
+ *     description: Retrieve details of a job posting by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to retrieve
+ *     responses:
+ *       200:
+ *         description: Job details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   put:
+ *     summary: Update a job
+ *     tags: [Jobs]
+ *     description: Update details of an existing job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to update
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *     responses:
+ *       200:
+ *         description: Job updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   delete:
+ *     summary: Delete a job
+ *     tags: [Jobs]
+ *     description: Delete a job posting by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to delete
+ *     responses:
+ *       200:
+ *         description: Job deleted successfully
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/apply:
+ *   post:
+ *     summary: Apply for a job
+ *     tags: [Jobs]
+ *     description: Submit an application for a specific job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to apply for
+ *     requestBody:
+ *       description: Applicant's user ID
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user applying for the job
+ *     responses:
+ *       200:
+ *         description: Application submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input or user already applied
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/applications/{userId}/accept:
+ *   put:
+ *     summary: Accept a job applicant
+ *     tags: [Jobs]
+ *     description: Mark an applicant as accepted for a job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the applicant to accept
+ *     responses:
+ *       200:
+ *         description: Applicant accepted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, user has not applied for this job
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/applications/{userId}/reject:
+ *   put:
+ *     summary: Reject a job applicant
+ *     tags: [Jobs]
+ *     description: Mark an applicant as rejected for a job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the applicant to reject
+ *     responses:
+ *       200:
+ *         description: Applicant rejected successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, user has not applied for this job
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/company/{companyId}:
+ *   get:
+ *     summary: Retrieve jobs by company
+ *     tags: [Jobs]
+ *     description: Retrieve all job postings created by a specific company
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: No jobs found for the specified company
+ *       500:
+ *         description: Internal server error
+ */
+// *********************************** Companys APIs ***************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Companys
+ *     description: API endpoints for managing Companys
+ */
+/**
+ * @swagger
+ * /companies:
+ *   post:
+ *     summary: Create a new company
+ *     tags: [Companies]
+ *     description: Create a new company profile
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateCompanyRequest'
+ *     responses:
+ *       201:
+ *         description: Company created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ *
+ *   get:
+ *     summary: Retrieve all companies
+ *     tags: [Companies]
+ *     description: Retrieve a list of all companies
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of companies retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Company'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /companies/{companyId}:
+ *   get:
+ *     summary: Retrieve a specific company
+ *     tags: [Companies]
+ *     description: Retrieve details of a company by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company to retrieve
+ *     responses:
+ *       200:
+ *         description: Company details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   put:
+ *     summary: Update a company
+ *     tags: [Companies]
+ *     description: Update details of an existing company profile
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company to update
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateCompanyRequest'
+ *     responses:
+ *       200:
+ *         description: Company updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   delete:
+ *     summary: Delete a company
+ *     tags: [Companies]
+ *     description: Delete a company profile by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company to delete
+ *     responses:
+ *       200:
+ *         description: Company deleted successfully
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /companies/{companyId}/follow:
+ *   post:
+ *     summary: Follow a company
+ *     tags: [Companies]
+ *     description: Follow a company by adding a user to the company's followers list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company to follow
+ *     requestBody:
+ *       description: User ID of the follower
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID of the user who wants to follow the company
+ *     responses:
+ *       200:
+ *         description: Company followed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Bad request, invalid input or user already following
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   delete:
+ *     summary: Unfollow a company
+ *     tags: [Companies]
+ *     description: Remove a user from the company's followers list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company to unfollow
+ *     requestBody:
+ *       description: User ID of the follower
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID of the user who wants to unfollow the company
+ *     responses:
+ *       200:
+ *         description: Company unfollowed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /companies/{companyId}/visit:
+ *   post:
+ *     summary: Add a visitor to a company
+ *     tags: [Companies]
+ *     description: Record a visit to a company's profile by a user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company being visited
+ *     requestBody:
+ *       description: User ID of the visitor
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID of the user who visited the company
+ *     responses:
+ *       200:
+ *         description: Visitor added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Company not found
  *       500:
  *         description: Internal server error
  */

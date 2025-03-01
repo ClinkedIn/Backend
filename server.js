@@ -12,6 +12,9 @@ const commentRouter = require('./routes/commentRoutes');
 const chatRouter = require('./routes/chatRoutes');
 const messageRouter = require('./routes/messageRoutes');
 
+const jobRouter = require('./routes/jobRoutes');
+const companyRouter = require('./routes/companyRoutes');
+
 const app = express();
   
 const mongoose = require('mongoose');
@@ -31,6 +34,9 @@ app.use('/repost', repostRouter);
 app.use('/comments', commentRouter);
 app.use('/chats', chatRouter);
 app.use('/messages', messageRouter);
+app.use('/jobs', jobRouter);
+app.use('/company', companyRouter);
+
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
