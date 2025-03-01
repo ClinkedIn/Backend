@@ -11,7 +11,7 @@
 
 const express = require('express')
 const router = express.Router();
-const jobController = reqire('../controllers/jobController');
+const jobController = require('../controllers/jobController');
 
 router.route('/')
     .post(jobController.createJob)
@@ -36,7 +36,7 @@ router.route('/jobId/applications/:userId/reject')
     .put(jobController.rejectApplicant);
 
 // get all jobs created by a specific company.
-router.routes('/company/:companyId')
+router.route('/company/:companyId')
     .get(jobController.getJobsByCompany)
     
     // get/search , Provide filtering/search capabilities (e.g., by workplace type, job location, job type).
