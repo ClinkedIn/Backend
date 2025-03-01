@@ -255,6 +255,79 @@
  *                 format: ObjectId
  *               default: []
  * 
+ *    JobBase:
+ *       type: object
+ *       properties:
+ *         companyId:
+ *           type: string
+ *           description: ID of the company offering the job
+ *         workplaceType:
+ *           type: string
+ *           enum: ["Onsite", "Hybrid", "Remote"]
+ *           description: Work location type
+ *         jobLocation:
+ *           type: string
+ *           description: Location of the job
+ *         jobType:
+ *           type: string
+ *           enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *           description: Classification of the job
+ *         description:
+ *           type: string
+ *           description: Details about the job
+ *         applicationEmail:
+ *           type: string
+ *           description: Email to which job applications should be sent
+ *         screeningQuestions:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               question:
+ *                 type: string
+ *                 description: The screening question
+ *               mustHave:
+ *                 type: boolean
+ *                 description: Indicates if the question is a must-have requirement
+ *         autoRejectMustHave:
+ *           type: boolean
+ *           description: Whether to automatically reject applicants who do not meet must-have criteria
+ *         rejectPreview:
+ *           type: string
+ *           description: Message to display for rejected applicants
+ *
+ *     Job:
+ *       allOf:
+ *         - $ref: '#/components/schemas/JobBase'
+ *         - type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               description: Unique ID of the job
+ *             applicants:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of users who applied
+ *             accepted:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of accepted applicants
+ *             rejected:
+ *               type: array
+ *               items:
+ *                 type: string
+ *               description: IDs of rejected applicants
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the job was created
+ *             updatedAt:
+ *               type: string
+ *               format: date-time
+ *               description: Timestamp when the job was last updated
+ *
  * 
  *   requestBodies:
  * 
@@ -309,6 +382,14 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/GroupChatBase'
+ *     CreateJobRequest:
+ *       description: Request body for creating a new job
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/JobBase'
+ *
  */
 
 /**
@@ -1132,4 +1213,305 @@
  *         description: No chats found
  *       500:
  *         description: Internal server error
+ */
+
+// *********************************** jobs APIs ***************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Jobs
+ *     description: API endpoints for managing jobs
+ */
+
+/**
+ * @swagger
+ * /jobs:
+ *   post:
+ *     summary: Create a new job
+ *     tags: [Jobs]
+ *     description: Create a new job posting
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *     responses:
+ *       201:
+ *         description: Job created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ *
+ *   get:
+ *     summary: Retrieve all jobs
+ *     tags: [Jobs]
+ *     description: Retrieve a list of all job postings
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}:
+ *   get:
+ *     summary: Retrieve a specific job
+ *     tags: [Jobs]
+ *     description: Retrieve details of a job posting by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to retrieve
+ *     responses:
+ *       200:
+ *         description: Job details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   put:
+ *     summary: Update a job
+ *     tags: [Jobs]
+ *     description: Update details of an existing job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to update
+ *     requestBody:
+ *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *     responses:
+ *       200:
+ *         description: Job updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   delete:
+ *     summary: Delete a job
+ *     tags: [Jobs]
+ *     description: Delete a job posting by its ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to delete
+ *     responses:
+ *       200:
+ *         description: Job deleted successfully
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/apply:
+ *   post:
+ *     summary: Apply for a job
+ *     tags: [Jobs]
+ *     description: Submit an application for a specific job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job to apply for
+ *     requestBody:
+ *       description: Applicant's user ID
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user applying for the job
+ *     responses:
+ *       200:
+ *         description: Application submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, invalid input or user already applied
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/applications/{userId}/accept:
+ *   put:
+ *     summary: Accept a job applicant
+ *     tags: [Jobs]
+ *     description: Mark an applicant as accepted for a job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the applicant to accept
+ *     responses:
+ *       200:
+ *         description: Applicant accepted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, user has not applied for this job
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/applications/{userId}/reject:
+ *   put:
+ *     summary: Reject a job applicant
+ *     tags: [Jobs]
+ *     description: Mark an applicant as rejected for a job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the job
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the applicant to reject
+ *     responses:
+ *       200:
+ *         description: Applicant rejected successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Job'
+ *       400:
+ *         description: Bad request, user has not applied for this job
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /jobs/company/{companyId}:
+ *   get:
+ *     summary: Retrieve jobs by company
+ *     tags: [Jobs]
+ *     description: Retrieve all job postings created by a specific company
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       404:
+ *         description: No jobs found for the specified company
+ *       500:
+ *         description: Internal server error
+ */
+// *********************************** Companys APIs ***************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Companys
+ *     description: API endpoints for managing Companys
  */
