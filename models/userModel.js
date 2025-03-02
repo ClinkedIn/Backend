@@ -45,7 +45,12 @@ const userSchema = new mongoose.Schema({
         skills: [{ type: String }],
         media: { type: String }
     }],
-
+    transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Subscription" }],
+    subscription: { type: mongoose.Schema.Types.ObjectId, ref: "Subscription" },
+    isPremium: { type: Boolean, default: false },
+    companies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company" }],
+    adminInCompanies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company" }],
+    isSuperAdmin: { type: Boolean, default: false },
     profilePrivacySettings: { type: String, enum: ["public", "private", "connectionsOnly"], default: "public" },
     connectionRequestPrivacySetting: { type: String, enum: ["everyone", "connectionsOnly"], default: "everyone" },
     impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
