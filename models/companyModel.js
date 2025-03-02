@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const companySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Company creator
-  admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Company admins
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users following the company
   name: { type: String, required: true },
   address: { type: String, required: true, unique: true }, // Unique LinkedIn-style URL
@@ -19,9 +18,6 @@ const companySchema = new mongoose.Schema({
   logo: { type: String }, // URL to company logo
   tagLine: { type: String }, // Short company description
   visitors: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who visited the profile
-  isActive: { type: Boolean, default: true },
-  posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }], // Company posts
-  jobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }], // Company job listings
 }, { timestamps: true }); // Adds createdAt & updatedAt timestamps
 
 module.exports = mongoose.model("Company", companySchema);

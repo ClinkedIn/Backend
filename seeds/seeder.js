@@ -24,13 +24,15 @@ const { createRandomIds } = require('./init');
         await connectDB(); // Ensure DB connection first
         console.log('✅ Connected to MongoDB');
 
+
+        //await createRandomIds();
         // Run seeders
         await postSeeder();
         await commentSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');
-        process.exit(0);
+        process.exit(0); // Exit the process cleanly
     } catch (error) {
         console.error('❌ Seeding failed:', error);
         process.exit(1); // Exit with error code
