@@ -1,0 +1,38 @@
+const { faker } = require('@faker-js/faker')
+
+const process = require('process');
+require('dotenv').config();
+const connectDB = require('../models/db');
+
+const userSeeder = require('./user');
+const postSeeder = require('./post');
+const commentSeeder = require('./comment');
+const chatGroupSeeder = require('./chatGroup');
+const directChatSeeder = require('./directChat');
+const ChatMessageSeeder = require('./chatMessage');
+const companySeeder = require('./company');
+const impressionSeeder = require('./impression');
+const jobSeeder = require('./job');
+const reportSeeder = require('./report');
+const repostSeeder = require('./repost');
+const subscriptionSeeder = require('./subscription');
+const transactionSeeder = require('./transaction');
+const { createRandomIds } = require('./init');
+
+(async () => {
+    try {
+        await connectDB(); // Ensure DB connection first
+        console.log('✅ Connected to MongoDB');
+
+        // Run seeders
+        await postSeeder();
+        await commentSeeder();
+        // await otherSeeder();
+
+        console.log('✅ Seeding completed successfully!');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Seeding failed:', error);
+        process.exit(1); // Exit with error code
+    }
+})();
