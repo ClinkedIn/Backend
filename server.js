@@ -31,6 +31,9 @@ app.use('/repost', repostRouter);
 app.use('/comments', commentRouter);
 app.use('/chats', chatRouter);
 app.use('/messages', messageRouter);
+app.use('/jobs', jobRouter);
+app.use('/company', companyRouter);
+
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
