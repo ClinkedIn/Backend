@@ -1106,6 +1106,7 @@
  *         description: Chat not found
  */
 
+
 /**
  * @swagger
  * /chats/all-chats:
@@ -1133,3 +1134,974 @@
  *       500:
  *         description: Internal server error
  */
+
+
+
+// *********************************** User APIs ******************************************//
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Users
+ *     description: API endpoints for managing users
+ */
+
+/**
+ * @swagger
+ * /user/:
+ *     post:
+ *         summary: Create a new user
+ *         tags: [Users] 
+ *         description: Registeration a new user 
+ *         operationId: createUser
+ *         requestBody:
+ *             description: Create User object 
+ *             required: true
+ *             content:
+ *                 application/json: 
+ *                     schema:
+ *                         $ref: '#/components/schemas/RegisterUser'
+ *         responses:
+ *             201:
+ *                 description: User created successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: User created successfully
+ *             500:
+ *                 description: Internal server error
+ *     delete:
+ *         summary: Delete a user
+ *         tags: [Users]
+ *         description: Delete a user 
+ *         operationId: deleteUser
+ *         responses:
+ *             200:
+ *                 description: User deleted successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: User deleted successfully
+ *             400:
+ *                 description: Bad request, invalid input
+ *             401:
+ *                 description: Unauthorized, user must be logged in
+ *             500:
+ *                 description: Internal server error 
+ * */
+
+/**
+ * @swagger
+ * /user/login:
+ *     post:
+ *         summary: Login user
+ *         tags: [Users]
+ *         description: Login a user with email and password
+ *         requestBody:
+ *             content:
+ *                 application/json:
+ *                     schema:
+ *                         $ref: '#/components/schemas/UserLogin'   
+ *             required: true
+ *         responses:
+ *             200:
+ *                 description: User logged in successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             token: <JWT_TOKEN>
+ *
+ *             401:
+ *                 description: Unauthorized, invalid credentials 
+ *             500:
+ *                 description: Internal server error
+ */
+
+/**
+ * @swasgger
+ * user/auth/google:    
+ *    get:
+ *      summary: Login with google
+ *      tags: [Users]
+ *      description: Login with google
+ *      responses:
+ *       200:
+ *        description: User logged in successfully
+ *        content:
+ *          application/json:
+ *            example:
+ *            token: <JWT_TOKEN>
+ *       401:
+ *         description: Unauthorized, invalid credentials
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/logout:
+ *    get:
+ *     summary: Logout user
+ *     tags: [Users]
+ *     description: Logout a user
+ *     responses:
+ *       200:
+ *        description: User logged out successfully
+ *        content:
+ *          application/json:
+ *            example:
+ *              message: User logged out successfully
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/forgot-password:
+ *     post:
+ *         summary: Send an email to the user to reset password
+ *         tags: [Users]
+ *         description: Send reset link
+ *         operationId: forgotPassword
+ *         requestBody:
+ *             description: Send reset link
+ *             required: true
+ *             content:
+ *                 application/json:
+ *                     schema:
+ *                         $ref: "#/components/schemas/ForgotPassword"
+ *         responses:
+ *             200:
+ *                 description: Password reset email sent successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: Password reset email sent successfully
+ *             404:
+ *                 description: email does not exist
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: email does not exist
+ *             500:
+ *                 description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/update-password:
+ *     patch:
+ *         summary: update password (for when user doesn't remember password and follows link in email)
+ *         tags: [Users]
+ *         description: update password using reset link
+ *         requestBody:
+ *             required: true
+ *             content:
+ *                 application/json:
+ *                     schema:
+ *                         $ref: "#/components/schemas/UpdatePassword"
+ *         responses:
+ *             200:
+ *                 description: Password update successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: Password updated successfully
+ *             401:
+ *                 description: Unauthorized, user must be logged in
+ *             500:
+ *                 description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/update-email:
+ *     patch:
+ *         summary: Allows user to update email
+ *         tags: [Users]
+ *         description: Update user email address.
+ *         operationId: updateEmail
+ *         requestBody:
+ *             required: true
+ *             content:
+ *                 application/json:
+ *                     schema:
+ *                         $ref: "#/components/schemas/UpdateEmail"
+ *         responses:
+ *             200:
+ *                 description: Email updated successfully
+ *                 content:
+ *                     application/json:
+ *                         example:
+ *                             message: Email updated successfully
+ *             400:
+ *                 description: Invalid Email
+ *             401:
+ *                 description: Unauthorized, user must be logged in
+ *             500:
+ *                 description: Internal server error
+ */
+
+
+
+/**
+ * @swagger
+ * /user/in/{userId}:
+ *    get:
+ *      summary: Get a logged-in user's public profile data by ID
+ *      tags: [Users]
+ *      description: Retrieve a logged-in user's public profile data by their ID
+ *      parameters:
+ *        - name: userId
+ *          in: path
+ *          required: true
+ *          schema:
+ *            type: string
+ *      responses:
+ *        200:
+ *          description: User data retrieved successfully
+ *          content:
+ *            application/json:
+ *              schema:
+ *                $ref: "#/components/schemas/LoggedInUser"
+ *        401:
+ *          description: Unauthorized, user must be logged in
+ *        404:
+ *          description: User not found
+ *        500:
+ *          description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/{userId}:
+ *    get:
+ *      summary: Get user data by ID
+ *      tags: [Users]
+ *      description: Retrieve a user's public profile data by their ID
+ *      parameters:
+ *        - name: userId
+ *          in: path
+ *          required: true
+ *          schema:
+ *            type: string
+ *      responses:
+ *        200:
+ *          description: User data retrieved successfully
+ *          content:
+ *            application/json:
+ *              schema:
+ *                $ref: "#/components/schemas/User"
+ *        404:
+ *          description: User not found
+ *        500:
+ *          description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/profile:
+ *   post:
+ *     summary: Create a user profile
+ *     tags: [Users]
+ *     description: Create a new user profile with basic information.
+ *     operationId: createUserProfile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/UserProfile"
+ *     responses:
+ *       201:
+ *         description: User profile created successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User profile created successfully
+ *               userId: "64f8a1b2c3d4e5f6a7b8c9d0"
+ *       400:
+ *         description: Bad request, invalid input
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     summary: Update user profile
+ *     tags: [Users]
+ *     description: Update user profile details such as name, bio, location, work experience, education, and skills.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/UpdateUserProfile"
+ *     responses:
+ *       200:
+ *         description: User profile updated successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Profile updated successfully"
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       500:
+ *         description: Internal Server Error
+ */
+
+
+/**
+ * @swagger
+ * /user/profile-picture:
+ *   post:
+ *     summary: Upload a profile picture
+ *     tags: [Users]
+ *     description: Upload or update a user's profile picture
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   delete:
+ *     summary: Delete profile picture
+ *     tags: [Users]
+ *     description: Remove a user's profile picture
+ *     responses:
+ *       200:
+ *         description: Profile picture deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Profile picture not found
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/cover-photo:
+ *   post:
+ *     summary: Upload a cover photo
+ *     tags: [Users]
+ *     description: Upload or update a user's cover photo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               coverPhoto:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Cover photo uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   delete:
+ *     summary: Delete cover photo
+ *     tags: [Users]
+ *     description: Remove a user's cover photo
+ *     responses:
+ *       200:
+ *         description: Cover photo deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Cover photo not found
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/resume:
+ *   post:
+ *     summary: Upload resume
+ *     tags: [Users]
+ *     description: Upload or update a user's resume
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               resume:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Resume uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/work-experience:
+ *   post:
+ *     summary: Add work experience
+ *     tags: [Users]
+ *     description: Add work experience to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/WorkExperience"
+ *     responses:
+ *       200:
+ *         description: Work experience added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/education:
+ *   post:
+ *     summary: Add education
+ *     tags: [Users]
+ *     description: Add an education entry to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/Education"
+ *     responses:
+ *       200:
+ *         description: Education added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/certifications:
+ *   post:
+ *     summary: Add certification
+ *     tags: [Users]
+ *     description: Add a certification to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/Certification"
+ *     responses:
+ *       200:
+ *         description: Certification added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/skills:
+ *   post:
+ *     summary: Add skills
+ *     tags: [Users]
+ *     description: Add skills to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["JavaScript", "Python", "Machine Learning"]
+ *     responses:
+ *       200:
+ *         description: Skills added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * /user/skills/endorse:
+ *   post:
+ *     summary: Endorse a skill
+ *     tags: [Users]
+ *     description: Endorse a user's skill
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: "64f8a1b2c3d4e5f6a7b8c9d0"
+ *               skill:
+ *                 type: string
+ *                 example: "JavaScript"
+ *     responses:
+ *       200:
+ *         description: Skill endorsed successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User or skill not found
+ *       500:
+ *         description: Internal Server Error
+ */
+
+
+
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     RegisterUser:
+ *       type: object
+ *       properties:
+ *         firstName:
+ *           type: string 
+ *           example: John
+ *         lastName:
+ *           type: string
+ *           example: Cena
+ *         email:
+ *           type: string
+ *           example: example@email.com
+ *         password:
+ *           type: string
+ *           example: password
+ *     UserLogin:
+ *       type: object
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: example@email.com
+ *         password:
+ *           type: string
+ *           example: password
+ *     ForgotPassword:
+ *       type: object
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: example@email.com
+ *     UpdatePassword:
+ *       type: object
+ *       properties:
+ *         newPassword:
+ *           type: string
+ *           example: newpassword
+ *     UpdateEmail:
+ *       type: object
+ *       properties:
+ *         newEmail:
+ *           type: string
+ *           example: newEmail@email.com
+ *         password:
+ *           type: string
+ *           example: password
+ * 
+ *     WorkExperience:
+ *       type: object
+ *       properties:
+ *         jobTitle:
+ *           type: string
+ *           example: Software Engineer
+ *         companyName:
+ *           type: string
+ *           example: Google
+ *         from:
+ *           type: string
+ *           format: date
+ *           example: "2020-06-01"
+ *         to:
+ *           type: string
+ *           format: date
+ *           example: "2023-06-01"
+ *         employmentType:
+ *           type: string
+ *           enum: [full-time, part-time, freelance, self-employed, contract, internship, apprenticeship, seasonal]
+ *           example: full-time
+ *         location:
+ *           type: string
+ *           example: San Francisco, CA, USA
+ *         locationType:
+ *           type: string
+ *           enum: [onsite, hybrid, remote]
+ *           example: hybrid
+ *         description:
+ *           type: string
+ *           example: Worked on backend services and APIs.
+ *         jobSource:
+ *           type: string
+ *           enum: [Indeed, LinkedIn, Company Website, Other job sites, Referral, Contracted by recruiter, Staffing agency, Other]
+ *           example: LinkedIn
+ *         skills:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["JavaScript", "Node.js", "MongoDB"]
+ *         media:
+ *           type: string
+ *           example: "https://example.com/certificate.pdf"
+ * 
+ *     Education:
+ *       type: object
+ *       properties:
+ *         school:
+ *           type: string
+ *           example: Harvard University
+ *         degree:
+ *           type: string
+ *           example: Bachelor's
+ *         fieldOfStudy:
+ *           type: string
+ *           example: Computer Science
+ *         startDate:
+ *           type: string
+ *           format: date
+ *           example: "2017-09-01"
+ *         endDate:
+ *           type: string
+ *           format: date
+ *           example: "2021-06-01"
+ *         grade:
+ *           type: string
+ *           example: 3.8 GPA
+ *         activitiesAndSocieties:
+ *           type: string
+ *           example: "Coding Club, Debate Team"
+ *         description:
+ *           type: string
+ *           example: "Completed a thesis on AI and Machine Learning."
+ *         skills:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["Python", "AI", "Data Science"]
+ *         media:
+ *           type: string
+ *           example: "https://example.com/transcript.pdf"
+ * 
+ *     Skill:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: JavaScript
+ *         endorsements:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId1", "userId2"]
+ *
+ *     LoggedInUser:
+ *       type: object
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           example: John
+ *         lastName:
+ *           type: string
+ *           example: Doe
+ *         email:
+ *           type: string
+ *           example: johndoe@email.com
+ *         profilePicture:
+ *           type: string
+ *           example: "https://example.com/profile.jpg"
+ *         coverPicture:
+ *           type: string
+ *           example: "https://example.com/cover.jpg"
+ *         resume:
+ *           type: string
+ *           example: "https://example.com/resume.pdf"
+ *         bio:
+ *           type: string
+ *           example: "Passionate software engineer with 5 years of experience."
+ *         location:
+ *           type: string
+ *           example: "San Francisco, CA, USA"
+ *         lastJobTitle:
+ *           type: string
+ *           example: "Software Engineer"
+ *         workExperience:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/WorkExperience"
+ *         skills:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Skill"
+ *         education:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Education"
+ *         profilePrivacySettings:
+ *           type: string
+ *           enum: [public, private, connections-only]
+ *           example: "connections-only"
+ *         connectionRequestPrivacySetting:
+ *           type: string
+ *           enum: [everyone, connections-only, no-one]
+ *           example: "connections-only"
+ *         following:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId1", "userId2"]
+ *         followers:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId1"]
+ *         connectionList:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId2"]
+ *         blockedUsers:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId3"]
+ *         profileViews:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId4", "userId5"]
+ *         savedPosts:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["postId1", "postId2"]
+ *         savedJobs:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["jobId1", "jobId2"]
+ *         appliedJobs:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               jobId:
+ *                 type: string
+ *                 example: "jobId123"
+ *               status:
+ *                 type: string
+ *                 enum: [pending, viewed, rejected, accepted]
+ *                 example: "pending"
+ *         jobListings:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["jobId123", "jobId456"]
+ *         defaultMode:
+ *           type: string
+ *           enum: [light, dark]
+ *           example: "dark"
+ *         isActive:
+ *           type: boolean
+ *           example: true
+ *     User:
+ *       type: object
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           example: John
+ *         lastName:
+ *           type: string
+ *           example: Doe
+ *         email:
+ *           type: string
+ *           example: johndoe@email.com
+ *         profilePicture:
+ *           type: string
+ *           example: "https://example.com/profile.jpg"
+ *         coverPicture:
+ *           type: string
+ *           example: "https://example.com/cover.jpg"
+ *         resume:
+ *           type: string
+ *           example: "https://example.com/resume.pdf"
+ *         bio:
+ *           type: string
+ *           example: "Passionate software engineer with 5 years of experience."
+ *         location:
+ *           type: string
+ *           example: "San Francisco, CA, USA"
+ *         lastJobTitle:
+ *           type: string
+ *           example: "Software Engineer"
+ *         workExperience:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/WorkExperience"
+ *         skills:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Skill"
+ *         education:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Education"
+ *         following:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId1", "userId2"]
+ *         followers:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId1"]
+ *         connectionList:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["userId2"]
+ *         isActive:
+ *           type: boolean
+ *           example: true
+ *     Certification:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "AWS Certified Solutions Architect"
+ *         issuingOrganization:
+ *           type: string
+ *           example: "Amazon Web Services (AWS)"
+ *         issueDate:
+ *           type: string
+ *           format: date
+ *           example: "2024-01-15"
+ *         credentialUrl:
+ *           type: string
+ *           format: uri
+ *           example: "https://www.credly.com/badges/123456"
+ * 
+ *     UpdateUserProfile:
+ *       type: object
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           example: "John"
+ *         lastName:
+ *           type: string
+ *           example: "Doe"
+ *         bio:
+ *           type: string
+ *           example: "Software engineer passionate about AI and ML."
+ *         location:
+ *           type: string
+ *           example: "San Francisco, USA"
+ *         workExperience:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/WorkExperience"
+ *         education:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Education"
+ *         skills:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["JavaScript", "Python", "Machine Learning"]
+ * 
+ *     UserProfile:
+ *       type: object
+ *       required:
+ *         - firstName
+ *         - lastName
+ *         - email
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           example: John
+ *         lastName:
+ *           type: string
+ *           example: Doe
+ *         email:
+ *           type: string
+ *           example: john.doe@email.com
+ *         bio:
+ *           type: string
+ *           example: "Software Engineer with 5 years of experience"
+ *         location:
+ *           type: string
+ *           example: "Giza, Egypt"
+ *         profilePicture:
+ *           type: string
+ *           example: "https://example.com/profile.jpg"
+ *         coverPicture:
+ *           type: string
+ *           example: "https://example.com/cover.jpg"
+ *         resume:
+ *           type: string
+ *           example: "https://example.com/resume.pdf"
+ *         workExperience:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/WorkExperience"
+ *         education:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Education"
+ *         skills:
+ *           type: array
+ *           items:
+ *             $ref: "#/components/schemas/Skill"
+ */
+
