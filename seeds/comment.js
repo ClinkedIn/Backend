@@ -2,7 +2,7 @@ const { faker } = require('@faker-js/faker');
 const CommentModel = require('../models/commentModel');
 const PostModel = require('../models/postModel');
 const { postIds, userIds, impressionIds, commentIds } = require('./init');
-
+const UserModel = require('../models/userModel');
 const commentsSeed = [];
 
 function createRandomComments() {
@@ -56,6 +56,15 @@ function createRandomComments() {
 async function commentSeeder() {
     try {
         const postCommentMap = createRandomComments();
+        
+        // Create a map for user comments
+        const userCommentMap = new Map();
+        commentsSeed.forEach(comment => {
+            if (!userCommentMap.has(comment.userId)) {
+                userCommentMap.set(comment.userId, []);
+            }
+            userCommentMap.get(comment.userId).push(comment._id);
+        });
 
         await CommentModel.deleteMany({});
         console.log(`Deleted existing comments`);
@@ -63,10 +72,33 @@ async function commentSeeder() {
         await CommentModel.insertMany(commentsSeed);
         console.log(`Inserted ${commentsSeed.length} comments`);
 
+        // Update posts with their comments
         for (const [postId, comments] of postCommentMap) {
-            await PostModel.findByIdAndUpdate(postId, { $push: { comments: { $each: comments } } });
+            await PostModel.findByIdAndUpdate(
+                postId, 
+                { $set: { comments: comments } }
+            );
         }        
         console.log('Updated posts with comments');
+
+        // Update users with their comments
+        for (const [userId, comments] of userCommentMap) {
+            await UserModel.findByIdAndUpdate(
+                userId,
+                { $set: { comments: comments } }
+            );
+        }
+        console.log('Updated users with comments');
+
+        // Verify updates
+        const sampleComment = commentsSeed[0];
+        const sampleUser = await UserModel.findById(sampleComment.userId);
+        const samplePost = await PostModel.findById(sampleComment.postId);
+        
+        console.log('Verification:', {
+            userCommentCount: sampleUser.comments.length,
+            postCommentCount: samplePost.comments.length
+        });
 
     } catch (error) {
         console.error('Error seeding comments:', error);

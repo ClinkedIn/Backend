@@ -1,5 +1,6 @@
 const { faker } = require('@faker-js/faker');
 const PostModel = require('../models/postModel');
+const UserModel = require('../models/userModel'); 
 const { postIds, userIds, impressionIds, repostIds } = require('./init');
 
 const posts = [];
@@ -36,15 +37,38 @@ function createRandomPosts() {
 async function postSeeder() {
     try {
         createRandomPosts();
-        console.log("Posts Length: ");
-        console.log(posts.lenght);
+        console.log("Posts Length: ", posts.length); // Fixed typo in 'length'
+
         const deleteResult = await PostModel.deleteMany({});
         console.log(`Deleted ${deleteResult.deletedCount} posts`);
 
         const insertResult = await PostModel.insertMany(posts);
         console.log(`Inserted ${insertResult.length} posts`);
 
-        console.log('Sample post:', insertResult[0]);
+        // Update users with their posts
+        const userPostMap = posts.reduce((acc, post) => {
+            if (!acc[post.userId]) {
+                acc[post.userId] = [];
+            }
+            acc[post.userId].push(post._id);
+            return acc;
+        }, {});
+
+        // Update each user with their posts
+        for (const [userId, userPosts] of Object.entries(userPostMap)) {
+            await UserModel.findByIdAndUpdate(
+                userId,
+                { $set: { posts: userPosts } },
+                { new: true }
+            );
+        }
+        console.log('Updated users with their posts');
+
+        // Verify a sample user's posts
+        const sampleUserId = posts[0].userId;
+        const sampleUser = await UserModel.findById(sampleUserId);
+        console.log(`Sample user (${sampleUserId}) has ${sampleUser.posts.length} posts`);
+
     } catch (error) {
         console.error('Error seeding posts:', error);
     }
