@@ -12,6 +12,9 @@ const commentRouter = require('./routes/commentRoutes');
 const chatRouter = require('./routes/chatRoutes');
 const messageRouter = require('./routes/messageRoutes');
 
+const jobRouter = require('./routes/jobRoutes');
+const companyRouter = require('./routes/companyRoutes');
+
 const app = express();
   
 const mongoose = require('mongoose');
