@@ -15,15 +15,10 @@ const messageRouter = require('./routes/messageRoutes');
 const jobRouter = require('./routes/jobRoutes');
 const companyRouter = require('./routes/companyRoutes');
 
+const connectDB = require('./models/db');
+
 const app = express();
-  
-const mongoose = require('mongoose');
-
-mongoose.connect(process.env.DATABASE_URL);
-const db = mongoose.connection;
-db.on('error', (error) => console.error(error));
-db.once('open', () => console.log('connected to database'));
-
+connectDB();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
