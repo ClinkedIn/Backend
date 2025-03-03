@@ -13,7 +13,7 @@ const IMPRESSIONS_NUM = 100;
 const NOTIFICATIONS_NUM = 100;
 const SUBSCRIPTIONS_NUM = 100;
 const TRANSACTIONS_NUM = 100;
-
+const JOBS_NUM = 100;
 const generateIds = (count) => Array.from({ length: count }, () => faker.database.mongodbObjectId());
 
 let userIds = [];
@@ -29,7 +29,7 @@ let impressionIds = [];
 let notificationIds = [];
 let subscriptionIds = [];
 let transactionIds = [];
-
+let jobIds= [];
 userIds = generateIds(USERS_NUM);
 postIds = generateIds(POSTS_NUM);
 commentIds = generateIds(COMMENTS_NUM);
@@ -43,7 +43,7 @@ impressionIds = generateIds(IMPRESSIONS_NUM);
 notificationIds = generateIds(NOTIFICATIONS_NUM);
 subscriptionIds = generateIds(SUBSCRIPTIONS_NUM);
 transactionIds = generateIds(TRANSACTIONS_NUM);
-
+jobIds = generateIds(JOBS_NUM);
 module.exports = {
     userIds,
     postIds,
@@ -58,4 +58,5 @@ module.exports = {
     notificationIds,
     subscriptionIds,
     transactionIds,
+    jobIds
 };

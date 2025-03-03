@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@faker-js/faker": "^9.5.1",
     "dotenv": "^16.4.7",
     "eslint": "^9.21.0",
     "globals": "^16.0.0",

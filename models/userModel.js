@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
     bio: { type: String },
     location: { type: String },
     lastJobTitle: { type: String, default: null },
-
+    certificates: [{ type: String }],
     workExperience: [{
         jobTitle: { type: String, required: true },
         companyName: { type: String, required: true },
@@ -64,6 +64,7 @@ const userSchema = new mongoose.Schema({
     profileViews: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
+    isConfirmed: { type: Boolean, default: false },
     appliedJobs: [{
         jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },
         status: { type: String, enum: ["pending", "viewed", "rejected", "accepted"], default: "pending" }

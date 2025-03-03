@@ -27,6 +27,7 @@ const { createRandomIds } = require('./init');
 
         //await createRandomIds();
         // Run seeders
+        await userSeeder();
         await postSeeder();
         await commentSeeder();
         // await otherSeeder();
