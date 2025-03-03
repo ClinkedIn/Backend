@@ -1584,13 +1584,9 @@
  *       500:
  *         description: Internal server error
  */
-// *********************************** Companys APIs ***************************************//
+// *********************************** Company APIs ***************************************//
 /**
- * @swagger
- * tags:
- *   - name: Companys
- *     description: API endpoints for managing Companys
- */
+
 /**
  * @swagger
  * /companies:
