@@ -1,8 +1,14 @@
 /**
  * @swagger
  * components:
- *   schemas:
  * 
+ *   securitySchemes:
+ *     BearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * 
+ *   schemas:
  *     ImpressionBase:
  *       type: object
  *       properties:
