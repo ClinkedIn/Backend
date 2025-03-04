@@ -1853,6 +1853,7 @@
  *   - name: Users
  *     description: API endpoints for managing users
  */
+
 /** 
  * @swagger
  * /user/:
@@ -2049,7 +2050,50 @@
  *                 description: Internal server error
  */
 
-
+/**
+ * @swagger
+ * /user/confirm-email:
+ *   get:
+ *     summary: Send email confirmation link
+ *     tags: [Users]
+ *     description: Sends a verification email containing a token for email confirmation.
+ *     operationId: sendEmailConfirmation
+ *     responses:
+ *       200:
+ *         description: Email verification token generated and email sent successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Email verification email sent successfully
+ *               emailVerificationToken: "123456789abcdef"
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       500:
+ *         description: Internal server error
+ *   patch:
+ *     summary: Confirm email address
+ *     tags: [Users]
+ *     description: Confirms the user's email by verifying the token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/ConfirmEmail"
+ *     responses:
+ *       200:
+ *         description: Email confirmed successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Email confirmed successfully
+ *       400:
+ *         description: Invalid or expired token
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       500:
+ *         description: Internal server error
+ */
 
 /**
  * @swagger
@@ -2156,7 +2200,6 @@
  *         description: Internal Server Error
  */
 
-
 /**
  * @swagger
  * /user/profile-picture:
@@ -2198,7 +2241,6 @@
  *       500:
  *         description: Internal Server Error
  */
-
 
 /**
  * @swagger
@@ -2372,7 +2414,6 @@
  *         description: Internal Server Error
  */
 
-
 /**
  * @swagger
  * /user/skills/endorse:
@@ -2406,7 +2447,258 @@
  *         description: Internal Server Error
  */
 
+/**
+ * @swagger
+ * /user/privacy-settings:
+ *   patch:
+ *     summary: Update profile visibility privacy settings
+ *     tags: [Users]
+ *     description: Update the user's profile visibility settings. Allowed values are "public", "private", or "connections-only".
+ *     operationId: updateProfilePrivacySettings
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/ProfilePrivacySettings"
+ *     responses:
+ *       200:
+ *         description: Privacy settings updated successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Privacy settings updated successfully"
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       500:
+ *         description: Internal server error
+ */
 
+/**
+ * @swagger
+ * /user/follow/{userId}:
+ *   post:
+ *     summary: Follow a user without connecting
+ *     tags: [Users]
+ *     description: Allows a user to follow another user without sending a connection request.
+ *     operationId: followUser
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to follow
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User followed successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User followed successfully"
+ *       400:
+ *         description: Cannot follow this user
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ * 
+ *   delete:
+ *     summary: Unfollow a user
+ *     tags: [Users]
+ *     description: Allows a user to unfollow another user.
+ *     operationId: unfollowUser
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to unfollow
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unfollowed successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User unfollowed successfully"
+ *       400:
+ *         description: Cannot unfollow this user
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/blocked:
+ *   get:
+ *     summary: Get list of blocked users
+ *     tags: [Users]
+ *     description: Retrieve the list of users that the logged-in user has blocked.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Blocked users list retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               blockedUsers: ["userId1", "userId2"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ */
+
+/**
+ * @swagger
+ * /user/block/{userId}:
+ *   post:
+ *     summary: Block a user
+ *     tags: [Users]
+ *     description: Block a user from interacting with the logged-in user.
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to block
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User blocked successfully"
+ *       400:
+ *         description: Cannot block this user
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *   delete:
+ *     summary: Unblock a user
+ *     tags: [Users]
+ *     description: Unblock a previously blocked user.
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to unblock
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User unblocked successfully"
+ *       400:
+ *         description: Cannot unblock this user
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /user/message-requests:
+ *   post:
+ *     summary: Send a message request to a non-connection
+ *     tags: [Messaging]
+ *     description: Allows a user to send a message request to another user who is not in their connections.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               recipientUserId:
+ *                 type: string
+ *                 example: "user123"
+ *               message:
+ *                 type: string
+ *                 example: "Hi, I'd like to connect with you."
+ *     responses:
+ *       201:
+ *         description: Message request sent successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Message request sent."
+ *       400:
+ *         description: Invalid request data.
+ *       401:
+ *         description: Unauthorized, user must be logged in.
+ *       403:
+ *         description: Recipient has restricted message requests.
+ *       500:
+ *         description: Internal server error.
+ *
+ *   get:
+ *     summary: Get pending message requests
+ *     tags: [Messaging]
+ *     description: Retrieves a list of message requests received by the logged-in user.
+ *     responses:
+ *       200:
+ *         description: List of pending message requests.
+ *         content:
+ *           application/json:
+ *             example:
+ *               messageRequests: 
+ *                 - senderId: "user456"
+ *                   senderName: "Jane Doe"
+ *                   messagePreview: "Hello, I wanted to..."
+ *                   timestamp: "2025-03-04T12:00:00Z"
+ *       401:
+ *         description: Unauthorized, user must be logged in.
+ *       500:
+ *         description: Internal server error.
+ *
+ *   patch:
+ *     summary: Accept or reject a message request
+ *     tags: [Messaging]
+ *     description: Allows a user to accept or reject a message request from a non-connection.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               sendingUserId:
+ *                 type: string
+ *                 example: "user123"
+ *               action:
+ *                 type: string
+ *                 enum: ["accept", "reject"]
+ *                 example: "accept"
+ *     responses:
+ *       200:
+ *         description: Message request handled successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Message request accepted."
+ *       400:
+ *         description: Invalid request data.
+ *       401:
+ *         description: Unauthorized, user must be logged in.
+ *       404:
+ *         description: Message request not found.
+ *       500:
+ *         description: Internal server error.
+ */
 
 
 /**
@@ -2812,4 +3104,337 @@
  *           type: array
  *           items:
  *             $ref: "#/components/schemas/Skill"
+ *     ConfirmEmail:
+ *       type: object
+ *       required:
+ *         - emailVerificationToken
+ *       properties:
+ *         emailVerificationToken:
+ *           type: string
+ *           example: "123456789abcdef"
+ * 
+ *     ProfilePrivacySettings:
+ *       type: object
+ *       required:
+ *         - profilePrivacySettings
+ *       properties:
+ *         profilePrivacySettings:
+ *           type: string
+ *           enum: [public, private, connections-only]
+ *           example: public
+ */
+
+
+// *********************************** Connections APIs ******************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Connections
+ *     description: Managing connections and connection requests
+ */
+
+/**
+ * @swagger
+ * /connections/request/{targetUserId}:
+ *   post:
+ *     summary: Send connection request to another user
+ *     tags: [Connections]
+ *     description: Send a connection request to the user specified by targetUserId.
+ *     parameters:
+ *       - name: targetUserId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to send a connection request to
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Connection request sent successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Connection request sent successfully"
+ *       400:
+ *         description: Invalid user ID 
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       409:
+ *         description: request already sent
+ *       404:
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /connections/requests/{userId}:
+ *   patch:
+ *     summary: Accept or decline a connection request
+ *     tags: [Connections]
+ *     description: Accept or decline a pending connection request.
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user that sent the request
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [accept, decline]
+ *                 example: accept
+ *     responses:
+ *       200:
+ *         description: Connection request updated successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Connection request accepted"
+ *       400:
+ *         description: Invalid action or userId
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: Connection request not found
+ */
+
+/**
+ * @swagger
+ * /connections/{userId}:
+ *   delete:
+ *     summary: Remove a connection
+ *     tags: [Connections]
+ *     description: Remove an existing connection.
+ *     parameters:
+ *       - name: uderId
+ *         in: path
+ *         required: true
+ *         description: The ID of the user to remove
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Connection removed successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Connection removed successfully"
+ *       400:
+ *         description: Invalid user ID
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: user not found
+ */
+
+/**
+ * @swagger
+ * /connections:
+ *   get:
+ *     summary: Get a list of connections
+ *     tags: [Connections]
+ *     description: Retrieve a list of all connections for the logged-in user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Connections retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               connections: ["user123", "user456"]
+ *
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ */
+
+/**
+ * @swagger
+ * /connections/requests:
+ *   get:
+ *     summary: Get a list of pending connection requests
+ *     tags: [Connections]
+ *     description: Retrieve a list of all pending connection requests for the logged-in user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending connection requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               pendingRequests: ["user123", "user456"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ */
+
+
+
+
+
+
+// *********************************** Notifications APIs ******************************************//
+
+/**
+ * @swagger
+ * tags:
+ *   name: Notifications
+ *   description: Notification management API
+ *
+ * /notifications:
+ *   get:
+ *     summary: Get notifications for likes, comments, connection requests, and messages
+ *     tags: [Notifications]
+ *     description: Retrieve a list of notifications for the logged-in user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notifications retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               notifications: [
+ *                 {
+ *                   id: "notif123",
+ *                   from: "user456",
+ *                   subject: "like",
+ *                   text: "Alice liked your post",
+ *                   isRead: false
+ *                 },
+ *                 {
+ *                   id: "notif456",
+ *                   from: "user789",
+ *                   subject: "message",
+ *                   text: "Bob sent you a message",
+ *                   isRead: false
+ *                 }
+ *               ]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *
+ * /notifications/{notificationId}/read:
+ *   patch:
+ *     summary: Mark a notification as read
+ *     tags: [Notifications]
+ *     description: Updates a specific notification to mark it as read.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: notificationId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Notification marked as read successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Notification marked as read"
+ *       404:
+ *         description: Notification not found
+ *
+ * /notifications/unseenCount:
+ *   get:
+ *     summary: Get unseen notifications count
+ *     tags: [Notifications]
+ *     description: Returns the count of unseen notifications for the logged-in user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unseen notifications count retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               unseenCount: 5
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *
+ * /notifications/pushToken:
+ *   post:
+ *     summary: Register or update push notification token
+ *     tags: [Notifications]
+ *     description: Allows users to register or update their Firebase Cloud Messaging (FCM) token for push notifications.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *                 example: "exampleFcmToken12345"
+ *     responses:
+ *       200:
+ *         description: Push notification token registered successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Push notification token registered"
+ *       400:
+ *         description: Invalid request body
+ */
+
+
+
+// *********************************** Search APIs ******************************************//
+/**
+ * @swagger
+ * tags:
+ *   - name: Search
+ *     description: API endpoints for search
+ */
+
+/**
+ * @swagger
+ * /search:
+ *   get:
+ *     summary: Search for users by name, company, or industry
+ *     tags: [Search]
+ *     description: Retrieve a list of users that match the search criteria (name, company, or industry).
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         required: true
+ *         description: Search query for user name, company, or industry
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               users: [
+ *                 {
+ *                   userId: "user123",
+ *                   firstName: "John",
+ *                   lastName: "Doe",
+ *                   company: "Example Corp",
+ *                   industry: "Technology"
+ *                 },
+ *                 {
+ *                   userId: "user456",
+ *                   firstName: "Jane",
+ *                   lastName: "Smith",
+ *                   company: "Acme Inc",
+ *                   industry: "Finance"
+ *                 }
+ *               ]
+ *       400:
+ *         description: Invalid search query
+ *       401:
+ *         description: Unauthorized, user must be logged in
  */
