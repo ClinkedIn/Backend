@@ -1,4 +1,5 @@
 require('dotenv').config();
+const yaml = require('js-yaml'); // Add this import at the top
 const process = require('process');
 const express = require('express');
 const swaggerUI = require('swagger-ui-express');
@@ -33,7 +34,39 @@ app.use('/jobs', jobRouter);
 app.use('/company', companyRouter);
 
 
-app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
+app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec, {
+  swaggerOptions: {
+      dom_id: '#swagger-ui',
+      displayRequestDuration: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+      tryItOutEnabled: true,
+      persistAuthorization: true,
+      displayOperationId: true,
+      filter: true,
+      supportedSubmitMethods: ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'],
+      // Add download options
+      defaultModelsExpandDepth: -1,
+      defaultModelExpandDepth: -1,
+      docExpansion: 'none',
+      // Enable export
+      deepLinking: true,
+      layout: "StandaloneLayout",
+  },
+  customCss: '.swagger-ui .topbar { display: flex !important; }',
+  customSiteTitle: "Your API Documentation"
+}));
+app.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Serve Swagger spec as YAML
+app.get('/swagger.yaml', (req, res) => {
+  const yamlString = yaml.dump(swaggerSpec);
+  res.setHeader('Content-Type', 'text/yaml');
+  res.send(yamlString);
+});
 
 app.listen(3000, () => {
   console.log('server started');
