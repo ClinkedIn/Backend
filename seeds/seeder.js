@@ -9,7 +9,7 @@ const postSeeder = require('./post');
 const commentSeeder = require('./comment');
 const chatGroupSeeder = require('./chatGroup');
 const directChatSeeder = require('./directChat');
-const ChatMessageSeeder = require('./chatMessage');
+const chatMessageSeeder = require('./chatMessage');
 const companySeeder = require('./company');
 const impressionSeeder = require('./impression');
 const jobSeeder = require('./job');
@@ -33,6 +33,7 @@ const { createRandomIds } = require('./init');
         await repostSeeder();
         await chatGroupSeeder();
         await directChatSeeder();
+        await chatMessageSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');
