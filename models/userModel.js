@@ -72,7 +72,12 @@ const userSchema = new mongoose.Schema({
     sentConnectionRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     receivedConnectionRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     messageRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-
+    chats: [{
+        chatId: { type: mongoose.Schema.Types.ObjectId, refPath: 'chats.chatType' },
+        chatType: { type: String, enum: ['DirectChat', 'ChatGroup'] },
+        unreadCount: { type: Number, default: 0 },
+        lastReadAt: { type: Date }
+    }],
     defaultMode: { type: String, enum: ["light", "dark"], default: "light" },
     googleId: { type: String, default: null },
     fcmToken: { type: String },

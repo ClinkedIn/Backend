@@ -31,6 +31,7 @@ const { createRandomIds } = require('./init');
         await postSeeder();
         await commentSeeder();
         await repostSeeder();
+        await chatGroupSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');
