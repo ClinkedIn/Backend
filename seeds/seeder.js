@@ -30,6 +30,7 @@ const { createRandomIds } = require('./init');
         await userSeeder();
         await postSeeder();
         await commentSeeder();
+        await repostSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');

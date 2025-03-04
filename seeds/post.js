@@ -28,7 +28,7 @@ function createRandomPosts() {
             impressions: impressions,
             comments: [],
             reposts: reposts,
-            isActive: faker.datatype.boolean(),
+            isActive: true,
             createdAt: faker.date.recent({ days: 450 })
         });
     }
