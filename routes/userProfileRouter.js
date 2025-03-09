@@ -7,4 +7,6 @@ const user = require('../controllers/userProfileController');
 router.route('/education')
     .patch(mockVerifyToken,user.addEducation)
 
+router.route('/profile')
+    .patch(mockVerifyToken,user.editIntro)
 module.exports = router;

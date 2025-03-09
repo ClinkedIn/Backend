@@ -45,7 +45,70 @@ const addEducation = async (req, res) => {
         });
     }
 };
-const editProfile = async(req, res) => {}
+const editIntro = async(req, res) => {
+    try {
+        const userId = req.user.id;
+        const {
+            firstName,
+            lastName,
+            bio,
+            location,
+            mainEducation,
+            industry
+        } = req.body;
+
+        // Validate required fields
+        const requiredFields = ['firstName', 'lastName', 'bio', 'location', 'industry', 'mainEducation'];
+        const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
+        
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                missingFields
+            });
+        }
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            {
+                $set: {
+                    firstName,
+                    lastName,
+                    bio,
+                    location,
+                    mainEducation,
+                    industry
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Intro updated successfully',
+            user: {
+                firstName: updatedUser.firstName,
+                lastName: updatedUser.lastName,
+                bio: updatedUser.bio,
+                location: updatedUser.location,
+                industry: updatedUser.industry
+            }
+        });
+
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ 
+            error: 'Failed to update profile',
+            details: error.message 
+        });
+    }
+};
 
 
-module.exports = { addEducation };
+module.exports = { 
+    addEducation,
+    editIntro
+};

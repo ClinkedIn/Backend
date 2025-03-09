@@ -2184,7 +2184,7 @@
  *       content:
  *         application/json:
  *           schema:
- *             $ref: "#/components/schemas/UpdateUserProfile"
+ *             $ref: "#/components/schemas/UpdateUserIntro"
  *     responses:
  *       200:
  *         description: User profile updated successfully
@@ -3032,7 +3032,7 @@
  *           format: uri
  *           example: "https://www.credly.com/badges/123456"
  * 
- *     UpdateUserProfile:
+ *     UpdateUserIntro:
  *       type: object
  *       properties:
  *         firstName:
@@ -3047,19 +3047,11 @@
  *         location:
  *           type: string
  *           example: "San Francisco, USA"
- *         workExperience:
- *           type: array
- *           items:
- *             $ref: "#/components/schemas/WorkExperience"
- *         education:
- *           type: array
- *           items:
- *             $ref: "#/components/schemas/Education"
- *         skills:
- *           type: array
- *           items:
- *             type: string
- *           example: ["JavaScript", "Python", "Machine Learning"]
+ *         mainEducation:
+ *           type: integer
+ *         industry:
+ *           type: string
+ *           example: "Software Development"
  * 
  *     UserProfile:
  *       type: object
