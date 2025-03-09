@@ -3,7 +3,16 @@ const mongoose = require("mongoose");
 const companySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Company creator
   admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Company admins
-  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users following the company
+  followers: [{
+    entity: { type: mongoose.Schema.Types.ObjectId, refPath: 'followers.entityType' },
+    entityType: { type: String, enum: ['User', 'Company'] },
+    followedAt: { type: Date, default: Date.now }
+  }],
+  following: [{
+    entity: { type: mongoose.Schema.Types.ObjectId, refPath: 'following.entityType' },
+    entityType: { type: String, enum: ['User', 'Company'] },
+    followedAt: { type: Date, default: Date.now }
+  }],
   name: { type: String, required: true },
   address: { type: String, required: true, unique: true }, // Unique LinkedIn-style URL
   website: { type: String },
