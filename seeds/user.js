@@ -121,10 +121,26 @@ async function createRandomUsers() {
         // Store relationship data separately
         userRelationships.push({
             userId,
-            following: faker.helpers.arrayElements(
-                userIds.filter(id => id !== userId), 
-                faker.number.int({ min: 0, max: 10 })
-            ),
+            following: [
+                // Following users
+                ...faker.helpers.arrayElements(
+                    userIds.filter(id => id !== userId),
+                    faker.number.int({ min: 0, max: 8 })
+                ).map(id => ({
+                    entity: id,
+                    entityType: 'User',
+                    followedAt: faker.date.past({ years: 1 })
+                })),
+                // Following companies
+                ...faker.helpers.arrayElements(
+                    companyIds,
+                    faker.number.int({ min: 0, max: 5 })
+                ).map(id => ({
+                    entity: id,
+                    entityType: 'Company',
+                    followedAt: faker.date.past({ years: 1 })
+                }))
+            ],
             connectionList: faker.helpers.arrayElements(
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 8 })
@@ -190,8 +206,15 @@ async function updateUserRelationships() {
     for (const relationship of userRelationships) {
         // Calculate followers based on who's following this user
         const followers = userRelationships
-            .filter(r => r.following.includes(relationship.userId))
-            .map(r => r.userId);
+            .filter(r => r.following.some(f => 
+                f.entity.toString() === relationship.userId.toString() && 
+                f.entityType === 'User'
+            ))
+            .map(r => ({
+                entity: r.userId,
+                entityType: 'User',
+                followedAt: faker.date.past({ years: 1 })
+            }));
 
         // Calculate received connection requests
         const receivedConnectionRequests = userRelationships

@@ -57,8 +57,16 @@ const userSchema = new mongoose.Schema({
     posts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
     reposts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Repost" }],
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: [{
+        entity: { type: mongoose.Schema.Types.ObjectId, refPath: 'following.entityType' },
+        entityType: { type: String, enum: ['User', 'Company'] },
+        followedAt: { type: Date, default: Date.now }
+    }],
+    followers: [{
+        entity: { type: mongoose.Schema.Types.ObjectId, refPath: 'followers.entityType' },
+        entityType: { type: String, enum: ['User', 'Company'] },
+        followedAt: { type: Date, default: Date.now }
+    }],
     connectionList: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     profileViews: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
