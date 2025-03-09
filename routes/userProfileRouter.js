@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const { verifyToken, isLoggedIn, verifyGoogleToken, mockVerifyToken } = require('../middlewares/auth');
+
+const user = require('../controllers/userProfileController');
+
+router.route('/education')
+    .patch(mockVerifyToken,user.addEducation)
+
+module.exports = router;

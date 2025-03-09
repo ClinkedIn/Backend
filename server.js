@@ -6,6 +6,7 @@ const swaggerUI = require('swagger-ui-express');
 const { swaggerSpec } = require('./swagger');
 
 const userRouter = require('./routes/userRoutes');
+const userProfileRouter = require('./routes/userProfileRouter');
 const postRouter = require('./routes/postRoutes');
 const reportRouter = require('./routes/reportRoutes');
 const repostRouter = require('./routes/repostRoutes');
@@ -24,6 +25,7 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/user', userRouter);
+app.use('/user', userProfileRouter);
 app.use('/posts', postRouter);
 app.use('/report', reportRouter);
 app.use('/repost', repostRouter);

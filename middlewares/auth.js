@@ -22,6 +22,16 @@ const verifyToken = async (req, res, next) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 }
+const mockUser = {
+    id: 'a0a20b073ac7c8facebfaa11', // Use an ID from your seeded users
+    email: 'Krystina18@yahoo.com',
+    // Add other user properties you need
+};
+
+const mockVerifyToken = async (req, res, next) => {
+    req.user = mockUser;
+    next();
+};
 const verifyGoogleToken = async (req, res, next) => {
     try {
         const token = req.cookies.googleToken;
@@ -35,4 +45,4 @@ const verifyGoogleToken = async (req, res, next) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 }
-module.exports = { isLoggedIn, verifyToken, verifyGoogleToken };
+module.exports = { isLoggedIn, verifyToken, verifyGoogleToken, mockVerifyToken };

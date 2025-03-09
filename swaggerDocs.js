@@ -2339,7 +2339,7 @@
 /**
  * @swagger
  * /user/education:
- *   post:
+ *   patch:
  *     summary: Add education
  *     tags: [Users]
  *     description: Add an education entry to a user's profile
