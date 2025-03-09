@@ -27,7 +27,16 @@ const userSchema = new mongoose.Schema({
         skills: [{ type: String }],
         media: { type: String }
     }],
-
+    mainEducation: {
+        type: Number,  // Index of the education in the education array
+        default: 0,    // First education entry is default
+        validate: {
+            validator: function(v) {
+                return v >= 0 && v < this.education.length;
+            },
+            message: 'Main education index must be within education array bounds'
+        }
+    },
     skills: [{
         skillName: { type: String, required: true },
         endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
@@ -98,3 +107,12 @@ const userSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true }
 }, { timestamps: true }); // Adds createdAt & updatedAt automatically
  module.exports = mongoose.model('User', userSchema);
+
+
+ userSchema.methods.setMainEducation = async function(index) {
+    if (index < 0 || index >= this.education.length) {
+        throw new Error('Invalid education index');
+    }
+    this.mainEducation = index;
+    return this.save();
+};
