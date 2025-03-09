@@ -4,7 +4,7 @@ const userModel = require('../models/userModel');
 
 const addEducation = async (req, res) => {
     try {
-        const userId = req.user.id; // From auth middleware
+        const userId = req.user.id;
         const educationData = {
             school: req.body.school,
             degree: req.body.degree,
@@ -18,12 +18,10 @@ const addEducation = async (req, res) => {
             media: req.body.media
         };
 
-        // Validate required fields
         if (!educationData.school) {
             return res.status(400).json({ error: 'School name is required' });
         }
 
-        // Add education to user profile
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { $push: { education: educationData } },
@@ -47,5 +45,7 @@ const addEducation = async (req, res) => {
         });
     }
 };
+const editProfile = async(req, res) => {}
+
 
 module.exports = { addEducation };

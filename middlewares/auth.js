@@ -23,7 +23,7 @@ const verifyToken = async (req, res, next) => {
     }
 }
 const mockUser = {
-    id: 'a0a20b073ac7c8facebfaa11', // Use an ID from your seeded users
+    id: '801ff1f5550a99e2f3fc7de6', // Use an ID from your seeded users
     email: 'Krystina18@yahoo.com',
     // Add other user properties you need
 };
