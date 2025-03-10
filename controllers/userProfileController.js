@@ -1,6 +1,54 @@
 const userModel = require('../models/userModel');
 
+const addExpperience = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const experienceData = {
+            jobTitle: req.body.jobTitle,
+            companyName: req.body.companyName,
+            fromDate: req.body.fromDate,
+            toDate: req.body.toDate,
+            employmentType: req.body.employmentType,
+            location: req.body.location,
+            locationType: req.body.locationType,
+            description: req.body.description,
+            foundVia: req.body.foundVia,
+            skills: req.body.skills,
+            media: req.body.media
+        };
+        if (!experienceData.jobTitle) {
+            return res.status(400).json({ error: 'Job title is required' });
+        }
+        if (!experienceData.companyName) {
+            return res.status(400).json({error: 'Company name is required'})
+        }
+        if (!experienceData.startDate || !experienceData.endDate) {
+            return res.status(400).json({error: 'Start and end date are required'})
+        }
 
+        const updatedUser = await userModel.findById(
+            userId,
+            { $push: { workExperience: experienceData } },
+            { new: true, runValidators: true }
+        )
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Experience added successfully',
+            education: updatedUser.education[updatedUser.education.length - 1]
+        });
+
+    } catch (error) {
+        console.error('Error adding Experience:', error);
+        res.status(500).json({ 
+            error: 'Failed to add education',
+            details: error.message 
+        });
+    }
+}
 
 const addEducation = async (req, res) => {
     try {
@@ -110,5 +158,6 @@ const editIntro = async(req, res) => {
 
 module.exports = { 
     addEducation,
-    editIntro
+    editIntro,
+    addExpperience
 };

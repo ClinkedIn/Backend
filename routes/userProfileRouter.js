@@ -9,4 +9,8 @@ router.route('/education')
 
 router.route('/profile')
     .patch(mockVerifyToken,user.editIntro)
+
+router.route('/experience')
+    .put(mockVerifyToken, user.addPosition)
+
 module.exports = router;
