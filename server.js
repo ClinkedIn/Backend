@@ -16,7 +16,8 @@ const messageRouter = require('./routes/messageRoutes');
 
 const jobRouter = require('./routes/jobRoutes');
 const companyRouter = require('./routes/companyRoutes');
-
+//to be removed
+const uploadRouter = require('./routes/uploadRoutes');
 const connectDB = require('./models/db');
 
 const app = express();
@@ -34,7 +35,7 @@ app.use('/chats', chatRouter);
 app.use('/messages', messageRouter);
 app.use('/jobs', jobRouter);
 app.use('/company', companyRouter);
-
+app.use('/upload', uploadRouter);
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec, {
   swaggerOptions: {
