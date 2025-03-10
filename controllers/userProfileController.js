@@ -3,11 +3,13 @@ const userModel = require('../models/userModel');
 const addExpperience = async (req, res) => {
     try {
         const userId = req.user.id;
+        
         const experienceData = {
             jobTitle: req.body.jobTitle,
             companyName: req.body.companyName,
             fromDate: req.body.fromDate,
             toDate: req.body.toDate,
+            currentlyWorking: req.body.currentlyWorking,
             employmentType: req.body.employmentType,
             location: req.body.location,
             locationType: req.body.locationType,
@@ -16,17 +18,21 @@ const addExpperience = async (req, res) => {
             skills: req.body.skills,
             media: req.body.media
         };
+
         if (!experienceData.jobTitle) {
-            return res.status(400).json({ error: 'Job title is required' });
+            return res.status(400).json({ error: 'Job Title is required' });
         }
         if (!experienceData.companyName) {
-            return res.status(400).json({error: 'Company name is required'})
+            return res.status(400).json({error: 'Company Name is required'})
         }
-        if (!experienceData.startDate || !experienceData.endDate) {
-            return res.status(400).json({error: 'Start and end date are required'})
+        if (!experienceData.startDate) {
+            return res.status(400).json({error: 'Start Date is required'})
+        }
+        if (!experienceData.endDate && !experienceData.currentlyWorking) {
+            return res.status(400).json({error: 'End Date is required'}) 
         }
 
-        const updatedUser = await userModel.findById(
+        const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { $push: { workExperience: experienceData } },
             { new: true, runValidators: true }
