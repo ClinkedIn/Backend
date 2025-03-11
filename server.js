@@ -71,5 +71,5 @@ app.get('/swagger.yaml', (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('server started');
+  console.log(`server started: http://localhost:3000`);
 });
