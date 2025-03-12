@@ -11,6 +11,18 @@ router.route('/profile')
     .patch(mockVerifyToken,user.editIntro)
 
 router.route('/experience')
-    .put(mockVerifyToken, user.addExpperience)
+    .post(mockVerifyToken, user.addExperience)
+    .get(mockVerifyToken, user.getUserExperiences)
+
+router.route('/experience/:index')
+    .put(mockVerifyToken,  user.updateExperience);
+
+router.route('/skills')
+    .post(mockVerifyToken, user.addSkill)
+    .get(mockVerifyToken, user.getUserSkills)
+
+router.route('/skills/:index')
+    .put(mockVerifyToken,  user.updateSkill);
+
 
 module.exports = router;
