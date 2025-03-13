@@ -26,7 +26,7 @@ const mockVerifyToken = (req, res, next) => {
 
 app.patch('/education', mockVerifyToken, addEducation);
 
-describe('PATCH /education', () => {
+describe('POST /education', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });

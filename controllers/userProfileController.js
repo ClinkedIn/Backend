@@ -1,5 +1,5 @@
 const userModel = require('../models/userModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utilities/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, validateEndorsements } = require('../utilities/userProfileUtils')
 const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 
@@ -80,7 +80,7 @@ const addExperience = async (req, res) => {
         user.workExperience.push(experienceData);
 
         user.workExperience = sortWorkExperience(user.workExperience);
-       // console.log(user.workExperience)
+        // console.log(user.workExperience)
 
         await user.save();
 
@@ -89,14 +89,14 @@ const addExperience = async (req, res) => {
             fromDate: experienceData.fromDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
             toDate: experienceData.toDate ? experienceData.toDate.toISOString().split('T')[0] : null
         };
-        
+
         const formattedWorkExperience = user.workExperience.map(exp => {
             const expObj = exp.toObject ? exp.toObject() : exp;
             return {
                 ...expObj,
-                fromDate: expObj.fromDate instanceof Date ? 
+                fromDate: expObj.fromDate instanceof Date ?
                     expObj.fromDate.toISOString().split('T')[0] : expObj.fromDate,
-                toDate: expObj.toDate instanceof Date ? 
+                toDate: expObj.toDate instanceof Date ?
                     expObj.toDate.toISOString().split('T')[0] : expObj.toDate
             };
         });
@@ -109,9 +109,9 @@ const addExperience = async (req, res) => {
 
     } catch (error) {
         console.error('Error adding Experience:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to add experience',
-            details: error.message 
+            details: error.message
         });
     }
 };
@@ -157,18 +157,18 @@ const updateExperience = async (req, res) => {
             return res.status(404).json({ message: 'Experience not found' });
         }
 
-        user.workExperience[experienceIndex] = { 
-            ...user.workExperience[experienceIndex], 
-            ...updatedData 
+        user.workExperience[experienceIndex] = {
+            ...user.workExperience[experienceIndex],
+            ...updatedData
         };
-        
+
         user.workExperience = sortWorkExperience(user.workExperience);
 
         await user.save();
 
-        res.status(200).json({ 
-            message: 'Experience updated successfully', 
-            experience: user.workExperience 
+        res.status(200).json({
+            message: 'Experience updated successfully',
+            experience: user.workExperience
         });
 
     } catch (error) {
@@ -295,7 +295,7 @@ const updateSkill = async (req, res) => {
 
 
 
-
+//------------------------------------------EDUCATION--------------------------
 const addEducation = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -333,13 +333,126 @@ const addEducation = async (req, res) => {
 
     } catch (error) {
         console.error('Error adding education:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to add education',
-            details: error.message 
+            details: error.message
         });
     }
 };
-const editIntro = async(req, res) => {
+const editEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const educationIndex = parseInt(req.params.index);
+        const updatedData = req.body;
+        // Get existing user data
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        // Validate education index
+        if (educationIndex < 0 || educationIndex >= user.education.length || isNaN(educationIndex)) {
+            return res.status(404).json({ message: 'Education not found' });
+        }
+        // Get existing education entry
+        const existingEducation = user.education[educationIndex].toObject();
+        // Create merged education data with type checking
+        const mergedEducation = {
+            school: updatedData.school || existingEducation.school,
+            degree: updatedData.degree !== undefined ? updatedData.degree : existingEducation.degree,
+            fieldOfStudy: updatedData.fieldOfStudy !== undefined ? updatedData.fieldOfStudy : existingEducation.fieldOfStudy,
+            startDate: updatedData.startDate ? new Date(updatedData.startDate) : existingEducation.startDate,
+            endDate: updatedData.endDate ? new Date(updatedData.endDate) : existingEducation.endDate,
+            grade: updatedData.grade !== undefined ? updatedData.grade : existingEducation.grade,
+            activities: updatedData.activities !== undefined ? updatedData.activities : existingEducation.activities,
+            description: updatedData.description !== undefined ? updatedData.description : existingEducation.description,
+            skills: updatedData.skills || existingEducation.skills,
+            media: updatedData.media !== undefined ? updatedData.media : existingEducation.media
+        };
+        // Validate required fields
+        if (!mergedEducation.school) {
+            return res.status(400).json({ error: 'School name is required' });
+        }
+        // Update the education entry
+        user.education[educationIndex] = mergedEducation;
+        await user.save();
+        res.status(200).json({
+            message: 'Education updated successfully',
+            education: user.education[educationIndex]
+        });
+
+    } catch (error) {
+        console.error('Error updating education:', error);
+        res.status(500).json({
+            error: 'Failed to update education',
+            details: error.message
+        });
+    }
+};
+
+
+const getEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await userModel.findById(userId);
+        const educationIndex = parseInt(req.params.index);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        if (isNaN(educationIndex) || educationIndex < 0 || educationIndex >= user.education.length) {
+            return res.status(400).json({ message: 'Invalid education index' });
+        }
+        res.status(200).json({
+            message: 'Education updated successfully',
+            education: user.education[educationIndex]
+        });
+    } catch (error) {
+        console.error('Error fetching education:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+const getEducations = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({
+            message: 'Education updated successfully',
+            educations: user.education
+        });
+    } catch (error) {
+        console.error('Error fetching educations:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+const deleteEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const educationIndex = parseInt(req.params.index, 10);
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (isNaN(educationIndex) || educationIndex < 0 || educationIndex >= user.education.length) {
+            return res.status(400).json({ message: 'Invalid education index' });
+        }
+
+        user.education.splice(educationIndex, 1);
+        await user.save();
+
+        res.status(200).json({ message: 'Education deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting education:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+
+//======================INTRO=====================
+const editIntro = async (req, res) => {
     try {
         const userId = req.user.id;
         const {
@@ -354,7 +467,7 @@ const editIntro = async(req, res) => {
         // Validate required fields
         const requiredFields = ['firstName', 'lastName', 'bio', 'location', 'industry', 'mainEducation'];
         const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
-        
+
         if (missingFields.length > 0) {
             return res.status(400).json({
                 error: 'Missing required fields',
@@ -394,16 +507,20 @@ const editIntro = async(req, res) => {
 
     } catch (error) {
         console.error('Error updating profile:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to update profile',
-            details: error.message 
+            details: error.message
         });
     }
 };
 
 
-module.exports = { 
+module.exports = {
     addEducation,
+    editEducation,
+    getEducation,
+    getEducations,
+    deleteEducation,
     editIntro,
     addExperience,
     getUserExperiences,

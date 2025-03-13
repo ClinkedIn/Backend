@@ -6,8 +6,12 @@ const upload = require('../middlewares/multer');
 const user = require('../controllers/userProfileController');
 
 router.route('/education')
-    .patch(mockVerifyToken,user.addEducation);
-
+    .post(mockVerifyToken,user.addEducation)
+    .get(mockVerifyToken,user.getEducations);
+router.route('/education/:index')
+    .get(mockVerifyToken,user.getEducation)
+    .patch(mockVerifyToken,user.editEducation)
+    .delete(mockVerifyToken,user.deleteEducation);
 router.route('/profile')
     .patch(mockVerifyToken,user.editIntro);
 
