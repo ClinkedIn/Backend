@@ -33,27 +33,29 @@ const validateSkillName = (skillName) => {
 // Helper function to validate endorsements
 const mongoose = require('mongoose');
 
-const validateEndorsements = async (endorsements) => {
+const validateEndorsements = async (endorsements, userId) => {
     if (!Array.isArray(endorsements)) {
         throw new Error('Endorsements must be an array');
     }
 
-   // console.log('Received endorsements:', endorsements);
+    if (endorsements.includes(userId)) {
+        return { valid: false, message: 'Users cannot endorse themselves' };
+    }
 
-    const uniqueEndorsements = [...new Set(endorsements)]; // Remove duplicates
-    const validObjectIds = uniqueEndorsements.filter(id => mongoose.Types.ObjectId.isValid(id));
+    // Check for duplicate endorsements
+    const duplicates = endorsements.filter((id, index) => endorsements.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+        return { valid: false, message: 'Duplicate endorsements are not allowed', duplicates };
+    }
 
-    //console.log('Valid Object IDs:', validObjectIds);
+    const validObjectIds = endorsements.filter(id => mongoose.Types.ObjectId.isValid(id));
 
     if (validObjectIds.length === 0) {
-       // console.log('No valid MongoDB ObjectIds provided');
         return { valid: false, message: 'No valid MongoDB ObjectIds provided', endorsements };
     }
 
     try {
         const existingUsers = await userModel.find({ _id: { $in: validObjectIds } }, '_id');
-
-        //console.log('Existing Users:', existingUsers);
 
         if (!existingUsers || existingUsers.length === 0) {
             return { valid: false, message: 'No matching users found in database', endorsements };
@@ -62,7 +64,7 @@ const validateEndorsements = async (endorsements) => {
         const existingUserIds = existingUsers.map(user => user._id.toString());
 
         // Check for invalid user IDs
-        const invalidUserIds = uniqueEndorsements.filter(id => !existingUserIds.includes(id));
+        const invalidUserIds = validObjectIds.filter(id => !existingUserIds.includes(id));
         if (invalidUserIds.length > 0) {
             return { valid: false, message: 'Some endorsement user IDs are invalid', invalidUserIds };
         }
@@ -73,6 +75,7 @@ const validateEndorsements = async (endorsements) => {
         throw new Error('Error fetching endorsements from MongoDB');
     }
 };
+
 
 
 module.exports = { sortWorkExperience, validateSkillName, validateEndorsements};

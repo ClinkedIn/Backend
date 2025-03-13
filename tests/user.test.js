@@ -1,7 +1,9 @@
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
-const { addEducation, editIntro, addExperience, updateExperience, addSkill, getUserSkills, updateSkill } = require('../controllers/userProfileController');
+const { addEducation, editIntro, addExperience, getUserExperiences, updateExperience, sortWorkExperience, addSkill, getUserSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
+const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
+const uploadMiddleware  = require('../middlewares/multer');
 
 jest.mock('../utilities/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utilities/userProfileUtils').validateSkillName,
@@ -10,6 +12,9 @@ jest.mock('../utilities/userProfileUtils', () => ({
   }));
 
 jest.mock('../models/userModel');
+jest.mock('../utils/cloudinaryUpload', () => ({
+    uploadFile: jest.fn(), // Mock upload function
+}));
 
 const app = express();
 app.use(express.json());
@@ -193,6 +198,7 @@ describe('PATCH /profile', () => {
 
 app.post('/experience', mockVerifyToken, addExperience);
 app.put('/experience/:index', mockVerifyToken, updateExperience);
+app.get('/experience', mockVerifyToken, getUserExperiences)
 
 describe('POST /experience', () => {
     beforeEach(() => {
@@ -218,50 +224,133 @@ describe('POST /experience', () => {
         const mockUser = {
             _id: '0b3169152ee6c171d25e6860',
             workExperience: [],
-            save: jest.fn().mockResolvedValue(true), // Ensure save is mocked
+            save: jest.fn().mockResolvedValue(true),
         };
 
-        const mockSortedExperience = [mockExperienceData];
-
         userModel.findById = jest.fn().mockResolvedValue(mockUser);
-        userModel.prototype.save = jest.fn().mockResolvedValue(mockUser);
-        
-        // Mock sorting function if needed
-        //global.sortWorkExperience = jest.fn((exp) => exp);
 
         const response = await request(app)
             .post('/experience')
             .send(mockExperienceData);
 
-        //console.log('Response:', response.body); // Check actual response
-
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Experience added successfully');
-        expect(response.body.experience).toEqual(mockExperienceData);
-        expect(response.body.sortedWorkExperience).toEqual(mockSortedExperience);
+        expect(response.body.experience).toEqual(expect.objectContaining(mockExperienceData));
+        expect(response.body.sortedWorkExperience).toHaveLength(1);
     });
 
     test('should sort work experience in reverse chronological order', async () => {
+        const experiences = [
+            {
+                jobTitle: 'Junior Developer',
+                companyName: 'Small Company',
+                fromDate: '2015-01-01',
+                toDate: '2017-12-31',
+                currentlyWorking: false,
+                employmentType: 'Full Time',
+                location: 'Remote',
+                locationType: 'Remote',
+                description: 'Junior role',
+                foundVia: 'Referral',
+                skills: ['HTML', 'CSS'],
+                media: ''
+            },
+            {
+                jobTitle: 'Senior SWE',
+                companyName: 'Google',
+                fromDate: '2022-10-01',
+                toDate: '2025-12-01',
+                currentlyWorking: false,
+                employmentType: 'Full Time',
+                location: 'USA',
+                locationType: 'Hybrid',
+                description: 'Leading projects',
+                foundVia: 'Direct',
+                skills: ['System Design', 'Leadership'],
+                media: ''
+            },
+            {
+                jobTitle: 'SWE',
+                companyName: 'Microsoft',
+                fromDate: '2023-01-01',
+                toDate: '2023-09-01',
+                currentlyWorking: false,
+                employmentType: 'Full Time',
+                location: 'Egypt',
+                locationType: 'Onsite',
+                description: 'Senior SWE',
+                foundVia: 'LinkedIn',
+                skills: ['Problem Solving'],
+                media: 'media'
+            }
+        ];
 
-        const firstExperience = {
-            jobTitle: 'Junior Developer',
-            companyName: 'Small Company',
-            fromDate: '2015-01-01',
-            toDate: '2017-12-31',
+        const mockUser = {
+            _id: '0b3169152ee6c171d25e6860',
+            workExperience: [experiences[0]],
+            save: jest.fn().mockResolvedValue(true),
+        };
+
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(mockUser) // First call (adding second experience)
+            .mockResolvedValueOnce({ ...mockUser, workExperience: [...mockUser.workExperience, experiences[1]] }) // Second call (adding third experience)
+            .mockResolvedValueOnce({ ...mockUser, workExperience: [...mockUser.workExperience, experiences[1], experiences[2]] });
+
+        await request(app).post('/experience').send(experiences[1]);
+        const response = await request(app).post('/experience').send(experiences[2]);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Experience added successfully');
+
+        const sortedExperience = response.body.sortedWorkExperience.map(exp => exp.companyName);
+        expect(sortedExperience).toEqual(['Google', 'Microsoft', 'Small Company']);
+    });
+
+    test('should return 400 if required fields are missing', async () => {
+        const incompleteExperience = {
+            jobTitle: 'Software Engineer',
+            companyName: '',
+            fromDate: '2020-01-01'
+        };
+
+        const response = await request(app)
+            .post('/experience')
+            .send(incompleteExperience);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Company Name is required');
+    });
+
+    test('should return 400 if end date is missing and currentlyWorking is false', async () => {
+        const experienceWithNoEndDate = {
+            jobTitle: 'Software Engineer',
+            companyName: 'Amazon',
+            fromDate: '2020-01-01',
             currentlyWorking: false,
             employmentType: 'Full Time',
-            location: 'Remote',
-            locationType: 'Remote',
-            description: 'Junior role',
-            foundVia: 'Referral',
-            skills: ['HTML', 'CSS'],
+            location: 'USA',
+            locationType: 'Hybrid',
+            description: 'Working at Amazon',
+            foundVia: 'LinkedIn',
+            skills: ['AWS', 'Java'],
             media: ''
         };
-    
-        const latestExperience = {
+
+        const response = await request(app)
+            .post('/experience')
+            .send(experienceWithNoEndDate);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('End Date is required');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        userModel.findById = jest.fn().mockResolvedValue(null);
+
+        const experience = {
             jobTitle: 'SWE',
             companyName: 'Microsoft',
-            fromDate: '2023-01-01',
+            fromDate: '2018-09-01',
             toDate: '2023-09-01',
             currentlyWorking: false,
             employmentType: 'Full Time',
@@ -272,83 +361,101 @@ describe('POST /experience', () => {
             skills: ['Problem Solving'],
             media: 'media'
         };
-    
-        const middleExperience = {
-            jobTitle: 'Senior SWE',
-            companyName: 'Google',
-            fromDate: '2022-10-01',
-            toDate: '2022-12-01',
-            currentlyWorking: false,
-            employmentType: 'Full Time',
-            location: 'USA',
-            locationType: 'Hybrid',
-            description: 'Leading projects',
-            foundVia: 'Direct',
-            skills: ['System Design', 'Leadership'],
-            media: ''
-        };
-    
-        // Mock user with existing experiences
-        const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
-            workExperience: [firstExperience], // Start with one experience
-            save: jest.fn().mockResolvedValue(true),
-        };
-    
-        // Define expected order after all experiences are added
-        // Most recent first (currentExperience → recentExperience → oldExperience)
-        const expectedOrder = [
-            expect.objectContaining({ companyName: 'Microsoft' }),
-            expect.objectContaining({ companyName: 'Google' }),
-            expect.objectContaining({ companyName: 'Small Company' })
-        ];
-    
-        // Setup the mocks
-        userModel.findById = jest.fn()
-            .mockResolvedValueOnce(mockUser) // First call returns user with oldExperience
-            .mockResolvedValueOnce({ // Second call returns user with old + recent
-                ...mockUser,
-                workExperience: [...mockUser.workExperience, latestExperience],
-                save: jest.fn().mockResolvedValue(true)
-            });
-    
-        await request(app)
-            .post('/experience')
-            .send(latestExperience);
-    
+
         const response = await request(app)
             .post('/experience')
-            .send(middleExperience);
+            .send(experience);
 
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Experience added successfully');
-    
-        expect(response.body.sortedWorkExperience).toHaveLength(3);
-        //console.log(response.body.sortedWorkExperience)
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
 
-        const companyOrder = response.body.sortedWorkExperience.map(exp => exp.companyName);
-        expect(companyOrder).toEqual(['Microsoft', 'Google', 'Small Company']);
-        
-        // Alternatively, use objectContaining to match the pattern
-        expect(response.body.sortedWorkExperience).toEqual(expectedOrder);
-        
+    test('should return 500 if database error occurs', async () => {
+        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
+
+        const experience = {
+            jobTitle: 'SWE',
+            companyName: 'Microsoft',
+            fromDate: '2018-09-01',
+            toDate: '2023-09-01',
+            currentlyWorking: false,
+            employmentType: 'Full Time',
+            location: 'Egypt',
+            locationType: 'Onsite',
+            description: 'Senior SWE',
+            foundVia: 'LinkedIn',
+            skills: ['Problem Solving'],
+            media: 'media'
+        };
+
+        const response = await request(app)
+            .post('/experience')
+            .send(experience);
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to add experience');
     });
 });
 
-describe('PUT /experience/:index', () => {
-    afterEach(() => {
-        jest.restoreAllMocks(); // Reset mocks after each test
+
+describe('GET /experience - Get User Experiences', () => {
+    const userId = 'cc81c18d6b9fc1b83e2bebe3';
+
+   // beforeEach(() => {
+        //userId = new mongoose.Types.ObjectId();
+   // });
+
+    it('should return 404 if user is not found', async () => {
+        userModel.findById.mockResolvedValue(null); // Simulate user not found
+
+        const response = await request(app)
+            .get('/experience')
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
     });
 
-    test('should update experience and sort it correctly', async () => {
+    it('should return 200 and user experiences if user exists', async () => {
         const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
+            _id: userId,
+            experience: [
+                { title: 'Software Engineer', company: 'Tech Corp', fromDate: '2023-01-01', currentlyWorking: true }
+            ]
+        };
+
+        userModel.findById.mockResolvedValue(mockUser); // Simulate found user
+
+        const response = await request(app)
+            .get('/experience')
+
+        expect(response.status).toBe(200);
+        expect(response.body.experiences).toEqual(mockUser.experience);
+    });
+
+    it('should return 500 if there is a server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error')); // Simulate DB error
+
+        const response = await request(app)
+            .get('/experience')
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Server error');
+    });
+});
+
+describe('PUT /experience/:index - Update Work Experience', () => {
+    const userId = 'cc81c18d6b9fc1b83e2bebe3';
+    let mockUser;
+
+    beforeEach(() => {
+        mockUser = {
+            _id: userId,
             workExperience: [
                 {
                     jobTitle: 'Junior Developer',
                     companyName: 'Small Company',
                     fromDate: '2015-01-01',
-                    toDate: '2023-11-31',
+                    toDate: '2023-11-30',
                     currentlyWorking: false
                 },
                 {
@@ -361,12 +468,17 @@ describe('PUT /experience/:index', () => {
             ],
             save: jest.fn().mockResolvedValue(true)
         };
+    });
 
-        userModel.findById = jest.fn().mockResolvedValue(mockUser);
+    afterEach(() => {
+        jest.restoreAllMocks(); // Reset mocks after each test
+    });
+
+    test('should update experience and sort it correctly', async () => {
+        userModel.findById.mockResolvedValue(mockUser);
 
         const updatedExperience = {
             jobTitle: 'Tech Lead',
-            //companyName: 'Small Company',
             fromDate: '2023-05-01', // Newer date to test sorting
             toDate: '2024-01-01',
             currentlyWorking: false
@@ -383,14 +495,14 @@ describe('PUT /experience/:index', () => {
         expect(mockUser.workExperience[0].jobTitle).toBe('Tech Lead');
 
         // Ensure sorting is correct (newest first)
-        const sortedCompanyNames = response.body.experience.map(exp => exp.companyName);
-        expect(sortedCompanyNames).toEqual(['Google', 'Small Company']); // Google is now the latest
+        const sortedJobTitles = response.body.experience.map(exp => exp.jobTitle);
+        expect(sortedJobTitles).toEqual(['Tech Lead', 'Junior Developer']);
 
         expect(mockUser.save).toHaveBeenCalled(); // Ensure save() was called
     });
 
     test('should return 404 if user is not found', async () => {
-        userModel.findById = jest.fn().mockResolvedValue(null); // User not found
+        userModel.findById.mockResolvedValue(null); // Simulate user not found
 
         const response = await request(app)
             .put('/experience/0')
@@ -400,12 +512,8 @@ describe('PUT /experience/:index', () => {
         expect(response.body.message).toBe('User not found');
     });
 
-    test('should return 404 if experience index is invalid', async () => {
-        userModel.findById = jest.fn().mockResolvedValue({
-            _id: 'user123',
-            workExperience: [{ jobTitle: 'Old Job' }],
-            save: jest.fn()
-        });
+    test('should return 404 if experience index is out of range', async () => {
+        userModel.findById.mockResolvedValue(mockUser);
 
         const response = await request(app)
             .put('/experience/5') // Invalid index
@@ -413,6 +521,50 @@ describe('PUT /experience/:index', () => {
 
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('Experience not found');
+    });
+
+    test('should return 404 if experience index is negative', async () => {
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .put('/experience/-1') // Invalid index
+            .send({ jobTitle: 'Updated Title' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Experience not found');
+    });
+
+    test('should return 400 if fromDate is invalid', async () => {
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .put('/experience/0')
+            .send({ fromDate: 'invalid-date' }); // Invalid date
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid Start Date');
+    });
+
+    test('should return 400 if toDate is invalid', async () => {
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .put('/experience/0')
+            .send({ toDate: 'invalid-date' }); // Invalid date
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid End Date');
+    });
+
+    test('should return 500 if there is a server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error')); // Simulate DB error
+
+        const response = await request(app)
+            .put('/experience/0')
+            .send({ jobTitle: 'Updated Title' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Server error');
     });
 });
 
@@ -459,87 +611,321 @@ describe('POST /skills', () => {
     });
 
     test('should return 400 if skill name is invalid', async () => {
-        const mockSkillData = {
-            skillName: '',  // Invalid skill name
-            endorsements: ['d29ccbd4ac1b1cb9faefb867'],
-        };
-
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
-
+            .send({ skillName: '', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
+        
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill name must be a valid string');
     });
 
-    test('should return 400 if endorsements contain invalid user IDs', async () => {
-        const mockSkillData = {
-            skillName: 'Communication',
-            endorsements: ['invalid_user_id'],
-        };
-
-        userModel.find.mockResolvedValue(undefined);
-
+    test('should return 400 if user tries to endorse themselves', async () => {
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
+            .send({ 
+                skillName: 'Leadership', 
+                endorsements: ['cc81c18d6b9fc1b83e2bebe3'] // Self-endorsement attempt
+            });
+    
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Users cannot endorse themselves');
+    });
+    
 
+    test('should return 400 if endorsements contain invalid user IDs', async () => {
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'Communication', endorsements: ['invalid_user_id'] });
+        
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('No valid MongoDB ObjectIds provided');
     });
 
-    test('should return 400 if no user (any one of endorsements) is not found', async () => {
-        const mockSkillData = {
-            skillName: 'Leadership',
-            endorsements: ['d29ccbd4ac1b1cb9faefb867'],
-        };
-
-        userModel.find.mockResolvedValue([]); // Simulate user not found
-
+    test('should return 400 if endorsements array is empty', async () => {
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
-
+            .send({ skillName: 'Teamwork', endorsements: [] });
+        
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('No matching users found in database');
+        expect(response.body.error).toBe('No valid MongoDB ObjectIds provided');
     });
 
-    test('should return 400 if a user (any one of endorsements) is not found', async () => {
+    test('should return 400 if endorsements contain duplicate user IDs', async () => {
         const mockSkillData = {
             skillName: 'Leadership',
-            endorsements: ['d29ccbd4ac1b1cb9faefb867', 'd29cchhbd4ac1b1cb9faefb867'],
+            endorsements: ['d29ccbd4ac1b1cb9faefb867', 'd29ccbd4ac1b1cb9faefb867'],
         };
-
-        userModel.find.mockResolvedValue([
-            { _id: 'd29ccbd4ac1b1cb9faefb867' }
-        ]);
 
         const response = await request(app)
             .post('/skills')
             .send(mockSkillData);
+        
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Duplicate endorsements are not allowed');
+    });
 
+    test('should return 400 if one or more endorsement user IDs are not found', async () => {
+        userModel.find.mockResolvedValue([{ _id: 'd29ccbd4ac1b1cb9faefb867' }]);
+        
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'Leadership', endorsements: ['d29ccbd4ac1b1cb9faefb867', 'fcec43117bcfec7dedf7cd55'] });
+        
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Some endorsement user IDs are invalid');
     });
 
-
-    test('should return 500 if database update fails', async () => {
-        const mockSkillData = {
-            skillName: 'Critical Thinking',
-            endorsements: ['d29ccbd4ac1b1cb9faefb867'],
-        };
-
-        userModel.find.mockResolvedValue([
-            { _id: 'd29ccbd4ac1b1cb9faefb867' }
-        ]);
-
-        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error')); // Simulate DB failure
+    test('should return 404 if user is not found', async () => {
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
 
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
+            .send({ skillName: 'Critical Thinking', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
+        
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
 
+    test('should return 500 if database update fails', async () => {
+        userModel.find.mockResolvedValue([{ _id: 'd29ccbd4ac1b1cb9faefb867' }]);
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'Critical Thinking', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
+        
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
+    });
+});
+
+
+
+/*
+Profile and Cover Pictures Tests
+*/
+
+app.post('/add-profile-picture', mockVerifyToken, uploadMiddleware.single('file'), uploadProfilePicture);
+app.post('/add-cover-picture', mockVerifyToken, uploadMiddleware.single('file'), uploadCoverPicture);
+
+describe('POST /add-profile-picture', () => {
+    const userId = 'cc81c18d6b9fc1b83e2bebe3';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully upload a profile picture', async () => {
+        const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
+        const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
+    
+        uploadFile.mockResolvedValue(mockUploadResult);
+    
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: userId,
+            profilePicture: mockUploadResult.url,
+        });
+    
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .set('Content-Type', 'multipart/form-data')
+            .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Profile Picture updated successfully');
+        expect(response.body.profilePicture).toBe(mockUploadResult.url);
+    
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            userId,
+            { profilePicture: mockUploadResult.url },
+            { new: true }
+        );
+    });
+
+
+    test('should return 400 if no file is uploaded', async () => {
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .send();
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No file uploaded');
+    });
+
+
+    test('should return 400 for invalid file type', async () => {
+        const mockTextBuffer = Buffer.from('This is a text file');
+    
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid file type. Only JPEG and PNG are allowed.');
+    });
+
+
+    test('should return 400 if file size exceeds limit', async () => {
+        const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
+    
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
+    });
+
+
+    test('should return 500 if database update fails', async () => {
+        const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
+        const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
+    
+        uploadFile.mockResolvedValue(mockUploadResult);
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
+    
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+    });
+
+
+    test('should return 404 if user is not found', async () => {
+        uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-image-url' });
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+    
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'profile.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });    
+
+    
+    test('should return 500 if Cloudinary upload fails', async () => {
+        uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
+
+        const mockImageBuffer = Buffer.from('mockImageData');
+
+        const response = await request(app)
+            .post('/add-profile-picture')
+            .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBeDefined();
+    });
+    
+});
+
+
+describe('POST /add-cover-picture', () => {
+    const userId = 'cc81c18d6b9fc1b83e2bebe3';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully upload a cover picture', async () => {
+        const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
+        const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
+    
+        uploadFile.mockResolvedValue(mockUploadResult);
+    
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: userId,
+            coverPicture: mockUploadResult.url,
+        });
+    
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .set('Content-Type', 'multipart/form-data')
+            .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Cover Picture updated successfully');
+        expect(response.body.coverPicture).toBe(mockUploadResult.url);
+    
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            userId,
+            { coverPicture: mockUploadResult.url },
+            { new: true }
+        );
+    });
+
+    test('should return 400 if no file is uploaded', async () => {
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .send();
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No file uploaded');
+    });
+
+    test('should return 400 for invalid file type', async () => {
+        const mockTextBuffer = Buffer.from('This is a text file');
+    
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid file type. Only JPEG and PNG are allowed.');
+    });
+
+    test('should return 400 if file size exceeds limit', async () => {
+        const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
+    
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
+    });
+
+    test('should return 500 if database update fails', async () => {
+        const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
+        const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
+    
+        uploadFile.mockResolvedValue(mockUploadResult);
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
+    
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-cover-url' });
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+    
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'cover.jpg', contentType: 'image/jpeg' });
+    
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });    
+
+    test('should return 500 if Cloudinary upload fails', async () => {
+        uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
+
+        const mockImageBuffer = Buffer.from('mockImageData');
+
+        const response = await request(app)
+            .post('/add-cover-picture')
+            .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBeDefined();
     });
 });

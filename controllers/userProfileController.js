@@ -1,5 +1,52 @@
 const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utilities/userProfileUtils') 
+const cloudinary = require('../utils/cloudinary');
+const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
+
+const uploadUserPicture = async (req, res, fieldName) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        // Validate file type (allow only JPEG, PNG)
+        const allowedMimeTypes = ['image/jpeg', 'image/png'];
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ message: 'Invalid file type. Only JPEG and PNG are allowed.' });
+        }
+
+        // Validate file size (limit: 5MB)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024;
+        if (req.file.size > MAX_FILE_SIZE) {
+            return res.status(400).json({ message: 'File size too large. Maximum allowed size is 5MB.' });
+        }
+
+        const uploadResult = await uploadFile(req.file.buffer);
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            req.user.id,
+            { [fieldName]: uploadResult.url },  // Dynamically updating field (profilePicture or coverPicture)
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: `${fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())} updated successfully`,
+            [fieldName]: uploadResult.url,
+        });
+    } catch (error) {
+        console.error(`Error uploading ${fieldName}:`, error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+};
+
+// Controller functions
+const uploadProfilePicture = (req, res) => uploadUserPicture(req, res, 'profilePicture');
+const uploadCoverPicture = (req, res) => uploadUserPicture(req, res, 'coverPicture');
+
 
 const addExperience = async (req, res) => {
     try {
@@ -8,8 +55,8 @@ const addExperience = async (req, res) => {
         const experienceData = {
             jobTitle: req.body.jobTitle,
             companyName: req.body.companyName,
-            fromDate: new Date(req.body.fromDate), 
-            toDate: req.body.currentlyWorking ? null : new Date(req.body.toDate), 
+            fromDate: req.body.fromDate ? new Date(req.body.fromDate) : null,
+            toDate: req.body.currentlyWorking ? null : (req.body.toDate ? new Date(req.body.toDate) : null),
             currentlyWorking: req.body.currentlyWorking,
             employmentType: req.body.employmentType,
             location: req.body.location,
@@ -23,9 +70,9 @@ const addExperience = async (req, res) => {
         if (!experienceData.jobTitle) return res.status(400).json({ error: 'Job Title is required' });
         if (!experienceData.companyName) return res.status(400).json({ error: 'Company Name is required' });
         if (!experienceData.fromDate) return res.status(400).json({ error: 'Start Date is required' });
-        if (!experienceData.currentlyWorking && !experienceData.toDate) {
-            return res.status(400).json({ error: 'End Date is required' });
-        }
+        if (isNaN(experienceData.fromDate.getTime())) return res.status(400).json({ error: 'Invalid Start Date' });
+        if (!experienceData.currentlyWorking && !experienceData.toDate) return res.status(400).json({ error: 'End Date is required' });
+        if (!req.body.currentlyWorking && isNaN(experienceData.toDate.getTime())) return res.status(400).json({ error: 'Invalid End Date' });
 
         const user = await userModel.findById(userId);
         if (!user) return res.status(404).json({ error: "User not found" });
@@ -86,12 +133,20 @@ const getUserExperiences = async (req, res) => {
     }
 };
 
-
 const updateExperience = async (req, res) => {
     try {
         const userId = req.user.id;
         const experienceIndex = parseInt(req.params.index, 10);
         const updatedData = req.body;
+
+        // Validate dates if provided
+        if (updatedData.fromDate && isNaN(Date.parse(updatedData.fromDate))) {
+            return res.status(400).json({ error: 'Invalid Start Date' });
+        }
+
+        if (updatedData.toDate && isNaN(Date.parse(updatedData.toDate))) {
+            return res.status(400).json({ error: 'Invalid End Date' });
+        }
 
         const user = await userModel.findById(userId);
         if (!user) {
@@ -101,14 +156,13 @@ const updateExperience = async (req, res) => {
         if (experienceIndex < 0 || experienceIndex >= user.workExperience.length) {
             return res.status(404).json({ message: 'Experience not found' });
         }
-        //console.log(user.workExperience);
+
         user.workExperience[experienceIndex] = { 
             ...user.workExperience[experienceIndex], 
             ...updatedData 
         };
         
         user.workExperience = sortWorkExperience(user.workExperience);
-        //console.log(user.workExperience);
 
         await user.save();
 
@@ -123,11 +177,12 @@ const updateExperience = async (req, res) => {
     }
 };
 
+
 const addSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName, endorsements } = req.body;
-        console.log('Request Body:', req.body);
+        //console.log('Request Body:', req.body);
         // Validate skill name
         const skillValidation = validateSkillName(skillName);
         if (!skillValidation.valid) {
@@ -135,7 +190,7 @@ const addSkill = async (req, res) => {
         }
 
         // Validate endorsements
-        const endorsementsValidation = await validateEndorsements(endorsements);
+        const endorsementsValidation = await validateEndorsements(endorsements, userId);
         if (!endorsementsValidation.valid) {
             return res.status(400).json({ error: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
         }
@@ -356,5 +411,7 @@ module.exports = {
     sortWorkExperience,
     addSkill,
     getUserSkills,
-    updateSkill
+    updateSkill,
+    uploadProfilePicture,
+    uploadCoverPicture
 };
