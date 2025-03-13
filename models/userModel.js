@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
         companyName: { type: String, required: true },
         fromDate: { type: Date, required: true },
         toDate: { type: Date },
+        currentlyWorking: {type: Boolean},
         employmentType: { type: String, enum: ["Full Time", "Part Time", "Freelance", "Self Employed", "Contract", "Internship", "Apprenticeship", "Seasonal"], required: true },
         location: { type: String },
         locationType: { type: String, enum: ["Onsite", "Hybrid", "Remote"] },
