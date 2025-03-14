@@ -20,8 +20,8 @@ const generateTokens = (userInfo, res) => {
 
     // Store tokens in HTTP-only cookies
     res.cookie('accessToken', accessToken, {
-        httpOnly: true,  
-        secure: true,    
+        httpOnly: true,
+        secure: true,
         sameSite: 'None',
         maxAge: 10 * 60 * 1000  // 10 minutes
     });
@@ -31,7 +31,7 @@ const generateTokens = (userInfo, res) => {
         secure: true,
         sameSite: 'None',
         maxAge: 24 * 60 * 60 * 1000, // 1 day
-        path: process.env.REFRESH_TOKEN_PATH || '/' 
+        path: process.env.REFRESH_TOKEN_PATH || '/'
     });
 
     return { refreshToken };
@@ -60,7 +60,7 @@ const decryptToken = (token, secret) => {
  */
 const refreshToken = (req, res) => {
     const { refreshToken } = req.cookies;
-    
+
     if (!refreshToken) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
