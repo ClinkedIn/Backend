@@ -1,8 +1,8 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const process = require('process');
-const generateTokens = (payload, res) => {
-    const userInfo  = payload;
+const generateTokens = (userInfo, res) => {
+
 
     // Generate Access Token (short-lived)
     const accessToken = jwt.sign(
