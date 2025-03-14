@@ -100,6 +100,36 @@ const deleteProfilePicture = (req, res) => deleteUserPicture(req, res, 'profileP
 const deleteCoverPicture = (req, res) => deleteUserPicture(req, res, 'coverPicture');
 
 
+const getUserPicture = async (req, res, fieldName) => {
+    try {
+        const userId = req.user.id;
+
+        // Find the user and retrieve only the required field
+        const user = await userModel.findById(userId).select(fieldName);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user[fieldName]) {
+            return res.status(400).json({ message: `${fieldName.replace(/([A-Z])/g, ' $1')} not set` });
+        }
+
+        res.status(200).json({ [fieldName]: user[fieldName] });
+    } catch (error) {
+        console.error(`Error retrieving ${fieldName}:`, error);
+        res.status(500).json({ message: 'Internal server error', error: error.message });
+    }
+};
+
+// Get profile picture
+const getProfilePicture = (req, res) => getUserPicture(req, res, 'profilePicture');
+
+// Get cover picture
+const getCoverPicture = (req, res) => getUserPicture(req, res, 'coverPicture');
+
+
+
 
 /*
 ***************************************************
@@ -658,5 +688,7 @@ module.exports = {
     deleteProfilePicture,
     deleteCoverPicture,
     getSkill,
-    getExperience
+    getExperience,
+    getProfilePicture,
+    getCoverPicture
 };
