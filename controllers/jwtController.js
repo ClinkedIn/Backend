@@ -1,27 +1,27 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const process = require('process');
-const generateTokens = (payload, res) => {
-    const { username } = payload;
+const generateTokens = (userInfo, res) => {
+
 
     // Generate Access Token (short-lived)
     const accessToken = jwt.sign(
-        { username },
+        { userId: userInfo._id, firstName: userInfo.firstName, lastName: userInfo.lastName, userEmail: userInfo.email },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: '10m' }
     );
 
     // Generate Refresh Token (long-lived)
     const refreshToken = jwt.sign(
-        { username },
+        { userId: userInfo._id, firstName: userInfo.firstName, lastName: userInfo.lastName, userEmail: userInfo.email },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: '1d' }
     );
 
     // Store tokens in HTTP-only cookies
     res.cookie('accessToken', accessToken, {
-        httpOnly: true,  
-        secure: true,    
+        httpOnly: true,
+        secure: true,
         sameSite: 'None',
         maxAge: 10 * 60 * 1000  // 10 minutes
     });
@@ -31,7 +31,7 @@ const generateTokens = (payload, res) => {
         secure: true,
         sameSite: 'None',
         maxAge: 24 * 60 * 60 * 1000, // 1 day
-        path: process.env.REFRESH_TOKEN_PATH || '/' 
+        path: process.env.REFRESH_TOKEN_PATH || '/'
     });
 
     return { refreshToken };
@@ -60,7 +60,7 @@ const decryptToken = (token, secret) => {
  */
 const refreshToken = (req, res) => {
     const { refreshToken } = req.cookies;
-    
+
     if (!refreshToken) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
