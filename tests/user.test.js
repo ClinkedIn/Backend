@@ -641,15 +641,7 @@ describe('POST /skills', () => {
         expect(response.body.error).toBe('No valid MongoDB ObjectIds provided');
     });
 
-    test('should return 400 if endorsements array is empty', async () => {
-        const response = await request(app)
-            .post('/skills')
-            .send({ skillName: 'Teamwork', endorsements: [] });
-        
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('No valid MongoDB ObjectIds provided');
-    });
-
+    
     test('should return 400 if endorsements contain duplicate user IDs', async () => {
         const mockSkillData = {
             skillName: 'Leadership',

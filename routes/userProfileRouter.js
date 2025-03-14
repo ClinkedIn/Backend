@@ -23,10 +23,12 @@ router.route('/skills')
     .get(mockVerifyToken, user.getUserSkills);
 
 router.route('/skills/:index')
-    .put(mockVerifyToken,  user.updateSkill);
+    .put(mockVerifyToken,  user.updateSkill)
+    .delete(mockVerifyToken, user.deleteSkill)
 
-router.post('/add-profile-picture', upload.single('file'), user.uploadProfilePicture);
-    
+router.route('/add-profile-picture')
+    .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture);
+
 router.post('/add-cover-picture', upload.single('file'), user.uploadCoverPicture);
 
 module.exports = router;

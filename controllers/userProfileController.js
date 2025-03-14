@@ -3,18 +3,38 @@ const { sortWorkExperience, validateSkillName, validateEndorsements} = require('
 const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 
+
+/*
+****************************************************
+************ PROFILE AND COVER PICTURES ************
+****************************************************
+*/
+
 const uploadUserPicture = async (req, res, fieldName) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-
+        const userId = req.user.id;
         // Validate file type (allow only JPEG, PNG)
-        const allowedMimeTypes = ['image/jpeg', 'image/png'];
-        if (!allowedMimeTypes.includes(req.file.mimetype)) {
-            return res.status(400).json({ message: 'Invalid file type. Only JPEG and PNG are allowed.' });
-        }
-
+        console.log(req.file.mimetype)
+        const allowedMimeTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+            'image/bmp',
+            'image/tiff',
+            'image/svg+xml'
+          ];
+          
+          if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ 
+              message: 'Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.' 
+            });
+          }
         // Validate file size (limit: 5MB)
         const MAX_FILE_SIZE = 5 * 1024 * 1024;
         if (req.file.size > MAX_FILE_SIZE) {
@@ -24,7 +44,7 @@ const uploadUserPicture = async (req, res, fieldName) => {
         const uploadResult = await uploadFile(req.file.buffer);
 
         const updatedUser = await userModel.findByIdAndUpdate(
-            req.user.id,
+            userId,
             { [fieldName]: uploadResult.url },  // Dynamically updating field (profilePicture or coverPicture)
             { new: true }
         );
@@ -43,10 +63,15 @@ const uploadUserPicture = async (req, res, fieldName) => {
     }
 };
 
-// Controller functions
 const uploadProfilePicture = (req, res) => uploadUserPicture(req, res, 'profilePicture');
 const uploadCoverPicture = (req, res) => uploadUserPicture(req, res, 'coverPicture');
 
+
+/*
+***************************************************
+***************** WORK EXPERIENCE *****************
+***************************************************
+*/
 
 const addExperience = async (req, res) => {
     try {
@@ -177,33 +202,70 @@ const updateExperience = async (req, res) => {
     }
 };
 
+const deleteExperience = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const experiencelIndex = parseInt(req.params.index, 10);
+
+        if (isNaN(experiencelIndex) || experiencelIndex < 0) {
+            return res.status(400).json({ error: 'Invalid experience index' });
+        }
+
+        const user = await userModel.findById(userId).select('workExperience');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (experiencelIndex >= user.workExperience.length) {
+            return res.status(400).json({ error: 'Invalid experience index' });
+        }
+
+        const deletedSkill = user.skills[experiencelIndex];
+
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { workExperience: { $eq: user.workExperience[experiencelIndex] } }
+        });
+
+        res.status(200).json({
+            message: 'Experience deleted successfully',
+            deletedSkill
+        });
+
+    } catch (error) {
+        console.error('Error deleting experience:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+};
+
+/*
+************************************************
+*********** SKILLS AND ENDORSEMENTS ************
+************************************************
+*/
 
 const addSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName, endorsements } = req.body;
-        //console.log('Request Body:', req.body);
-        // Validate skill name
+
         const skillValidation = validateSkillName(skillName);
         if (!skillValidation.valid) {
             return res.status(400).json({ error: skillValidation.message });
         }
 
-        // Validate endorsements
-        const endorsementsValidation = await validateEndorsements(endorsements, userId);
-        if (!endorsementsValidation.valid) {
-            return res.status(400).json({ error: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
+        let validEndorsements = [];
+        if (endorsements && endorsements.length > 0) {
+            const endorsementsValidation = await validateEndorsements(endorsements, userId);
+            if (!endorsementsValidation.valid) {
+                return res.status(400).json({ error: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
+            }
+            validEndorsements = endorsementsValidation.endorsements;
         }
-
-        const skillData = {
-            skillName,
-            endorsements: endorsementsValidation.endorsements,
-        };
 
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { $push: { skills: skillData } },
-            { new: true, runValidators: true }
+            { $push: { skills: { skillName: skillName, endorsements: validEndorsements } } },
+            { new: true, runValidators: true, select: 'skills' }
         );
 
         if (!updatedUser) {
@@ -212,7 +274,7 @@ const addSkill = async (req, res) => {
 
         res.status(200).json({
             message: 'Skill added successfully',
-            skill: updatedUser.skills[updatedUser.skills.length - 1]
+            skill: updatedUser.skills.at(-1)
         });
 
     } catch (error) {
@@ -225,75 +287,107 @@ const addSkill = async (req, res) => {
 const getUserSkills = async (req, res) => {
     try {
         const userId = req.user.id;
-        const user = await userModel.findById(userId);
+        const user = await userModel.findById(userId).select('skills');
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ error: 'User not found' });
         }
 
         res.status(200).json({ skills: user.skills });
     } catch (error) {
         console.error('Error fetching skills:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
 
+// Update skill by index
 const updateSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const skillIndex = parseInt(req.params.index, 10);
         const { skillName, endorsements } = req.body;
 
-        const user = await userModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        if (isNaN(skillIndex) || skillIndex < 0) {
+            return res.status(400).json({ error: 'Invalid skill index' });
         }
 
-        // Validate skill index
-        if (isNaN(skillIndex) || skillIndex < 0 || skillIndex >= user.skills.length) {
-            return res.status(400).json({ message: 'Invalid skill index' });
-        }
-
-        // Validate skill name
         if (skillName) {
             const skillValidation = validateSkillName(skillName);
             if (!skillValidation.valid) {
-                return res.status(400).json({ message: skillValidation.message });
+                return res.status(400).json({ error: skillValidation.message });
             }
         }
 
-        let validEndorsements = user.skills[skillIndex].endorsements; // Default to existing endorsements
-
-        // Validate endorsements if provided
+        let validEndorsements = endorsements;
         if (endorsements) {
-            const endorsementsValidation = await validateEndorsements(endorsements);
+            const endorsementsValidation = await validateEndorsements(endorsements, userId);
             if (!endorsementsValidation.valid) {
-                return res.status(400).json({ message: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
+                return res.status(400).json({ error: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
             }
             validEndorsements = endorsementsValidation.endorsements;
         }
 
-        // Update the skill
-        user.skills[skillIndex] = {
-            ...user.skills[skillIndex],
-            ...(skillName && { skillName }),
-            endorsements: validEndorsements
-        };
+        // Construct update object
+        const updateFields = {};
+        if (skillName) updateFields[`skills.${skillIndex}.skillName`] = skillName;
+        if (endorsements) updateFields[`skills.${skillIndex}.endorsements`] = validEndorsements;
 
-        await user.save();
+        const updatedUser = await userModel.findOneAndUpdate(
+            { _id: userId, [`skills.${skillIndex}`]: { $exists: true } },
+            { $set: updateFields },
+            { new: true, runValidators: true, select: 'skills' }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found or invalid skill index' });
+        }
 
         res.status(200).json({
             message: 'Skill updated successfully',
-            skill: user.skills[skillIndex]
+            skill: updatedUser.skills[skillIndex]
         });
 
     } catch (error) {
         console.error('Error updating skill:', error);
-        res.status(500).json({ message: 'Server error', details: error.message });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
 
+// Delete skill by index
+const deleteSkill = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const skillIndex = parseInt(req.params.index, 10);
 
+        if (isNaN(skillIndex) || skillIndex < 0) {
+            return res.status(400).json({ error: 'Invalid skill index' });
+        }
+
+        const user = await userModel.findById(userId).select('skills');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (skillIndex >= user.skills.length) {
+            return res.status(400).json({ error: 'Invalid skill index' });
+        }
+
+        const deletedSkill = user.skills[skillIndex];
+
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { skills: { $eq: user.skills[skillIndex] } }
+        });
+
+        res.status(200).json({
+            message: 'Skill deleted successfully',
+            deletedSkill
+        });
+
+    } catch (error) {
+        console.error('Error deleting skill:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+};
 
 
 const addEducation = async (req, res) => {
@@ -413,5 +507,7 @@ module.exports = {
     getUserSkills,
     updateSkill,
     uploadProfilePicture,
-    uploadCoverPicture
+    uploadCoverPicture,
+    deleteSkill,
+    deleteExperience
 };
