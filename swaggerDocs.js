@@ -2608,6 +2608,45 @@
  *                 message:
  *                   type: string
  *                   example: Education deleted successfully
+ *                 educations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       school:
+ *                         type: string
+ *                         example: Harvard University
+ *                       degree:
+ *                         type: string
+ *                         example: Bachelor of Science
+ *                       fieldOfStudy:
+ *                         type: string
+ *                         example: Computer Science
+ *                       startDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2020-09-01
+ *                       endDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2024-06-30
+ *                       grade:
+ *                         type: string
+ *                         example: 3.8
+ *                       activities:
+ *                         type: string
+ *                         example: Coding Club, Research Group
+ *                       description:
+ *                         type: string
+ *                         example: Major in AI and ML
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "Machine Learning"]
+ *                       media:
+ *                         type: string
+ *                         example: https://example.com/certificate.pdf
  *       400:
  *         description: Invalid education index
  *         content:

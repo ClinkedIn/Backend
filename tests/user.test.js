@@ -1,7 +1,9 @@
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
-const { addEducation, editIntro, addExperience, getUserExperiences, updateExperience, sortWorkExperience, addSkill, getUserSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
+const { addEducation,getEducation,editEducation,getEducations,deleteEducation, editIntro, addExperience, getUserExperiences, updateExperience, sortWorkExperience, addSkill, getUserSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 const uploadMiddleware  = require('../middlewares/multer');
 
@@ -23,8 +25,8 @@ const mockVerifyToken = (req, res, next) => {
     req.user = { id: 'cc81c18d6b9fc1b83e2bebe3' };
     next();
 };
-
-app.patch('/education', mockVerifyToken, addEducation);
+//------------------------------EDUCATION TESTS---------------------------------
+app.post('/education', mockVerifyToken, addEducation);
 
 describe('POST /education', () => {
     beforeEach(() => {
@@ -53,7 +55,7 @@ describe('POST /education', () => {
         userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser);
 
         const response = await request(app)
-            .patch('/education')
+            .post('/education')
             .send(mockEducationData);
 
         expect(response.status).toBe(200);
@@ -63,7 +65,7 @@ describe('POST /education', () => {
 
     test('should return 400 if school name is missing', async () => {
         const response = await request(app)
-            .patch('/education')
+            .post('/education')
             .send({ degree: 'B.Sc. Computer Science' });
 
         expect(response.status).toBe(400);
@@ -74,7 +76,7 @@ describe('POST /education', () => {
         userModel.findByIdAndUpdate.mockResolvedValue(null);
 
         const response = await request(app)
-            .patch('/education')
+            .post('/education')
             .send({ school: 'Harvard University' });
 
         expect(response.status).toBe(404);
@@ -85,7 +87,7 @@ describe('POST /education', () => {
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database failure'));
 
         const response = await request(app)
-            .patch('/education')
+            .post('/education')
             .send({ school: 'Harvard University' });
 
         expect(response.status).toBe(500);
@@ -94,6 +96,265 @@ describe('POST /education', () => {
     });
 });
 
+app.get('/education/:index', mockVerifyToken, getEducation);
+describe('GET /education/:index', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully get specific education entry', async () => {
+        const mockEducation = {
+            school: 'Harvard University',
+            degree: 'B.Sc. Computer Science',
+            fieldOfStudy: 'Computer Science',
+            startDate: '2020-09-01',
+            endDate: '2024-06-30'
+        };
+
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [mockEducation]
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .get('/education/0');
+
+        expect(response.status).toBe(200);
+        expect(response.body.education).toEqual(mockEducation);
+    });
+
+    test('should return 404 if user not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app)
+            .get('/education/0');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 for invalid index', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'Harvard' }]
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .get('/education/999');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid education index');
+    });
+});
+
+app.patch('/education/:index', mockVerifyToken, editEducation);
+describe('PATCH /education/:index', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully update education entry', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [
+                {
+                    school: 'Old School Name',
+                    degree: 'Old Degree',
+                    fieldOfStudy: 'Old Field',
+                    startDate: '2018-09-01',
+                    endDate: '2022-06-01'
+                }
+            ],
+            save: jest.fn().mockResolvedValue(true)
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const updatedData = {
+            school: 'New School Name',
+            degree: 'New Degree',
+            fieldOfStudy: 'Computer Science',
+            startDate: '2019-09-01',
+            endDate: '2023-06-01'
+        };
+
+        const response = await request(app)
+            .patch('/education/0')
+            .send(updatedData);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Education updated successfully');
+        expect(response.body.education).toEqual(expect.objectContaining(updatedData));
+        expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    test('should return 404 if user not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app)
+            .patch('/education/0')
+            .send({ school: 'New School Name' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 404 if education index is out of bounds', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'School 1' }],
+            save: jest.fn()
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .patch('/education/5') // Invalid index
+            .send({ school: 'New School Name' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Education not found');
+        expect(mockUser.save).not.toHaveBeenCalled();
+    });
+
+    test('should return 404 if education index is negative', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'School 1' }],
+            save: jest.fn()
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .patch('/education/-1') // Invalid index
+            .send({ school: 'New School Name' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Education not found');
+        expect(mockUser.save).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 if school name is empty', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'Old School' }],
+            save: jest.fn()
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .patch('/education/0')
+            .send({ school: '' }); // Empty school name
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('School name is required');
+        expect(mockUser.save).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 if school name contains only whitespace', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'Old School' }],
+            save: jest.fn()
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .patch('/education/0')
+            .send({ school: '   ' }); // Only whitespace
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('School name is required');
+        expect(mockUser.save).not.toHaveBeenCalled();
+    });
+
+    test('should return 500 if database error occurs', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .patch('/education/0')
+            .send({ school: 'New School Name' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to update education');
+        expect(response.body.details).toBe('Database error');
+    });
+});
+
+app.delete('/education/:index', mockVerifyToken, deleteEducation);
+describe('DELETE /education/:index', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully delete education entry and return updated education array', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [
+                { school: 'School 1' },
+                { school: 'School 2' },
+                { school: 'School 3' }
+            ],
+            save: jest.fn().mockResolvedValue(true)
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .delete('/education/1');
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Education deleted successfully');
+        expect(response.body.educations).toHaveLength(2);
+        expect(response.body.educations).toEqual([
+            { school: 'School 1' },
+            { school: 'School 3' }
+        ]);
+        expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    test('should return 404 if user not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app)
+            .delete('/education/0');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 for invalid index', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            education: [{ school: 'School 1' }]
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app)
+            .delete('/education/999');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid education index');
+    });
+
+    test('should return 500 on server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database failure'));
+
+        const response = await request(app)
+            .delete('/education/0');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Server error');
+    });
+});
 // Setup route
 app.patch('/profile', mockVerifyToken, editIntro);
 

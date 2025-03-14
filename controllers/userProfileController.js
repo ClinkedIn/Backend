@@ -344,37 +344,44 @@ const editEducation = async (req, res) => {
         const userId = req.user.id;
         const educationIndex = parseInt(req.params.index);
         const updatedData = req.body;
+
         // Get existing user data
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+
         // Validate education index
         if (educationIndex < 0 || educationIndex >= user.education.length || isNaN(educationIndex)) {
             return res.status(404).json({ message: 'Education not found' });
         }
-        // Get existing education entry
-        const existingEducation = user.education[educationIndex].toObject();
-        // Create merged education data with type checking
-        const mergedEducation = {
-            school: updatedData.school || existingEducation.school,
-            degree: updatedData.degree !== undefined ? updatedData.degree : existingEducation.degree,
-            fieldOfStudy: updatedData.fieldOfStudy !== undefined ? updatedData.fieldOfStudy : existingEducation.fieldOfStudy,
-            startDate: updatedData.startDate ? new Date(updatedData.startDate) : existingEducation.startDate,
-            endDate: updatedData.endDate ? new Date(updatedData.endDate) : existingEducation.endDate,
-            grade: updatedData.grade !== undefined ? updatedData.grade : existingEducation.grade,
-            activities: updatedData.activities !== undefined ? updatedData.activities : existingEducation.activities,
-            description: updatedData.description !== undefined ? updatedData.description : existingEducation.description,
-            skills: updatedData.skills || existingEducation.skills,
-            media: updatedData.media !== undefined ? updatedData.media : existingEducation.media
-        };
-        // Validate required fields
-        if (!mergedEducation.school) {
+
+        // Validate required field (school)
+        if (!updatedData.school || updatedData.school.trim() === '') {
             return res.status(400).json({ error: 'School name is required' });
         }
+
+        // Define the full structure with default values
+        const defaultEducation = {
+            school: null,
+            degree: null,
+            fieldOfStudy: null,
+            startDate: null,
+            endDate: null,
+            grade: null,
+            activities: null,
+            description: null,
+            skills: [],
+            media: []
+        };
+
+        // Ensure all keys are present and merge updated data
+        const mergedEducation = Object.assign({}, defaultEducation, updatedData);
+
         // Update the education entry
         user.education[educationIndex] = mergedEducation;
         await user.save();
+
         res.status(200).json({
             message: 'Education updated successfully',
             education: user.education[educationIndex]
@@ -443,7 +450,10 @@ const deleteEducation = async (req, res) => {
         user.education.splice(educationIndex, 1);
         await user.save();
 
-        res.status(200).json({ message: 'Education deleted successfully' });
+        res.status(200).json({
+            message: 'Education deleted successfully',
+            educations: user.education
+        });
 
     } catch (error) {
         console.error('Error deleting education:', error);
