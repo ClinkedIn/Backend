@@ -21,6 +21,7 @@ const {
     getResume,
     uploadResume,
     deleteResume,
+    updatePrivacySettings
 } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const uploadMiddleware = require('../middlewares/multer');
@@ -1523,5 +1524,79 @@ describe('DELETE /resume', () => {
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Failed to delete resume');
         expect(response.body.error).toBe('Database update failed');
+    });
+});
+
+app.patch('/privacy-settings', mockVerifyToken, updatePrivacySettings);
+
+describe('PATCH /privacy-settings', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully update privacy settings', async () => {
+        const mockUserId = 'cc81c18d6b9fc1b83e2bebe3';
+        const privacySettings = {
+            profilePrivacySettings: 'private'
+        };
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: mockUserId,
+            profilePrivacySettings: 'private'
+        });
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send(privacySettings);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Profile privacy settings updated successfully');
+        expect(response.body.profilePrivacySettings).toBe('private');
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            mockUserId,
+            { $set: { profilePrivacySettings: 'private' } },
+            { new: true, select: 'profilePrivacySettings' }
+        );
+    });
+
+    test('should return 400 if profilePrivacySettings is missing', async () => {
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('profilePrivacySettings is required');
+    });
+
+    test('should return 400 if invalid value for profilePrivacySettings is provided', async () => {
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'invalid-value' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid value for profilePrivacySettings. Must be one of: public, private, connectionsOnly');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'public' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 if database update fails', async () => {
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'connectionsOnly' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to update privacy settings');
+        expect(response.body.details).toBe('Database error');
     });
 });

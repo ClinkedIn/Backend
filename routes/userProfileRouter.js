@@ -23,7 +23,6 @@ router.route('/experience/:index')
     .get(mockVerifyToken, user.getExperience)
     .put(mockVerifyToken,  user.updateExperience)
     .delete(mockVerifyToken, user.deleteExperience);
-
 router.route('/skills')
     .get(mockVerifyToken, user.getAllSkills)
     .post(mockVerifyToken, user.addSkill);
@@ -47,6 +46,8 @@ router.route('/resume')
     .get(mockVerifyToken, user.getResume)
     .post(mockVerifyToken, upload.single('resume'), user.uploadResume)
     .delete(mockVerifyToken, user.deleteResume);
+router.route('/privacy-settings')
+    .patch(mockVerifyToken, user.updatePrivacySettings);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
 

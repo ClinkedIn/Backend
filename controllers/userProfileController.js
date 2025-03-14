@@ -941,7 +941,54 @@ const editIntro = async (req, res) => {
         });
     }
 };
+/*
+************************************************
+*********** privacy settings ************
+************************************************
+*/
+const updatePrivacySettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { profilePrivacySettings } = req.body;
+        
+        if (!profilePrivacySettings) {
+            return res.status(400).json({ 
+                error: 'profilePrivacySettings is required' 
+            });
+        }
+        
+        // Validate that the value is one of the allowed enum values
+        const allowedValues = ["public", "private", "connectionsOnly"];
+        if (!allowedValues.includes(profilePrivacySettings)) {
+            return res.status(400).json({
+                error: `Invalid value for profilePrivacySettings. Must be one of: ${allowedValues.join(', ')}`
+            });
+        }
 
+        // Update the field directly, not as a nested property
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: { profilePrivacySettings: profilePrivacySettings } },
+            { new: true, select: 'profilePrivacySettings' }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Profile privacy settings updated successfully',
+            profilePrivacySettings: updatedUser.profilePrivacySettings
+        });
+
+    } catch (error) {
+        console.error('Error updating privacy settings:', error);
+        res.status(500).json({
+            error: 'Failed to update privacy settings',
+            details: error.message
+        });
+    }
+};
 
 module.exports = {
     addEducation,
@@ -969,5 +1016,6 @@ module.exports = {
     getSkill,
     getExperience,
     getProfilePicture,
-    getCoverPicture
+    getCoverPicture,
+    updatePrivacySettings,
 };
