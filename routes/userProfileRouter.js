@@ -4,7 +4,10 @@ const { verifyToken, isLoggedIn, verifyGoogleToken, mockVerifyToken } = require(
 const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
-
+router.route('/:userId')
+    .get(mockVerifyToken, user.getUserProfile);
+router.route('/')
+    .get(mockVerifyToken, user.getAllUsers);
 router.route('/education')
     .post(mockVerifyToken,user.addEducation)
     .get(mockVerifyToken,user.getEducations);

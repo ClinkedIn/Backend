@@ -3,7 +3,110 @@ const { sortWorkExperience, validateSkillName, validateEndorsements} = require('
 const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const companyModel = require('../models/companyModel');
+const { get } = require('mongoose');
 
+
+const getUserProfile = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        // Find the user by ID
+        const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check privacy settings
+        const requesterId = req.user.id; // Current authenticated user
+        
+        // If not requesting own profile and profile is private
+        if (userId !== requesterId && user.profilePrivacySettings === 'private') {
+            return res.status(403).json({ message: 'This profile is private' });
+        }
+        
+        // If profile is set to connections only, check if they're connected
+        if (userId !== requesterId && 
+            user.profilePrivacySettings === 'connectionsOnly' &&
+            !user.connectionList.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is only visible to connections' });
+        }
+        if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        res.status(200).json({ 
+            message: 'User profile retrieved successfully',
+            user
+        });
+    } catch (error) {
+        console.error('Error retrieving user profile:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve user profile',
+            error: error.message 
+        });
+    }
+};
+
+const getAllUsers = async (req, res) => {
+    try {
+        // Extract query parameters for filtering
+        const { name, location, industry, page = 1, limit = 10 } = req.query;
+        
+        // Build query filter
+        const filter = {};
+        
+        if (name) {
+            filter.$or = [
+                { firstName: { $regex: name, $options: 'i' } },
+                { lastName: { $regex: name, $options: 'i' } }
+            ];
+        }
+        
+        if (location) {
+            filter.location = { $regex: location, $options: 'i' };
+        }
+        
+        if (industry) {
+            filter.industry = { $regex: industry, $options: 'i' };
+        }
+        
+        // Only return public profiles and the current user's profile
+        filter.$or = filter.$or || [];
+        filter.$or.push(
+            { profilePrivacySettings: 'public' },
+            { _id: req.user.id }
+        );
+        
+        // Pagination setup
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Find users with filtering and pagination
+        const users = await userModel.find(filter)
+            .select('firstName lastName profilePicture location industry mainEducation bio profilePrivacySettings')
+            .skip(skip)
+            .limit(parseInt(limit));
+            
+        // Count total matching documents for pagination info
+        const total = await userModel.countDocuments(filter);
+        
+        res.status(200).json({
+            message: 'Users retrieved successfully',
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error retrieving users:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve users',
+            error: error.message 
+        });
+    }
+};
 /*
 ****************************************************
 ************ PROFILE AND COVER PICTURES ************
@@ -990,12 +1093,11 @@ const updatePrivacySettings = async (req, res) => {
     }
 };
 
-/**
- * Follow an entity (user or company)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @returns {Object} JSON response indicating success or failure
- */
+/*
+************************************************
+*********** follow/unfollow ************
+************************************************
+*/
 const followEntity = async (req, res) => {
     try {
         const followerId = req.user.id; // Current authenticated user
@@ -1083,12 +1185,6 @@ const followEntity = async (req, res) => {
     }
 };
 
-/**
- * Unfollow an entity (user or company)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @returns {Object} JSON response indicating success or failure
- */
 const unfollowEntity = async (req, res) => {
     try {
         const followerId = req.user.id; // Current authenticated user
@@ -1166,6 +1262,8 @@ const unfollowEntity = async (req, res) => {
 };
 
 module.exports = {
+    getAllUsers,
+    getUserProfile,
     addEducation,
     editEducation,
     getEducation,

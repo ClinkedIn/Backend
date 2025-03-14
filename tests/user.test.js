@@ -25,6 +25,8 @@ const {
     updatePrivacySettings,
     followEntity,
     unfollowEntity,
+    getUserProfile,
+    getAllUsers
 } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const uploadMiddleware = require('../middlewares/multer');
@@ -1957,5 +1959,314 @@ describe('DELETE /follow/:entityId - Unfollow Entity', () => {
             
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Failed to unfollow entity');
+    });
+});
+
+
+// Mock routes for testing
+app.get('/user/:userId', mockVerifyToken, getUserProfile);
+app.get('/user', mockVerifyToken, getAllUsers);
+
+describe('GET /user/:userId - Get User Profile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve own profile', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';  // Same as authenticated user ID
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'private',  // Even if private, own profile should be accessible
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should successfully retrieve public profile', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            email: 'jane.smith@example.com',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should return 403 when trying to access private profile', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'private',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is private');
+    });
+
+    test('should return 403 when trying to access connections-only profile without being connected', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'connectionsOnly',
+            connectionList: ['e5f6g7h8i9j0'],  // Current user not in connections list
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is only visible to connections');
+    });
+
+    test('should return 403 when blocked by the user', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        const authenticatedUserId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: [authenticatedUserId]  // Current user is blocked
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is not available');
+    });
+
+    test('should return 404 when user not found', async () => {
+        const userId = 'nonexistentid';
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 when server error occurs', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve user profile');
+        expect(response.body.error).toBe('Database error');
+    });
+});
+
+describe('GET /user - Get All Users', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve users with no filters', async () => {
+        const mockUsers = [
+            { _id: '1', firstName: 'John', lastName: 'Doe', profilePrivacySettings: 'public' },
+            { _id: '2', firstName: 'Jane', lastName: 'Smith', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            skip: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockResolvedValue(mockUsers)
+        }));
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(2);
+        
+        const response = await request(app).get('/user');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Users retrieved successfully');
+        expect(response.body.users).toEqual(mockUsers);
+        expect(response.body.pagination).toEqual({
+            total: 2,
+            page: 1,
+            limit: 10,
+            pages: 1
+        });
+    });
+
+    test('should apply name filter', async () => {
+        const mockUsers = [
+            { _id: '1', firstName: 'John', lastName: 'Doe', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains name search
+            expect(filter.$or).toContainEqual(
+                { firstName: { $regex: 'john', $options: 'i' } }
+            );
+            expect(filter.$or).toContainEqual(
+                { lastName: { $regex: 'john', $options: 'i' } }
+            );
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?name=john');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+        expect(response.body.pagination.total).toBe(1);
+    });
+
+    test('should apply location filter', async () => {
+        const mockUsers = [
+            { _id: '2', firstName: 'Jane', lastName: 'Smith', location: 'New York', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains location search
+            expect(filter.location).toEqual({ $regex: 'new york', $options: 'i' });
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?location=new%20york');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should apply industry filter', async () => {
+        const mockUsers = [
+            { _id: '3', firstName: 'Alex', lastName: 'Johnson', industry: 'Technology', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains industry search
+            expect(filter.industry).toEqual({ $regex: 'technology', $options: 'i' });
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?industry=technology');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should handle pagination', async () => {
+        const mockUsers = [
+            { _id: '4', firstName: 'Sarah', lastName: 'Williams', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            skip: jest.fn((skipVal) => {
+                // Verify skip value is calculated correctly
+                expect(skipVal).toBe(20); // (page 3 - 1) * 10
+                return {
+                    limit: jest.fn((limitVal) => {
+                        // Verify limit value is set correctly
+                        expect(limitVal).toBe(10);
+                        return Promise.resolve(mockUsers);
+                    })
+                };
+            })
+        }));
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(25);
+        
+        const response = await request(app).get('/user?page=3&limit=10');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.pagination).toEqual({
+            total: 25,
+            page: 3,
+            limit: 10,
+            pages: 3
+        });
+    });
+
+    test('should return 500 when server error occurs', async () => {
+        userModel.find = jest.fn().mockImplementation(() => {
+            throw new Error('Database error');
+        });
+        
+        const response = await request(app).get('/user');
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve users');
+        expect(response.body.error).toBe('Database error');
     });
 });
