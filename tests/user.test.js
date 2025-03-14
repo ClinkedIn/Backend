@@ -3,6 +3,7 @@
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
+const companyModel = require('../models/companyModel');
 const {
     addEducation,
     getEducation,
@@ -21,7 +22,9 @@ const {
     getResume,
     uploadResume,
     deleteResume,
-    updatePrivacySettings
+    updatePrivacySettings,
+    followEntity,
+    unfollowEntity,
 } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const uploadMiddleware = require('../middlewares/multer');
@@ -1598,5 +1601,361 @@ describe('PATCH /privacy-settings', () => {
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Failed to update privacy settings');
         expect(response.body.details).toBe('Database error');
+    });
+});
+
+app.post('/follow/:userId', mockVerifyToken, followEntity);
+app.delete('/follow/:userId', mockVerifyToken, unfollowEntity);
+
+describe('POST /follow/:userId - Follow Entity', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully follow a user', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [],
+            blockedUsers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: [],
+            blockedUsers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(targetUser);   // Second call for target
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User followed successfully');
+        expect(followerUser.following.length).toBe(1);
+        expect(followerUser.following[0].entity).toBe(targetUserId);
+        expect(followerUser.following[0].entityType).toBe('User');
+        expect(targetUser.followers.length).toBe(1);
+        expect(targetUser.followers[0].entity).toBe(followerId);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetUser.save).toHaveBeenCalled();
+    });
+    
+    test('should successfully follow a company', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetCompanyId = 'c18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target company
+        const targetCompany = {
+            _id: targetCompanyId,
+            followers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        companyModel.findById = jest.fn().mockResolvedValue(targetCompany);
+        
+        const response = await request(app)
+            .post(`/follow/${targetCompanyId}`)
+            .send({ entityType: 'Company' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Company followed successfully');
+        expect(followerUser.following.length).toBe(1);
+        expect(followerUser.following[0].entity).toBe(targetCompanyId);
+        expect(followerUser.following[0].entityType).toBe('Company');
+        expect(targetCompany.followers.length).toBe(1);
+        expect(targetCompany.followers[0].entity).toBe(followerId);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetCompany.save).toHaveBeenCalled();
+    });
+    
+    test('should return 400 when trying to follow yourself', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const response = await request(app)
+            .post(`/follow/${userId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You cannot follow yourself');
+    });
+    
+    test('should return 400 for invalid entity type', async () => {
+        const targetId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        const response = await request(app)
+            .post(`/follow/${targetId}`)
+            .send({ entityType: 'InvalidType' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid entity type. Must be one of: User, Company');
+    });
+    
+    test('should return 400 if already following', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user already following the target
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }]
+        };
+        
+        // Setup mock
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You are already following this user');
+    });
+    
+    test('should return 404 if follower user not found', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock user not found
+        userModel.findById = jest.fn().mockResolvedValue(null);
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Your user account not found');
+    });
+    
+    test('should return 404 if target entity not found', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: []
+        };
+        
+        // Setup mocks - follower exists but target doesn't
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(null);         // Second call for target
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    
+    test('should return 500 if database error occurs', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock database error
+        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to follow entity');
+    });
+});
+
+describe('DELETE /follow/:entityId - Unfollow Entity', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully unfollow a user', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: [{
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(targetUser);   // Second call for target
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User unfollowed successfully');
+        expect(followerUser.following.length).toBe(0);
+        expect(targetUser.followers.length).toBe(0);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetUser.save).toHaveBeenCalled();
+    });
+    
+    test('should successfully unfollow a company', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetCompanyId = 'c18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetCompanyId,
+                entityType: 'Company',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target company
+        const targetCompany = {
+            _id: targetCompanyId,
+            followers: [{
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        companyModel.findById = jest.fn().mockResolvedValue(targetCompany);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetCompanyId}`)
+            .send({ entityType: 'Company' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Company unfollowed successfully');
+        expect(followerUser.following.length).toBe(0);
+        expect(targetCompany.followers.length).toBe(0);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetCompany.save).toHaveBeenCalled();
+    });
+    
+    test('should return 400 when trying to unfollow yourself', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const response = await request(app)
+            .delete(`/follow/${userId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You cannot unfollow yourself');
+    });
+    
+    test('should return 400 if not following the entity', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user not following the target
+        const followerUser = {
+            _id: followerId,
+            following: []
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: []
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)
+            .mockResolvedValueOnce(targetUser);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You are not following this user');
+    });
+    
+    test('should return 404 if target entity not found', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }]
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)
+            .mockResolvedValueOnce(null);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    
+    test('should return 500 if database error occurs', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock database error
+        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to unfollow entity');
     });
 });

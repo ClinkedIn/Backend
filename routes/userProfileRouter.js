@@ -48,6 +48,9 @@ router.route('/resume')
     .delete(mockVerifyToken, user.deleteResume);
 router.route('/privacy-settings')
     .patch(mockVerifyToken, user.updatePrivacySettings);
+router.route('/follow/:userId')
+    .post(mockVerifyToken, user.followEntity)
+    .delete(mockVerifyToken, user.unfollowEntity);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
 

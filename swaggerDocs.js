@@ -3450,60 +3450,84 @@
 
 /**
  * @swagger
- * /user/follow/{userId}:
+ * /user/follow/{entityId}:
  *   post:
- *     summary: Follow a user without connecting
+ *     summary: Follow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to follow another user without sending a connection request.
- *     operationId: followUser
+ *     description: Allows a user to follow another user or a company.
+ *     operationId: followEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to follow
+ *         description: The ID of the entity (user or company) to follow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to follow (User or Company)
  *     responses:
  *       200:
- *         description: User followed successfully
+ *         description: Entity followed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User followed successfully"
  *       400:
- *         description: Cannot follow this user
+ *         description: Cannot follow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  * 
  *   delete:
- *     summary: Unfollow a user
+ *     summary: Unfollow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to unfollow another user.
- *     operationId: unfollowUser
+ *     description: Allows a user to unfollow another user or company.
+ *     operationId: unfollowEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to unfollow
+ *         description: The ID of the entity (user or company) to unfollow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to unfollow (User or Company)
  *     responses:
  *       200:
- *         description: User unfollowed successfully
+ *         description: Entity unfollowed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User unfollowed successfully"
  *       400:
- *         description: Cannot unfollow this user
+ *         description: Cannot unfollow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  */

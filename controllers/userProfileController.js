@@ -2,7 +2,7 @@ const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
-
+const companyModel = require('../models/companyModel');
 
 /*
 ****************************************************
@@ -990,6 +990,181 @@ const updatePrivacySettings = async (req, res) => {
     }
 };
 
+/**
+ * Follow an entity (user or company)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response indicating success or failure
+ */
+const followEntity = async (req, res) => {
+    try {
+        const followerId = req.user.id; // Current authenticated user
+        const targetId = req.params.userId; // Entity to follow
+        const { entityType = 'User' } = req.body; // Default to User if not specified
+        
+        // Validate entity type
+        const validEntityTypes = ['User', 'Company'];
+        if (!validEntityTypes.includes(entityType)) {
+            return res.status(400).json({ 
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            });
+        }
+
+        // If following a user, prevent self-following
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You cannot follow yourself' });
+        }
+
+        // Get follower user
+        const followerUser = await userModel.findById(followerId);
+        if (!followerUser) {
+            return res.status(404).json({ message: 'Your user account not found' });
+        }
+
+        // Get target entity
+        let targetEntity;
+        if (entityType === 'User') {
+            targetEntity = await userModel.findById(targetId);
+        } else if (entityType === 'Company') {
+            targetEntity = await companyModel.findById(targetId);
+        }
+
+        if (!targetEntity) {
+            return res.status(404).json({ message: `${entityType} not found` });
+        }
+
+        // Check if target user blocked the follower (only applicable for User entities)
+        if (entityType === 'User' && 
+            targetEntity.blockedUsers && 
+            targetEntity.blockedUsers.includes(followerId)) {
+            return res.status(400).json({ message: 'Cannot follow this user' });
+        }
+
+        // Check if already following
+        const alreadyFollowing = followerUser.following.some(
+            follow => follow.entity.toString() === targetId && follow.entityType === entityType
+        );
+
+        if (alreadyFollowing) {
+            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
+        }
+
+        // Update follower's following list
+        followerUser.following.push({
+            entity: targetId,
+            entityType: entityType,
+            followedAt: new Date()
+        });
+
+        // Update target entity's followers list
+        if (entityType === 'User') {
+            targetEntity.followers.push({
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            });
+            await Promise.all([followerUser.save(), targetEntity.save()]);
+        } else if (entityType === 'Company') {
+            targetEntity.followers.push({
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            });
+            await Promise.all([followerUser.save(), targetEntity.save()]);
+        }
+
+        res.status(200).json({ message: `${entityType} followed successfully` });
+    } catch (error) {
+        console.error('Error following entity:', error);
+        res.status(500).json({ 
+            message: 'Failed to follow entity',
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * Unfollow an entity (user or company)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response indicating success or failure
+ */
+const unfollowEntity = async (req, res) => {
+    try {
+        const followerId = req.user.id; // Current authenticated user
+        const targetId = req.params.userId; // Entity to unfollow
+        const { entityType = 'User' } = req.body; // Default to User if not specified
+        
+        // Validate entity type
+        const validEntityTypes = ['User', 'Company'];
+        if (!validEntityTypes.includes(entityType)) {
+            return res.status(400).json({ 
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            });
+        }
+
+        // If unfollowing a user, prevent self-unfollowing
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You cannot unfollow yourself' });
+        }
+
+        // Get follower user
+        const followerUser = await userModel.findById(followerId);
+        if (!followerUser) {
+            return res.status(404).json({ message: 'Your user account not found' });
+        }
+
+        // Get target entity
+        let targetEntity;
+        if (entityType === 'User') {
+            targetEntity = await userModel.findById(targetId);
+        } else if (entityType === 'Company') {
+            targetEntity = await companyModel.findById(targetId);
+        }
+
+        if (!targetEntity) {
+            return res.status(404).json({ message: `${entityType} not found` });
+        }
+
+        // Check if actually following
+        const followingIndex = followerUser.following.findIndex(
+            follow => follow.entity.toString() === targetId && follow.entityType === entityType
+        );
+
+        if (followingIndex === -1) {
+            return res.status(400).json({ message: `You are not following this ${entityType.toLowerCase()}` });
+        }
+
+        // Remove from follower's following list
+        followerUser.following.splice(followingIndex, 1);
+
+        // Remove from target entity's followers list
+        if (targetEntity.followers) {
+            const followerIndex = targetEntity.followers.findIndex(
+                follow => follow.entity.toString() === followerId && follow.entityType === 'User'
+            );
+            
+            if (followerIndex !== -1) {
+                targetEntity.followers.splice(followerIndex, 1);
+            }
+        }
+
+        // Save both updates in parallel
+        await Promise.all([
+            followerUser.save(),
+            targetEntity.save()
+        ]);
+
+        res.status(200).json({ message: `${entityType} unfollowed successfully` });
+    } catch (error) {
+        console.error('Error unfollowing entity:', error);
+        res.status(500).json({ 
+            message: 'Failed to unfollow entity',
+            error: error.message 
+        });
+    }
+};
+
 module.exports = {
     addEducation,
     editEducation,
@@ -1018,4 +1193,6 @@ module.exports = {
     getProfilePicture,
     getCoverPicture,
     updatePrivacySettings,
+    followEntity,
+    unfollowEntity
 };
