@@ -4,7 +4,6 @@ const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
 const reportModel = require('../models/reportModel');
 
-<<<<<<< HEAD
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
@@ -12,15 +11,6 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { sendEmailConfirmation } = require('../utils/emailconfirmationService');
 const { validateEmail, validatePassword } = require('../utils/validateEmailPassword');
-=======
-const axios = require('axios')
-const bcrypt = require('bcryptjs')
-const mongoose = require('mongoose')
-const jwt = require('jsonwebtoken')
-require('dotenv').config()
-const { sendEmailConfirmation } = require('../utils/emailconfirmationService');
-const { validateEmail,validatePassword } = require('../utils/validateEmailPassword');
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
 const { generateTokens } = require('./jwtController');
 
 const dummyData = async (req, res) => {
@@ -94,11 +84,7 @@ const registerUser = async (req, res) => {
 
         // get registration data
         const { firstName, lastName, email, password, recaptchaResponseToken } = req.body;
-<<<<<<< HEAD
         if (!firstName || !lastName || !email || !password || !recaptchaResponseToken) {
-=======
-        if (!firstName || !lastName || !email || !password||! recaptchaResponseToken ) {
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
             return res.status(400).json({ message: 'all fields are required' });
         }
         //validate email format and password requirements
@@ -120,11 +106,7 @@ const registerUser = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'CAPCHA Verification failed'
-<<<<<<< HEAD
             });
-=======
-            })
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
         }
 
         //check if user already exists
@@ -136,11 +118,6 @@ const registerUser = async (req, res) => {
         //Hash the Password
         const hashsalt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, hashsalt);
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
 
         //start a session
         const session = await mongoose.startSession();
@@ -149,13 +126,8 @@ const registerUser = async (req, res) => {
         const newUser = await userModel.create([{ firstName, lastName, email, password: hashedPassword, isEmailConfirmed: false }], { session });
 
         // use generateTokens from jwt controller and fix it ✅
-<<<<<<< HEAD
         const jwtrefreshToken = generateTokens(newUser[0], res);
         console.log(`refresh tokeen:  ${jwtrefreshToken}`);
-=======
-        const jwtrefreshToken = generateTokens( newUser[0] , res);
-        console.log(`refresh tokeen:  ${jwtrefreshToken}`)
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
         await session.commitTransaction();
         session.endSession();
 
@@ -167,25 +139,14 @@ const registerUser = async (req, res) => {
                 message: isEmailSent.error
             });
         }
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
         return res.status(201).json({
             success: true,
             message: 'User registered successfully. Please check your email to confirm your account.',
             data: {
                 token: jwtrefreshToken,
-<<<<<<< HEAD
                 user: newUser[0]
             }
         });
-=======
-                user:newUser[0]
-            }
-        })
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
     }
     catch (error) {
         await session.abortTransaction();
@@ -194,121 +155,88 @@ const registerUser = async (req, res) => {
         return res.status(error.statusCode || 500).json({
             success: false, message: 'Registration failed',
             error: `${error.message}`
-<<<<<<< HEAD
         });
 
-=======
-        })
-        
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
     }
 };
 
 
-const confirmEmail = async (req, res) => {
-    try {
-        const { emailVerificationToken } = req.body;
-<<<<<<< HEAD
+// const confirmEmail = async (req, res) => {
+//     try {
+//         const { emailVerificationToken } = req.body;
+//         if (!emailVerificationToken) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Verification token is required"
+//             });
+//         }
 
-=======
-        
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
-        if (!emailVerificationToken) {
-            return res.status(400).json({
-                success: false,
-                message: "Verification token is required"
-            });
-        }
+//         const verificationDate = new Date(Date.now());
+//         const user = await userModel.findOne({
+//             emailVerificationToken: emailVerificationToken,
+//             emailVerificationExpiresAt: { $gt: verificationDate }
+//         });
 
-<<<<<<< HEAD
-        const verificationDate = new Date(Date.now());
-=======
-        const verificationDate=new Date(Date.now())
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
-        const user = await userModel.findOne({
-            emailVerificationToken: emailVerificationToken,
-            emailVerificationExpiresAt: { $gt: verificationDate }
-        });
+//         if (!user) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid or expired token'
+//             });
+//         }
+//         user.isConfirmed = true;
+//         user.emailVerificationToken = null;
+//         user.emailVerificationExpiresAt = null;
+//         await user.save();
 
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid or expired token'
-            });
-        }
-        user.isConfirmed = true;
-        user.emailVerificationToken = null;
-        user.emailVerificationExpiresAt = null;
-<<<<<<< HEAD
-        await user.save();
+//         return res.status(200).json({
+//             success: true,
+//             message: "Email is confirmed successfully"
+//         });
+//     }
 
-        return res.status(200).json({
-            success: true,
-            message: "Email is confirmed successfully"
-        });
-=======
-        await user.save();      
-        
-        return res.status(200).json({
-            success: true,
-            message:"Email is confirmed successfully"
-        })
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
-    }
+//     catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Email confirmation failed",
+//             error: error.message
+//         });
+//     }
+// };
 
-    catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Email confirmation failed",
-            error: error.message
-<<<<<<< HEAD
-        });
-    }
-};
-=======
-        })
-    }
-}
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
+// const login = async (req, res, next) => {
+//     try {
+//         const { email, password } = req.body;
 
-const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
+//         const user = await User.findOne({ email });
 
-        const user = await User.findOne({ email });
+//         if (!user) {
+//             const error = new Error('User not found');
+//             error.statusCode = 404;
+//             throw error;
+//         }
 
-        if (!user) {
-            const error = new Error('User not found');
-            error.statusCode = 404;
-            throw error;
-        }
+//         const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+//         if (!isPasswordValid) {
+//             const error = new Error('Invalid password');
+//             error.statusCode = 401;
+//             throw error;
+//         }
 
-        if (!isPasswordValid) {
-            const error = new Error('Invalid password');
-            error.statusCode = 401;
-            throw error;
-        }
+//         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-
-        res.status(200).json({
-            success: true,
-            message: 'User signed in successfully',
-            data: {
-                token,
-                user,
-            }
-        });
-    } catch (error) {
-        ;
-    }
-<<<<<<< HEAD
-};
-=======
-}
->>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
+//         res.status(200).json({
+//             success: true,
+//             message: 'User signed in successfully',
+//             data: {
+//                 token,
+//                 user,
+//             }
+//         });
+//     } catch (error) {
+//         ;
+//     }
+// };
 module.exports = {
     dummyData,
     registerUser,
