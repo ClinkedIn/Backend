@@ -44,7 +44,11 @@ const verifyGoogleToken = async (req, res, next) => {
     } catch (error) {
         return res.status(401).json({ error: "Unauthorized" });
     }
+<<<<<<< HEAD
 };
+=======
+}
+>>>>>>> 2e4c884ebc3902ba26dd3fa1c3e5447b60084487
 module.exports = { isLoggedIn, verifyToken, verifyGoogleToken, mockVerifyToken };
 
 
