@@ -2,18 +2,18 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const process = require('process');
 const generateTokens = (payload, res) => {
-    const { username } = payload;
+    const userInfo  = payload;
 
     // Generate Access Token (short-lived)
     const accessToken = jwt.sign(
-        { username },
+        { userId: userInfo._id, firstName: userInfo.firstName, lastName: userInfo.lastName, userEmail: userInfo.email },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: '10m' }
     );
 
     // Generate Refresh Token (long-lived)
     const refreshToken = jwt.sign(
-        { username },
+        { userId: userInfo._id, firstName: userInfo.firstName, lastName: userInfo.lastName, userEmail: userInfo.email },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: '1d' }
     );
