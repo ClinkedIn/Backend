@@ -1,5 +1,5 @@
 const userModel = require('../models/userModel');
-
+const mongoose = require('mongoose');
 
 const sortWorkExperience = (workExperience) => {
     return workExperience.sort((a, b) => {
@@ -23,16 +23,23 @@ const sortWorkExperience = (workExperience) => {
     });
 };
 
+
 const validateSkillName = (skillName) => {
     if (!skillName || typeof skillName !== 'string') {
-        return { valid: false, message: 'Skill name must be a valid string' };
+        return { valid: false, message: 'Skill name is required and must be a string' };
+    }
+        
+    if (skillName.trim().length < 2) {
+        return { valid: false, message: 'Skill name must be at least 2 characters' };
+    }
+        
+    if (skillName.trim().length > 50) {
+        return { valid: false, message: 'Skill name cannot exceed 50 characters' };
     }
     return { valid: true };
 };
 
 // Helper function to validate endorsements
-const mongoose = require('mongoose');
-
 const validateEndorsements = async (endorsements, userId) => {
     if (!Array.isArray(endorsements)) {
         throw new Error('Endorsements must be an array');
@@ -50,9 +57,9 @@ const validateEndorsements = async (endorsements, userId) => {
 
     const validObjectIds = endorsements.filter(id => mongoose.Types.ObjectId.isValid(id));
 
-    if (validObjectIds.length === 0) {
-        return { valid: false, message: 'No valid MongoDB ObjectIds provided', endorsements };
-    }
+    //if (validObjectIds.length === 0) {
+    //    return { valid: false, message: 'No valid MongoDB ObjectIds provided', endorsements };
+    //}
 
     try {
         const existingUsers = await userModel.find({ _id: { $in: validObjectIds } }, '_id');

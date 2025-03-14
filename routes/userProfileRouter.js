@@ -17,20 +17,33 @@ router.route('/profile')
 
 router.route('/experience')
     .post(mockVerifyToken, user.addExperience)
-    .get(mockVerifyToken, user.getUserExperiences);
+    .get(mockVerifyToken, user.getAllExperiences);
 
 router.route('/experience/:index')
-    .put(mockVerifyToken,  user.updateExperience);
+    .get(mockVerifyToken, user.getExperience)
+    .put(mockVerifyToken,  user.updateExperience)
+    .delete(mockVerifyToken, user.deleteExperience);
 
 router.route('/skills')
-    .post(mockVerifyToken, user.addSkill)
-    .get(mockVerifyToken, user.getUserSkills);
+    .get(mockVerifyToken, user.getAllSkills)
+    .post(mockVerifyToken, user.addSkill);
 
-router.route('/skills/:index')
-    .put(mockVerifyToken,  user.updateSkill);
+router.route('/skills/:skillName')
+    .get(mockVerifyToken, user.getSkill)
+    .put(mockVerifyToken, user.updateSkill)
+    .delete(mockVerifyToken, user.deleteSkill);
 
-router.post('/add-profile-picture', upload.single('file'), user.uploadProfilePicture);
-    
-router.post('/add-cover-picture', upload.single('file'), user.uploadCoverPicture);
+router.route('/add-profile-picture')
+    .get(mockVerifyToken, user.getProfilePicture)
+    .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
+    .delete(mockVerifyToken, user.deleteProfilePicture);
+
+router.route('/add-cover-picture')
+    .get(mockVerifyToken, user.getCoverPicture)
+    .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
+    .delete(mockVerifyToken, user.deleteCoverPicture);
+
+//router.route('/skills/endorse')
+//    .post(mockVerifyToken, user.endorseSkill);
 
 module.exports = router;
