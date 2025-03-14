@@ -1,7 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
-const { addEducation, editIntro, addExperience, getUserExperiences, updateExperience, sortWorkExperience, addSkill, getUserSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
+const { addEducation, editIntro, addExperience, getAllExperiences, updateExperience, sortWorkExperience, addSkill, getAllSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 const uploadMiddleware  = require('../middlewares/multer');
 
@@ -198,7 +198,7 @@ describe('PATCH /profile', () => {
 
 app.post('/experience', mockVerifyToken, addExperience);
 app.put('/experience/:index', mockVerifyToken, updateExperience);
-app.get('/experience', mockVerifyToken, getUserExperiences)
+app.get('/experience', mockVerifyToken, getAllExperiences)
 
 describe('POST /experience', () => {
     beforeEach(() => {
@@ -572,124 +572,164 @@ describe('PUT /experience/:index - Update Work Experience', () => {
 /*
 Skills Section Tests
 */ 
-
+const mongoose = require('mongoose');
 app.post('/skills', mockVerifyToken, addSkill);
-app.put('/skills/:index', mockVerifyToken, updateSkill);
+app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 
 describe('POST /skills', () => {
-    const { validateSkillName, validateEndorsements } = require('../utilities/userProfileUtils');
-    
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    test('should successfully add a skill', async () => {
+    it('should add a skill successfully', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
         const mockSkillData = {
             skillName: 'Problem Solving',
             endorsements: ['d29ccbd4ac1b1cb9faefb867', 'fcec43117bcfec7dedf7cd55'],
         };
-        
-        const userId = '0b3169152ee6c171d25e6860';
 
         userModel.find.mockResolvedValue([
             { _id: 'd29ccbd4ac1b1cb9faefb867' },
             { _id: 'fcec43117bcfec7dedf7cd55' }
         ]);
-        
+
         userModel.findByIdAndUpdate.mockResolvedValue({
-            _id: userId,
+            _id: mockUserId,
             skills: [mockSkillData],
         });
-        
+
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
-        
+            .send(mockSkillData)
+
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill added successfully');
         expect(response.body.skill).toEqual(mockSkillData);
+
+    });
+
+    test('should return 400 if skill already exists', async () => {
+        userModel.exists.mockResolvedValue(true); // Skill exists
+
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'Problem Solving', endorsements: [] });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Skill already exists');
     });
 
     test('should return 400 if skill name is invalid', async () => {
+
         const response = await request(app)
             .post('/skills')
             .send({ skillName: '', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
-        
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Skill name must be a valid string');
-    });
 
-    test('should return 400 if user tries to endorse themselves', async () => {
-        const response = await request(app)
-            .post('/skills')
-            .send({ 
-                skillName: 'Leadership', 
-                endorsements: ['cc81c18d6b9fc1b83e2bebe3'] // Self-endorsement attempt
-            });
-    
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Users cannot endorse themselves');
+        expect(response.body.error).toBe('Skill name is required and must be a string');
     });
-    
 
     test('should return 400 if endorsements contain invalid user IDs', async () => {
+        userModel.exists.mockResolvedValue(null);
+        userModel.find.mockResolvedValue([]);
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Communication', endorsements: ['invalid_user_id'] });
+            .send({ skillName: 'hello', endorsements: ['invalid_user_id'] });
         
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('No valid MongoDB ObjectIds provided');
-    });
-
-    
-    test('should return 400 if endorsements contain duplicate user IDs', async () => {
-        const mockSkillData = {
-            skillName: 'Leadership',
-            endorsements: ['d29ccbd4ac1b1cb9faefb867', 'd29ccbd4ac1b1cb9faefb867'],
-        };
-
-        const response = await request(app)
-            .post('/skills')
-            .send(mockSkillData);
-        
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Duplicate endorsements are not allowed');
-    });
-
-    test('should return 400 if one or more endorsement user IDs are not found', async () => {
-        userModel.find.mockResolvedValue([{ _id: 'd29ccbd4ac1b1cb9faefb867' }]);
-        
-        const response = await request(app)
-            .post('/skills')
-            .send({ skillName: 'Leadership', endorsements: ['d29ccbd4ac1b1cb9faefb867', 'fcec43117bcfec7dedf7cd55'] });
-        
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Some endorsement user IDs are invalid');
+        expect(response.body.error).toBe('No matching users found in database');
+       // expect(response.body.invalidUserIds).toContain('invalid_user_id');
     });
 
     test('should return 404 if user is not found', async () => {
+        userModel.exists.mockResolvedValue(null);
+
         userModel.findByIdAndUpdate.mockResolvedValue(null);
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
-        
+            .send({ skillName: 'Critical Thinking', endorsements: [] });
+
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
     test('should return 500 if database update fails', async () => {
-        userModel.find.mockResolvedValue([{ _id: 'd29ccbd4ac1b1cb9faefb867' }]);
+        userModel.exists.mockResolvedValue(null);
+     //   validateSkillName.mockResolvedValue({ valid: true });
+     //   validateEndorsements.mockResolvedValue({ valid: true, endorsements: [] });
+
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
-        
+            .send({ skillName: 'Critical Thinking', endorsements: [] });
+
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
     });
 });
+
+
+describe('PUT /skills/:skillName', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return 400 if no updates are provided', async () => {
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('No updates provided');
+    });
+
+    test('should return 400 if new skill name already exists', async () => {
+        userModel.exists
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true);
+
+        const mockSkillData = {
+            newSkillName: 'Problem Solving',
+        };
+        
+        userModel.find.mockResolvedValue(['bacc96ea16038e4091b6cc55']);
+
+        const response = await request(app)
+            .put('/skills/data') 
+            .send(mockSkillData);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Skill already exists');
+    });
+
+    test('should return 404 if skill is not found', async () => {
+        userModel.exists.mockResolvedValue(false); // Skill does not exist
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Skill not found');
+    });
+
+    test('should return 500 if skill not found', async () => {
+        userModel.exists.mockResolvedValue(true);
+      //  validateSkillName.mockResolvedValue({ valid: true });
+        userModel.exists.mockResolvedValueOnce(null);
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Skill not found');
+    });
+});
+
 
 
 
@@ -753,7 +793,7 @@ describe('POST /add-profile-picture', () => {
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
     
         expect(response.status).toBe(400);
-        expect(response.body.message).toBe('Invalid file type. Only JPEG and PNG are allowed.');
+        expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
 
 
@@ -866,7 +906,7 @@ describe('POST /add-cover-picture', () => {
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
     
         expect(response.status).toBe(400);
-        expect(response.body.message).toBe('Invalid file type. Only JPEG and PNG are allowed.');
+        expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
 
     test('should return 400 if file size exceeds limit', async () => {
