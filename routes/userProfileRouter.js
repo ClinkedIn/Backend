@@ -30,10 +30,12 @@ router.route('/skills/:skillName')
     .delete(mockVerifyToken, user.deleteSkill);
 
 router.route('/add-profile-picture')
+    .get(mockVerifyToken, user.getProfilePicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
     .delete(mockVerifyToken, user.deleteProfilePicture);
 
 router.route('/add-cover-picture')
+    .get(mockVerifyToken, user.getCoverPicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
 
