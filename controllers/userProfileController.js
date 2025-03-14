@@ -1,7 +1,7 @@
 const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
-const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
+const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 
 
 /*
@@ -128,8 +128,148 @@ const getProfilePicture = (req, res) => getUserPicture(req, res, 'profilePicture
 // Get cover picture
 const getCoverPicture = (req, res) => getUserPicture(req, res, 'coverPicture');
 
+/*
+************************************************
+*********** RESUME UPLOAD ************
+************************************************
+*/
+const getResume = async (req, res) => {
+    try {
+        const userId = req.user.id;
 
+        // Find the user and retrieve only the resume field
+        const user = await userModel.findById(userId).select('resume');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
+        if (!user.resume) {
+            return res.status(400).json({ message: 'Resume not uploaded' });
+        } 
+        // Create a Google Docs viewer URL as fallback
+        const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(user.resume)}&embedded=true`;
+
+        res.status(200).json({ 
+            message: 'Resume retrieved successfully',
+            resume: user.resume,
+            googleDocsUrl: googleDocsUrl
+        });
+    } catch (error) {
+        console.error('Error retrieving resume:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve resume',
+            error: error.message 
+        });
+    }
+};
+const uploadResume = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        
+        const userId = req.user.id;
+        
+        // Validate file type (allow PDF, DOC, DOCX)
+        const allowedMimeTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+          
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ 
+                message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.' 
+            });
+        }
+        
+        // Validate file size (limit: 10MB)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024;
+        if (req.file.size > MAX_FILE_SIZE) {
+            return res.status(400).json({ 
+                message: 'File size too large. Maximum allowed size is 10MB.' 
+            });
+        }
+
+        console.log('Uploading file with mimetype:', req.file.mimetype);
+
+        // Use 'raw' resource type for documents instead of 'document'
+        const uploadResult = await uploadFile(req.file.buffer, 'raw');
+
+        if (!uploadResult || !uploadResult.url) {
+            throw new Error('Failed to get upload URL from Cloudinary');
+        }
+
+        console.log('Cloudinary upload successful:', uploadResult);
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { resume: uploadResult.url },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Resume uploaded successfully',
+            resume: uploadResult.url
+        });
+    } catch (error) {
+        console.error('Error uploading resume:', error);
+        res.status(500).json({ 
+            message: 'Failed to upload resume',
+            error: error.message,
+            details: error.http_code ? `HTTP Code: ${error.http_code}` : 'Unknown error'
+        });
+    }
+};
+
+const deleteResume = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Find user and get current resume URL
+      const user = await userModel.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      if (!user.resume) {
+        return res.status(400).json({ message: 'No resume to delete' });
+      }
+      
+      // Delete file from Cloudinary
+      const deleteResult = await deleteFileFromUrl(user.resume);
+      
+      if (deleteResult.result !== 'ok' && deleteResult.result !== 'no file to delete') {
+        return res.status(500).json({ 
+          message: 'Failed to delete resume from storage',
+          details: deleteResult
+        });
+      }
+      
+      // Update user in database
+      const updatedUser = await userModel.findByIdAndUpdate(
+        userId,
+        { resume: null },
+        { new: true }
+      );
+      
+      res.status(200).json({
+        message: 'Resume deleted successfully'
+      });
+      
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      res.status(500).json({ 
+        message: 'Failed to delete resume',
+        error: error.message 
+      });
+    }
+  };
 
 /*
 ***************************************************
@@ -565,7 +705,11 @@ const deleteSkill = async (req, res) => {
     }
 };
 
-//------------------------------------------EDUCATION--------------------------
+/*
+************************************************
+*********** Education ************
+************************************************
+*/
 const addEducation = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -731,7 +875,11 @@ const deleteEducation = async (req, res) => {
     }
 }
 
-//======================INTRO=====================
+/*
+************************************************
+*********** Intro ************
+************************************************
+*/
 const editIntro = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -811,6 +959,9 @@ module.exports = {
     updateSkill,
     uploadProfilePicture,
     uploadCoverPicture,
+    getResume,
+    uploadResume,
+    deleteResume,
     deleteSkill,
     deleteExperience,
     deleteProfilePicture,

@@ -3,19 +3,39 @@
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
-const { addEducation,getEducation,editEducation,getEducations,deleteEducation, editIntro, addExperience, getAllExperiences, updateExperience, sortWorkExperience, addSkill, getAllSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
-const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
-const uploadMiddleware  = require('../middlewares/multer');
+const {
+    addEducation,
+    getEducation,
+    editEducation,
+    getEducations,
+    deleteEducation,
+    editIntro, addExperience,
+    getAllExperiences,
+    updateExperience,
+    sortWorkExperience,
+    addSkill,
+    getAllSkills,
+    updateSkill,
+    uploadProfilePicture,
+    uploadCoverPicture,
+    getResume,
+    uploadResume,
+    deleteResume,
+} = require('../controllers/userProfileController');
+const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
+const uploadMiddleware = require('../middlewares/multer');
 
-jest.mock('../utilities/userProfileUtils', () => ({
-    validateSkillName: jest.requireActual('../utilities/userProfileUtils').validateSkillName,
-    validateEndorsements: jest.requireActual('../utilities/userProfileUtils').validateEndorsements,
-    sortWorkExperience: jest.requireActual('../utilities/userProfileUtils').sortWorkExperience
-  }));
+jest.mock('../utils/userProfileUtils', () => ({
+    validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
+    validateEndorsements: jest.requireActual('../utils/userProfileUtils').validateEndorsements,
+    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience
+}));
 
 jest.mock('../models/userModel');
 jest.mock('../utils/cloudinaryUpload', () => ({
     uploadFile: jest.fn(), // Mock upload function
+    uploadMultipleImages: jest.fn(),
+    deleteFileFromUrl: jest.fn()
 }));
 
 const app = express();
@@ -662,9 +682,9 @@ describe('POST /experience', () => {
 describe('GET /experience - Get User Experiences', () => {
     const userId = 'cc81c18d6b9fc1b83e2bebe3';
 
-   // beforeEach(() => {
-        //userId = new mongoose.Types.ObjectId();
-   // });
+    // beforeEach(() => {
+    //userId = new mongoose.Types.ObjectId();
+    // });
 
     it('should return 404 if user is not found', async () => {
         userModel.findById.mockResolvedValue(null); // Simulate user not found
@@ -832,7 +852,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
 
 /*
 Skills Section Tests
-*/ 
+*/
 const mongoose = require('mongoose');
 app.post('/skills', mockVerifyToken, addSkill);
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
@@ -897,10 +917,10 @@ describe('POST /skills', () => {
         const response = await request(app)
             .post('/skills')
             .send({ skillName: 'hello', endorsements: ['invalid_user_id'] });
-        
+
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('No matching users found in database');
-       // expect(response.body.invalidUserIds).toContain('invalid_user_id');
+        // expect(response.body.invalidUserIds).toContain('invalid_user_id');
     });
 
     test('should return 404 if user is not found', async () => {
@@ -918,8 +938,8 @@ describe('POST /skills', () => {
 
     test('should return 500 if database update fails', async () => {
         userModel.exists.mockResolvedValue(null);
-     //   validateSkillName.mockResolvedValue({ valid: true });
-     //   validateEndorsements.mockResolvedValue({ valid: true, endorsements: [] });
+        //   validateSkillName.mockResolvedValue({ valid: true });
+        //   validateEndorsements.mockResolvedValue({ valid: true, endorsements: [] });
 
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
 
@@ -955,11 +975,11 @@ describe('PUT /skills/:skillName', () => {
         const mockSkillData = {
             newSkillName: 'Problem Solving',
         };
-        
+
         userModel.find.mockResolvedValue(['bacc96ea16038e4091b6cc55']);
 
         const response = await request(app)
-            .put('/skills/data') 
+            .put('/skills/data')
             .send(mockSkillData);
 
         expect(response.status).toBe(400);
@@ -979,7 +999,7 @@ describe('PUT /skills/:skillName', () => {
 
     test('should return 500 if skill not found', async () => {
         userModel.exists.mockResolvedValue(true);
-      //  validateSkillName.mockResolvedValue({ valid: true });
+        //  validateSkillName.mockResolvedValue({ valid: true });
         userModel.exists.mockResolvedValueOnce(null);
 
         const response = await request(app)
@@ -1011,23 +1031,23 @@ describe('POST /add-profile-picture', () => {
     test('should successfully upload a profile picture', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
         const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
-    
+
         userModel.findByIdAndUpdate.mockResolvedValue({
             _id: userId,
             profilePicture: mockUploadResult.url,
         });
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .set('Content-Type', 'multipart/form-data')
             .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Profile Picture updated successfully');
         expect(response.body.profilePicture).toBe(mockUploadResult.url);
-    
+
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
             userId,
             { profilePicture: mockUploadResult.url },
@@ -1048,11 +1068,11 @@ describe('POST /add-profile-picture', () => {
 
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
@@ -1060,11 +1080,11 @@ describe('POST /add-profile-picture', () => {
 
     test('should return 400 if file size exceeds limit', async () => {
         const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
     });
@@ -1073,14 +1093,14 @@ describe('POST /add-profile-picture', () => {
     test('should return 500 if database update fails', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
         const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
     });
@@ -1089,16 +1109,16 @@ describe('POST /add-profile-picture', () => {
     test('should return 404 if user is not found', async () => {
         uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-image-url' });
         userModel.findByIdAndUpdate.mockResolvedValue(null);
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('User not found');
-    });    
+    });
 
-    
+
     test('should return 500 if Cloudinary upload fails', async () => {
         uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
 
@@ -1112,7 +1132,7 @@ describe('POST /add-profile-picture', () => {
         expect(response.body.message).toBe('Internal server error');
         expect(response.body.error).toBeDefined();
     });
-    
+
 });
 
 
@@ -1126,23 +1146,23 @@ describe('POST /add-cover-picture', () => {
     test('should successfully upload a cover picture', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
         const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
-    
+
         userModel.findByIdAndUpdate.mockResolvedValue({
             _id: userId,
             coverPicture: mockUploadResult.url,
         });
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .set('Content-Type', 'multipart/form-data')
             .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Cover Picture updated successfully');
         expect(response.body.coverPicture).toBe(mockUploadResult.url);
-    
+
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
             userId,
             { coverPicture: mockUploadResult.url },
@@ -1161,22 +1181,22 @@ describe('POST /add-cover-picture', () => {
 
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
 
     test('should return 400 if file size exceeds limit', async () => {
         const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
     });
@@ -1184,14 +1204,14 @@ describe('POST /add-cover-picture', () => {
     test('should return 500 if database update fails', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
         const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
     });
@@ -1199,14 +1219,14 @@ describe('POST /add-cover-picture', () => {
     test('should return 404 if user is not found', async () => {
         uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-cover-url' });
         userModel.findByIdAndUpdate.mockResolvedValue(null);
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('User not found');
-    });    
+    });
 
     test('should return 500 if Cloudinary upload fails', async () => {
         uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
@@ -1220,5 +1240,288 @@ describe('POST /add-cover-picture', () => {
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
         expect(response.body.error).toBeDefined();
+    });
+});
+
+
+app.get('/resume', mockVerifyToken, getResume);
+app.post('/resume', mockVerifyToken, uploadMiddleware.single('resume'), uploadResume);
+app.delete('/resume', mockVerifyToken, deleteResume);
+
+describe('GET /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve resume URL', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+    
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        };
+    
+        // Mock the chainable query pattern correctly
+        const mockSelectFn = jest.fn().mockResolvedValue(mockUser);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume retrieved successfully');
+        expect(response.body.resume).toBe(resumeUrl);
+        expect(response.body.googleDocsUrl).toBe(
+            `https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=true`
+        );
+    });
+
+    test('should return 404 if user not found', async () => {
+        // Correctly mock a "user not found" scenario with chainable API
+        const mockSelectFn = jest.fn().mockResolvedValue(null);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if resume not uploaded', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        };
+    
+        // Use the chainable mock pattern
+        const mockSelectFn = jest.fn().mockResolvedValue(mockUser);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Resume not uploaded');
+    });
+
+    test('should return 500 if server error occurs', async () => {
+        // Mock the chainable query pattern with an error on select()
+        const mockSelectFn = jest.fn().mockRejectedValue(new Error('Database error'));
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve resume');
+    });
+});
+
+describe('POST /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully upload resume', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+        const mockResumeBuffer = Buffer.from('mock PDF content');
+
+        uploadFile.mockResolvedValue({ url: resumeUrl });
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        });
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', mockResumeBuffer, {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume uploaded successfully');
+        expect(response.body.resume).toBe(resumeUrl);
+        expect(uploadFile).toHaveBeenCalledWith(expect.any(Buffer), 'raw');
+    });
+
+    test('should return 400 if no file is uploaded', async () => {
+        const response = await request(app)
+            .post('/resume')
+            .send();
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No file uploaded');
+    });
+
+    test('should return 400 for invalid file type', async () => {
+        const mockImageBuffer = Buffer.from('fake image data');
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', mockImageBuffer, {
+                filename: 'resume.jpg',
+                contentType: 'image/jpeg'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid file type. Only PDF, DOC, and DOCX are allowed.');
+    });
+
+    test('should return 400 if file size exceeds 10MB', async () => {
+        const largeBuffer = Buffer.alloc(11 * 1024 * 1024); // 11MB file
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', largeBuffer, {
+                filename: 'large.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('File size too large. Maximum allowed size is 10MB.');
+    });
+
+    test('should return 404 if user not found', async () => {
+        uploadFile.mockResolvedValue({ url: 'https://example.com/resume.pdf' });
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', Buffer.from('mock PDF content'), {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 if Cloudinary upload fails', async () => {
+        uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', Buffer.from('mock PDF content'), {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to upload resume');
+    });
+});
+
+describe('DELETE /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully delete resume', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'ok' });
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        });
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume deleted successfully');
+        expect(deleteFileFromUrl).toHaveBeenCalledWith(resumeUrl);
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            'cc81c18d6b9fc1b83e2bebe3',
+            { resume: null },
+            { new: true }
+        );
+    });
+
+    test('should return 404 if user not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if no resume to delete', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No resume to delete');
+    });
+
+    test('should return 500 if Cloudinary deletion fails', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockRejectedValue(new Error('Cloudinary deletion failed'));
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume');
+    });
+
+    test('should return 500 if Cloudinary reports file not found', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'not found' });
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        });
+
+        const response = await request(app).delete('/resume');
+
+        // should throw error if file not found
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume from storage');
+    });
+
+    test('should return 500 if database update fails', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'ok' });
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume');
+        expect(response.body.error).toBe('Database update failed');
     });
 });

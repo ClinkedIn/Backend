@@ -43,6 +43,10 @@ router.route('/add-cover-picture')
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
 
+router.route('/resume')
+    .get(mockVerifyToken, user.getResume)
+    .post(mockVerifyToken, upload.single('resume'), user.uploadResume)
+    .delete(mockVerifyToken, user.deleteResume);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
 

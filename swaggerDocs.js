@@ -2287,10 +2287,52 @@
 /**
  * @swagger
  * /user/resume:
+ *   get:
+ *     summary: Get user resume
+ *     tags: [Users]
+ *     description: Retrieves the current user's resume URL
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume retrieved successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
+ *                 googleDocsUrl:
+ *                   type: string
+ *                   example: "https://docs.google.com/viewer?url=https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can&embedded=true"
+ *       400:
+ *         description: Resume not uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume not uploaded"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ *
  *   post:
  *     summary: Upload resume
  *     tags: [Users]
  *     description: Upload or update a user's resume
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -2301,15 +2343,71 @@
  *               resume:
  *                 type: string
  *                 format: binary
+ *                 description: PDF, DOC or DOCX file (max 10MB)
  *     responses:
  *       200:
  *         description: Resume uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume uploaded successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
  *       400:
- *         description: Invalid file format
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid file type. Only PDF, DOC, and DOCX are allowed."
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: User not found
  *       500:
- *         description: Internal Server Error
+ *         description: Server error
+ *
+ *   delete:
+ *     summary: Delete resume
+ *     tags: [Users]
+ *     description: Remove a user's resume
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume deleted successfully"
+ *       400:
+ *         description: No resume to delete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No resume to delete"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
 
 /**
