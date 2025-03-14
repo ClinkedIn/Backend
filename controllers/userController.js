@@ -161,47 +161,47 @@ const registerUser = async (req, res) => {
 };
 
 
-// const confirmEmail = async (req, res) => {
-//     try {
-//         const { emailVerificationToken } = req.body;
-//         if (!emailVerificationToken) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Verification token is required"
-//             });
-//         }
+const confirmEmail = async (req, res) => {
+    try {
+        const { emailVerificationToken } = req.body;
+        if (!emailVerificationToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Verification token is required"
+            });
+        }
 
-//         const verificationDate = new Date(Date.now());
-//         const user = await userModel.findOne({
-//             emailVerificationToken: emailVerificationToken,
-//             emailVerificationExpiresAt: { $gt: verificationDate }
-//         });
+        const verificationDate = new Date(Date.now());
+        const user = await userModel.findOne({
+            emailVerificationToken: emailVerificationToken,
+            emailVerificationExpiresAt: { $gt: verificationDate }
+        });
 
-//         if (!user) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: 'Invalid or expired token'
-//             });
-//         }
-//         user.isConfirmed = true;
-//         user.emailVerificationToken = null;
-//         user.emailVerificationExpiresAt = null;
-//         await user.save();
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
+        user.isConfirmed = true;
+        user.emailVerificationToken = null;
+        user.emailVerificationExpiresAt = null;
+        await user.save();
 
-//         return res.status(200).json({
-//             success: true,
-//             message: "Email is confirmed successfully"
-//         });
-//     }
+        return res.status(200).json({
+            success: true,
+            message: "Email is confirmed successfully"
+        });
+    }
 
-//     catch (error) {
-//         return res.status(500).json({
-//             success: false,
-//             message: "Email confirmation failed",
-//             error: error.message
-//         });
-//     }
-// };
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Email confirmation failed",
+            error: error.message
+        });
+    }
+};
 
 // const login = async (req, res, next) => {
 //     try {
