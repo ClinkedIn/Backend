@@ -3370,27 +3370,39 @@
  *         description: Internal Server Error
  */
 
+
+
 /**
  * @swagger
  * /user/skills:
  *   post:
- *     summary: Add a skill to user's profile
+ *     summary: Add a new skill to the user's profile
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Adds a new skill to a user's profile after validating the skill name and checking for duplicates.
+ *     description: Adds a skill to the authenticated user's profile and associates it with their education records.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - skillName
+ *               - educationIndexes
  *             properties:
  *               skillName:
  *                 type: string
  *                 example: "JavaScript"
+ *                 description: "The name of the skill to be added."
+ *               educationIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: "Array of indexes referring to the user's education records."
  *     responses:
- *       201:
+ *       200:
  *         description: Skill added successfully
  *         content:
  *           application/json:
@@ -3401,10 +3413,23 @@
  *                   type: string
  *                   example: "Skill added successfully"
  *                 skill:
- *                   type: string
- *                   example: "JavaScript"
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       400:
- *         description: Invalid input data or skill already exists
+ *         description: Bad request - Invalid input data
  *         content:
  *           application/json:
  *             schema:
@@ -3412,7 +3437,17 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Invalid skill name or skill already exists"
+ *                   example: "Skill already exists"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
  *         description: Internal Server Error
  *         content:
@@ -3423,7 +3458,15 @@
  *                 error:
  *                   type: string
  *                   example: "Internal server error"
- * 
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+
+/**
+ * @swagger
+ * /user/skills:
  *   get:
  *     summary: Get all user skills
  *     tags: [Users]
@@ -3451,6 +3494,11 @@
  *                         items:
  *                           type: string
  *                         example: ["userId1", "userId2"]
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
  *       404:
  *         description: User not found
  *         content:
@@ -3474,18 +3522,17 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- */
+
 
 /**
  * @swagger
  * /user/skills/{skillName}:
- * 
  *   get:
  *     summary: Get a specific skill by name
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Retrieve a specific skill from a user's profile by skill name.
+ *     description: Retrieve a specific skill from the authenticated user's profile by skill name.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3513,6 +3560,11 @@
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       404:
  *         description: User not found or skill not found
  *         content:
@@ -3536,21 +3588,27 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- * 
+ */
+
+
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
  *   put:
  *     summary: Update a user's skill
- *     description: Allows a user to update an existing skill in their profile.
- *     tags:
- *       - Skills
+ *     tags: [Users]
  *     security:
  *       - BearerAuth: []
+ *     description: Update the skill name or associated education indexes for a given skill.
  *     parameters:
  *       - in: path
  *         name: skillName
  *         required: true
  *         schema:
  *           type: string
- *         description: The name of the skill to update
+ *           example: "JavaScript"
+ *         description: The current name of the skill to be updated.
  *     requestBody:
  *       required: true
  *       content:
@@ -3560,7 +3618,14 @@
  *             properties:
  *               newSkillName:
  *                 type: string
- *                 description: The updated skill name
+ *                 example: "Node.js"
+ *                 description: The new name for the skill (optional).
+ *               educationIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: List of education indexes to associate with the skill (optional).
  *     responses:
  *       200:
  *         description: Skill updated successfully
@@ -3571,22 +3636,67 @@
  *               properties:
  *                 message:
  *                   type: string
+ *                   example: "Skill updated successfully"
  *                 skill:
  *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "Node.js"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       400:
- *         description: Invalid request, missing or duplicate skill name
+ *         description: Invalid request or duplicate skill
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill name is the same"
  *       404:
- *         description: Skill not found
+ *         description: User or skill not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill not found"
  *       500:
- *         description: Internal server error
- *
- * 
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
  *   delete:
- *     summary: Delete a skill by name
+ *     summary: Delete a user's skill
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Remove a skill from a user's profile by specifying its name.
+ *     description: Remove a skill from the authenticated user's profile.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3617,8 +3727,13 @@
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       404:
- *         description: User not found or skill not found
+ *         description: Skill not found
  *         content:
  *           application/json:
  *             schema:
@@ -3641,6 +3756,7 @@
  *                   type: string
  *                   example: "Error message details"
  */
+
 
 /**
  * @swagger
@@ -3681,11 +3797,19 @@
  *                     skillName:
  *                       type: string
  *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *                     endorsements:
  *                       type: array
  *                       items:
  *                         type: string
  *                       example: ["USER_ID_1", "USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
  *       400:
  *         description: Bad request (e.g., User cannot endorse themselves, already endorsed)
  *       401:
@@ -3736,11 +3860,19 @@
  *                     skillName:
  *                       type: string
  *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *                     endorsements:
  *                       type: array
  *                       items:
  *                         type: string
  *                       example: ["USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
  *       400:
  *         description: Bad request (e.g., missing fields)
  *       401:
@@ -3750,6 +3882,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 
 /**

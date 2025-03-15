@@ -15,6 +15,7 @@ router.route('/education/:index')
     .get(mockVerifyToken,user.getEducation)
     .patch(mockVerifyToken,user.editEducation)
     .delete(mockVerifyToken,user.deleteEducation);
+
 router.route('/profile')
     .patch(mockVerifyToken,user.editIntro);
 

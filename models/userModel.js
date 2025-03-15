@@ -35,7 +35,8 @@ const userSchema = new mongoose.Schema({
     },
     skills: [{
         skillName: { type: String, required: true },
-        endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+        endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        education: [{ type: Number }] 
     }],
 
     education: [{
