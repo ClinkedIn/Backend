@@ -16,6 +16,39 @@ const {
 } = require("../utils/validateEmailPassword");
 const { generateTokens } = require("./jwtController");
 
+const signToken = (id) => {
+  const token = jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+  return token;
+};
+
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.secure = true;
+  }
+
+  res.cookie("jwt", token, cookieOptions);
+
+  user.password = undefined;
+
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: {
+      user,
+    },
+  });
+};
+
 const dummyData = async (req, res) => {
   res.status(200).json({ message: "Dummy data" });
 };
@@ -118,7 +151,7 @@ const registerUser = async (req, res) => {
         message: "CAPCHA Verification failed",
       });
     }
-
+    console.log("------------------------------------------");
     //check if user already exists
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
@@ -223,39 +256,45 @@ const confirmEmail = async (req, res) => {
   }
 };
 
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!email || !password) {
+      return res
+        .status(401)
+        .json({ message: "please provide email and password" });
+    }
+
+    const user = await userModel.findOne({ email });
 
     if (!user) {
-      const error = new Error("User not found");
-      error.statusCode = 404;
-      throw error;
+      return res.status(401).json({ message: "wrong email" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await user.correctPassword(password, user.password);
 
     if (!isPasswordValid) {
-      const error = new Error("Invalid password");
-      error.statusCode = 401;
-      throw error;
+      return res.status(401).json({ message: "wrong password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    /* const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }); */
+
+    generateTokens(user, res);
 
     res.status(200).json({
       success: true,
       message: "User signed in successfully",
       data: {
-        token,
+        //token,
         user,
       },
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const forgorPassword = async (req, res) => {
@@ -298,10 +337,38 @@ const forgorPassword = async (req, res) => {
   }
 };
 
+const resetPassword = async (req, res) => {
+  //get user based on the token
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+  const user = await userModel.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+  // if token is not expired
+  if (!user) {
+    return res.status(400).json({ message: "Token is invalid or has expired" });
+  }
+  // update changedpasswordat
+  user.password = req.body.password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+  // log the user in send jwt
+
+  createSendToken(user, 200, res);
+};
+
+const updatePassword = async (req, res) => {};
+
 module.exports = {
   dummyData,
   registerUser,
   confirmEmail,
   login,
   forgorPassword,
+  resetPassword,
+  updatePassword,
 };

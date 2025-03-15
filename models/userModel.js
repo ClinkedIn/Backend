@@ -178,6 +178,13 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 ); // Adds createdAt & updatedAt automatically
 
+userSchema.methods.correctPassword = async function (
+  candidatePassword,
+  userPassword
+) {
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
 
