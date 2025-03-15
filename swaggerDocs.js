@@ -4855,3 +4855,129 @@
  *                   type: string
  *                   example: "Error message details"
  */
+
+/**
+ * @swagger
+ * /user/contact-info:
+ *   patch:
+ *     summary: Update user contact information
+ *     tags: [Users]
+ *     description: Update a user's contact information including phone, address, birthday, and website
+ *     operationId: editContactInfo
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "+1 555-123-4567"
+ *               phoneType:
+ *                 type: string
+ *                 enum: [Home, Work, Mobile, null]
+ *                 nullable: true
+ *                 example: "Mobile"
+ *               address:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "123 Main Street, San Francisco, CA 94105"
+ *               birthDay:
+ *                 type: object
+ *                 properties:
+ *                   day:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 31
+ *                     nullable: true
+ *                     example: 15
+ *                   month:
+ *                     type: string
+ *                     enum: [January, February, March, April, May, June, July, August, September, October, November, December, null]
+ *                     nullable: true
+ *                     example: "June"
+ *               website:
+ *                 type: object
+ *                 properties:
+ *                   url:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "https://johndoe.com"
+ *                   type:
+ *                     type: string
+ *                     enum: [Personal, Company, Blog, RSS Feed, Portfolio, Other, null]
+ *                     nullable: true
+ *                     example: "Personal"
+ *     responses:
+ *       200:
+ *         description: Contact information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Contact information updated successfully"
+ *                 contactInfo:
+ *                   type: object
+ *                   properties:
+ *                     phone:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "+1 555-123-4567"
+ *                     phoneType:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Mobile"
+ *                     address:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "123 Main Street, San Francisco, CA 94105"
+ *                     birthDay:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                           nullable: true
+ *                           example: 15
+ *                         month:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "June"
+ *                     website:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "https://johndoe.com"
+ *                         type:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "Personal"
+ *       400:
+ *         description: Validation error or no fields provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid phoneType"
+ *                 validValues:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Home", "Work", "Mobile"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */

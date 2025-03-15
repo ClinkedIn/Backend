@@ -1266,7 +1266,117 @@ const unfollowEntity = async (req, res) => {
         });
     }
 };
+const editContactInfo = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { 
+            phone, 
+            phoneType, 
+            address, 
+            birthDay,
+            website 
+        } = req.body;
 
+        // Build the update object with only provided fields
+        const updateFields = {};
+        
+        // Handle phone updates
+        if (phone !== undefined) {
+            updateFields['contactInfo.phone'] = phone;
+        }
+        
+        // Handle phoneType updates with validation
+        if (phoneType !== undefined) {
+            const validPhoneTypes = ["Home", "Work", "Mobile"];
+            if (phoneType && !validPhoneTypes.includes(phoneType)) {
+                return res.status(400).json({
+                    error: 'Invalid phoneType',
+                    validValues: validPhoneTypes
+                });
+            }
+            updateFields['contactInfo.phoneType'] = phoneType;
+        }
+        
+        // Handle address updates
+        if (address !== undefined) {
+            updateFields['contactInfo.address'] = address;
+        }
+        
+        // Handle birthday updates with validation
+        if (birthDay) {
+            if (birthDay.day !== undefined) {
+                if (birthDay.day !== null && (birthDay.day < 1 || birthDay.day > 31)) {
+                    return res.status(400).json({
+                        error: 'Invalid day value',
+                        message: 'Day must be between 1 and 31'
+                    });
+                }
+                updateFields['contactInfo.birthDay.day'] = birthDay.day;
+            }
+            
+            if (birthDay.month !== undefined) {
+                const validMonths = ["January", "February", "March", "April", "May", "June", 
+                                     "July", "August", "September", "October", "November", "December"];
+                if (birthDay.month !== null && !validMonths.includes(birthDay.month)) {
+                    return res.status(400).json({
+                        error: 'Invalid month value',
+                        validValues: validMonths
+                    });
+                }
+                updateFields['contactInfo.birthDay.month'] = birthDay.month;
+            }
+        }
+        
+        // Handle website updates with validation
+        if (website) {
+            if (website.url !== undefined) {
+                updateFields['contactInfo.website.url'] = website.url;
+            }
+            
+            if (website.type !== undefined) {
+                const validWebsiteTypes = ["Personal", "Company", "Blog", "RSS Feed", "Portfolio", "Other"];
+                if (website.type !== null && !validWebsiteTypes.includes(website.type)) {
+                    return res.status(400).json({
+                        error: 'Invalid website type',
+                        validValues: validWebsiteTypes
+                    });
+                }
+                updateFields['contactInfo.website.type'] = website.type;
+            }
+        }
+        
+        // If no fields were provided for update, return an error
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({
+                error: 'No fields provided for update',
+                message: 'Please provide at least one contact information field to update'
+            });
+        }
+        
+        // Find user and update contact information
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        ).select('contactInfo');
+        
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.status(200).json({
+            message: 'Contact information updated successfully',
+            contactInfo: updatedUser.contactInfo
+        });
+        
+    } catch (error) {
+        console.error('Error updating contact information:', error);
+        res.status(500).json({
+            error: 'Failed to update contact information',
+            details: error.message
+        });
+    }
+};
 module.exports = {
     getAllUsers,
     getUserProfile,
@@ -1298,5 +1408,6 @@ module.exports = {
     getCoverPicture,
     updatePrivacySettings,
     followEntity,
-    unfollowEntity
+    unfollowEntity,
+    editContactInfo
 };

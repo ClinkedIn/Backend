@@ -13,13 +13,13 @@ const userSchema = new mongoose.Schema({
     resume: { type: String, default: null },
     website: { type: String, default: null },
     contactInfo:{
-        phone: { type: String, default: null },
-        phoneType: { type: String, enum:["Home", "Work", "Mobile"],default: null },
-        address: { type: String, default: null },
+        phone: { type: String, default: "" },
+        phoneType: { type: String, enum:["Home", "Work", "Mobile"],default: "Home" },
+        address: { type: String, default: "" },
         birthDay:  {
-            day: { type: Number, default: null },
+            day: { type: Number, default: 1 },
             month: { type: String, enum:["January", "February", "March", "April","May", "June", "July", "August", "September", "October", "November", "December"],
-                 default: null },
+                 default: "January" },
         },
         website: { url: { type: String, default: null }, type: { type: String,enum:["Personal", "Company", "Blog","RSS Feed", "Portfolio","Other"] ,default: null } },
     },
