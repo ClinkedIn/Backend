@@ -27,6 +27,7 @@ router.route('/experience/:index')
     .get(mockVerifyToken, user.getExperience)
     .put(mockVerifyToken,  user.updateExperience)
     .delete(mockVerifyToken, user.deleteExperience);
+    
 router.route('/skills')
     .get(mockVerifyToken, user.getAllSkills)
     .post(mockVerifyToken, user.addSkill);

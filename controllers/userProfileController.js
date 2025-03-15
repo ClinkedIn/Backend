@@ -386,6 +386,7 @@ const addExperience = async (req, res) => {
     try {
         const userId = req.user.id;
 
+        // Extract experience data from request body
         const experienceData = {
             jobTitle: req.body.jobTitle,
             companyName: req.body.companyName,
@@ -397,33 +398,68 @@ const addExperience = async (req, res) => {
             locationType: req.body.locationType,
             description: req.body.description,
             foundVia: req.body.foundVia,
-            skills: req.body.skills,
+            skills: req.body.skills, // Expecting an array of skills
             media: req.body.media
         };
 
+        // Validation checks
         if (!experienceData.jobTitle) return res.status(400).json({ error: 'Job Title is required' });
         if (!experienceData.companyName) return res.status(400).json({ error: 'Company Name is required' });
         if (!experienceData.fromDate) return res.status(400).json({ error: 'Start Date is required' });
         if (isNaN(experienceData.fromDate.getTime())) return res.status(400).json({ error: 'Invalid Start Date' });
-        if (!experienceData.currentlyWorking && !experienceData.toDate) return res.status(400).json({ error: 'End Date is required' });
+        if (!req.body.currentlyWorking && !experienceData.toDate) return res.status(400).json({ error: 'End Date is required' });
         if (!req.body.currentlyWorking && isNaN(experienceData.toDate.getTime())) return res.status(400).json({ error: 'Invalid End Date' });
 
+        // Find the user by ID
         const user = await userModel.findById(userId);
         if (!user) return res.status(404).json({ error: "User not found" });
 
+        // Add the new experience to the user's workExperience array
         user.workExperience.push(experienceData);
 
+        // Sort work experience
         user.workExperience = sortWorkExperience(user.workExperience);
-        // console.log(user.workExperience)
 
+        // Get the index of the newly added experience
+        const experienceIndex = user.workExperience.findIndex(exp => 
+            exp.jobTitle === experienceData.jobTitle &&
+            exp.companyName === experienceData.companyName &&
+            exp.fromDate.getTime() === experienceData.fromDate.getTime()
+        );
+
+        // Add skills and associate them with this experience index
+        if (experienceData.skills && experienceData.skills.length > 0) {
+            experienceData.skills.forEach(skillName => {
+                // Check if skill already exists in the user's skills array
+                const existingSkill = user.skills.find(skill => skill.skillName === skillName);
+
+                if (existingSkill) {
+                    // Add the experience index if it's not already present
+                    if (!existingSkill.experience.includes(experienceIndex)) {
+                        existingSkill.experience.push(experienceIndex);
+                    }
+                } else {
+                    // Create a new skill entry with this experience index
+                    user.skills.push({
+                        skillName,
+                        experience: [experienceIndex],
+                        education: []
+                    });
+                }
+            });
+        }
+
+        // Save the updated user document
         await user.save();
 
+        // Format response experience data
         const responseExperience = {
             ...experienceData,
             fromDate: experienceData.fromDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
             toDate: experienceData.toDate ? experienceData.toDate.toISOString().split('T')[0] : null
         };
 
+        // Format all work experiences for response
         const formattedWorkExperience = user.workExperience.map(exp => {
             const expObj = exp.toObject ? exp.toObject() : exp;
             return {
@@ -435,6 +471,7 @@ const addExperience = async (req, res) => {
             };
         });
 
+        // Send response
         res.status(200).json({
             message: 'Experience added successfully',
             experience: responseExperience,
@@ -484,7 +521,6 @@ const getExperience = async (req, res) => {
     }
 };
 
-
 const getAllExperiences = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -511,7 +547,6 @@ const updateExperience = async (req, res) => {
         if (updatedData.fromDate && isNaN(Date.parse(updatedData.fromDate))) {
             return res.status(400).json({ error: 'Invalid Start Date' });
         }
-
         if (updatedData.toDate && isNaN(Date.parse(updatedData.toDate))) {
             return res.status(400).json({ error: 'Invalid End Date' });
         }
@@ -525,10 +560,57 @@ const updateExperience = async (req, res) => {
             return res.status(404).json({ message: 'Experience not found' });
         }
 
+        const oldExperience = user.workExperience[experienceIndex];
+        const newSkills = updatedData.skills || []; // Default to empty array if not provided
+
+        // Update experience entry
         user.workExperience[experienceIndex] = {
-            ...user.workExperience[experienceIndex],
+            ...oldExperience,
             ...updatedData
         };
+
+        // Update user.skills array if skills are modified
+        if (updatedData.skills) {
+            const oldSkills = oldExperience.skills || [];
+
+            // Find removed skills
+            const removedSkills = oldSkills.filter(skill => !newSkills.includes(skill));
+
+            // Find added skills
+            const addedSkills = newSkills.filter(skill => !oldSkills.includes(skill));
+
+            // Remove experience index from removed skills
+            removedSkills.forEach(skillName => {
+                const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
+                if (skillIndex !== -1) {
+                    user.skills[skillIndex].experience = user.skills[skillIndex].experience.filter(i => i !== experienceIndex);
+
+                    // If skill has no experience or education, remove it completely
+                    if (user.skills[skillIndex].experience.length === 0 && user.skills[skillIndex].education.length === 0) {
+                        user.skills.splice(skillIndex, 1);
+                    }
+                }
+            });
+
+            // Add experience index to added skills
+            addedSkills.forEach(skillName => {
+                const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
+                if (skillIndex !== -1) {
+                    // If skill exists, add experience index if not already present
+                    if (!user.skills[skillIndex].experience.includes(experienceIndex)) {
+                        user.skills[skillIndex].experience.push(experienceIndex);
+                    }
+                } else {
+                    // If skill does not exist, create a new entry
+                    user.skills.push({
+                        skillName,
+                        endorsements: [],
+                        education: [],
+                        experience: [experienceIndex]
+                    });
+                }
+            });
+        }
 
         user.workExperience = sortWorkExperience(user.workExperience);
 
@@ -536,7 +618,8 @@ const updateExperience = async (req, res) => {
 
         res.status(200).json({
             message: 'Experience updated successfully',
-            experience: user.workExperience
+            experience: user.workExperience,
+            skills: user.skills
         });
 
     } catch (error) {
@@ -548,30 +631,43 @@ const updateExperience = async (req, res) => {
 const deleteExperience = async (req, res) => {
     try {
         const userId = req.user.id;
-        const experiencelIndex = parseInt(req.params.index, 10);
+        const experienceIndex = parseInt(req.params.index, 10);
 
-        if (isNaN(experiencelIndex) || experiencelIndex < 0) {
+        if (isNaN(experienceIndex) || experienceIndex < 0) {
             return res.status(400).json({ error: 'Invalid experience index' });
         }
 
-        const user = await userModel.findById(userId).select('workExperience');
+        // Fetch user with workExperience and skills
+        const user = await userModel.findById(userId).select('workExperience skills');
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        if (experiencelIndex >= user.workExperience.length) {
+        if (experienceIndex >= user.workExperience.length) {
             return res.status(400).json({ error: 'Invalid experience index' });
         }
 
-        const deletedSkill = user.skills[experiencelIndex];
+        // Remove experience from user.workExperience
+        const deletedExperience = user.workExperience.splice(experienceIndex, 1)[0];
 
-        await userModel.findByIdAndUpdate(userId, {
-            $pull: { workExperience: { $eq: user.workExperience[experiencelIndex] } }
+        // Remove experience index from user's skills
+        user.skills = user.skills.map(skill => {
+            // Remove the experienceIndex from the experience array
+            skill.experience = skill.experience.filter(index => index !== experienceIndex);
+
+            // Shift down experience indices greater than the deleted index
+            skill.experience = skill.experience.map(index => (index > experienceIndex ? index - 1 : index));
+
+            return skill;
         });
+
+        // Save updated user
+        await user.save();
 
         res.status(200).json({
             message: 'Experience deleted successfully',
-            deletedSkill
+            deletedExperience,
+            updatedSkills: user.skills
         });
 
     } catch (error) {
@@ -579,6 +675,7 @@ const deleteExperience = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+
 
 /*
 ************************************************
@@ -589,54 +686,74 @@ const deleteExperience = async (req, res) => {
 const addSkill = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { skillName, educationIndexes } = req.body;
+        const { skillName, educationIndexes, experienceIndexes } = req.body;
 
-        // Validate skill name and check for duplicates
-        const [skillValidation, skillExists, user] = await Promise.all([
-            validateSkillName(skillName),
-            userModel.exists({ 
-                _id: userId, 
-                "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") }
-            }),
-            userModel.findById(userId, "education skills") // Fetch user education and skills
-        ]);
-
+        // Validate skill name
+        const skillValidation = await validateSkillName(skillName);
         if (!skillValidation.valid) {
             return res.status(400).json({ error: skillValidation.message });
         }
 
+        // Check if skill already exists and fetch user
+        const [skillExists, user] = await Promise.all([
+            userModel.exists({ 
+                _id: userId, 
+                "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") }
+            }),
+            userModel.findById(userId, "education skills workExperience") // Fetch necessary fields
+        ]);
+
         if (skillExists) {
             return res.status(400).json({ error: 'Skill already exists' });
         }
-
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Validate education indexes
-        if (!Array.isArray(educationIndexes)) {
-            return res.status(400).json({ error: "Education indexes must be an array" });
+        // Validate and filter indexes
+        const validIndexes = Array.isArray(educationIndexes)
+            ? educationIndexes.filter(index => Number.isInteger(index) && index >= 0 && index < user.education.length)
+            : [];
+
+        const validExperienceIndexes = Array.isArray(experienceIndexes)
+            ? experienceIndexes.filter(index => Number.isInteger(index) && index >= 0 && index < user.workExperience.length)
+            : [];
+
+        if (validIndexes.length === 0 && validExperienceIndexes.length === 0) {
+            return res.status(400).json({ error: 'Skill must be linked to at least one education or experience entry' });
         }
 
-        const validIndexes = educationIndexes.filter(index => 
-            Number.isInteger(index) && index >= 0 && index < user.education.length
-        );
+            // Add skill to the user
+            const updatedUser = await userModel.findByIdAndUpdate(
+                userId,
+                { $push: { skills: { skillName, endorsements: [], education: validIndexes, experience: validExperienceIndexes } } },
+                { new: true, select: 'skills education workExperience', lean: true }
+            );
 
-        if (validIndexes.length !== educationIndexes.length) {
-            return res.status(400).json({ error: "Some provided education indexes are invalid" });
-        }
+            // Update corresponding education & work experience entries
+            const updateEducationPromises = validIndexes.map(index =>
+                userModel.updateOne(
+                    { _id: userId },
+                    { $addToSet: { [`education.${index}.skills`]: skillName } }
+                )
+            );
 
-        // Add the skill with associated education indexes
-        const updatedUser = await userModel.findByIdAndUpdate(
-            userId,
-            { $push: { skills: { skillName, endorsements: [], education: validIndexes } } },
-            { new: true, select: 'skills', lean: true }
-        );
+            const updateWorkExperiencePromises = validExperienceIndexes.map(index =>
+                userModel.updateOne(
+                    { _id: userId },
+                    { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
+                )
+            );
 
-        res.status(200).json({ 
-            message: 'Skill added successfully', 
-            skill: updatedUser.skills.at(-1) 
-        });
+            await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
+
+            // Get the correct skill entry
+            const newSkill = updatedUser.skills.find(s => s.skillName.toLowerCase() === skillName.toLowerCase());
+
+            res.status(200).json({ 
+                message: 'Skill added successfully', 
+                skill: newSkill
+            });
 
     } catch (error) {
         console.error('Error adding skill:', error);
@@ -691,29 +808,25 @@ const updateSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName } = req.params;
-        const { newSkillName, educationIndexes } = req.body;
+        const { newSkillName, educationIndexes, experienceIndexes } = req.body;
 
-        if (!newSkillName && !Array.isArray(educationIndexes)) {
+        if (!newSkillName && (!Array.isArray(educationIndexes) || !Array.isArray(experienceIndexes))) {
             return res.status(400).json({ error: 'No updates provided' });
         }
 
-        // Fetch user details
-        const user = await userModel.findById(userId, "skills education");
+        const user = await userModel.findById(userId, "skills education workExperience");
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Find the skill index
-        const skillIndex = user.skills.findIndex(skill => 
-            skill.skillName.toLowerCase() === skillName.toLowerCase()
-        );
-
+        // Find skill index
+        const skillIndex = user.skills.findIndex(skill => skill.skillName.toLowerCase() === skillName.toLowerCase());
         if (skillIndex === -1) {
             return res.status(404).json({ error: 'Skill not found' });
         }
 
         let updates = {};
-        
+
         // Validate and update skill name
         if (newSkillName) {
             const skillValidation = validateSkillName(newSkillName);
@@ -736,25 +849,47 @@ const updateSkill = async (req, res) => {
             updates[`skills.${skillIndex}.skillName`] = newSkillName;
         }
 
-        // Validate and update education indexes
-        if (Array.isArray(educationIndexes)) {
-            const validIndexes = educationIndexes.filter(index => 
-                Number.isInteger(index) && index >= 0 && index < user.education.length
-            );
+        // Validate and update education/work experience indexes
+        const validEducationIndexes = educationIndexes.filter(index => 
+            Number.isInteger(index) && index >= 0 && index < user.education.length
+        );
+        const validExperienceIndexes = experienceIndexes.filter(index => 
+            Number.isInteger(index) && index >= 0 && index < user.workExperience.length
+        );
 
-            if (validIndexes.length !== educationIndexes.length) {
-                return res.status(400).json({ error: "Some provided education indexes are invalid" });
-            }
-
-            updates[`skills.${skillIndex}.education`] = validIndexes;
+        if (validEducationIndexes.length !== educationIndexes.length) {
+            return res.status(400).json({ error: "Some provided education indexes are invalid" });
+        }
+        if (validExperienceIndexes.length !== experienceIndexes.length) {
+            return res.status(400).json({ error: "Some provided experience indexes are invalid" });
         }
 
-        // Apply updates
+        updates[`skills.${skillIndex}.education`] = validEducationIndexes;
+        updates[`skills.${skillIndex}.experience`] = validExperienceIndexes;
+
+        // Apply skill update inside the transaction
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { $set: updates },
             { new: true, projection: { skills: 1 } }
         );
+
+        // Update education and work experience skills
+        const updateEducationPromises = validEducationIndexes.map(index =>
+            userModel.updateOne(
+                { _id: userId },
+                { $addToSet: { [`education.${index}.skills`]: skillName } }
+            )
+        );
+
+        const updateWorkExperiencePromises = validExperienceIndexes.map(index =>
+            userModel.updateOne(
+                { _id: userId },
+                { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
+            )
+        );
+
+        await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
 
         res.status(200).json({ 
             message: 'Skill updated successfully', 
@@ -767,12 +902,13 @@ const updateSkill = async (req, res) => {
     }
 };
 
-// Delete skill by skill name
+
 const deleteSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName } = req.params;
 
+        // Find the skill inside the user's skills array
         const user = await userModel.findOne(
             { _id: userId },
             { skills: { $elemMatch: { skillName: new RegExp(`^${skillName}$`, "i") } } }
@@ -784,6 +920,7 @@ const deleteSkill = async (req, res) => {
 
         const skillToDelete = user.skills[0];
 
+        // Remove skill from the user's skills array
         const result = await userModel.findByIdAndUpdate(
             userId,
             { $pull: { skills: { skillName: { $regex: new RegExp(`^${skillName}$`, "i") } } } },
@@ -794,15 +931,29 @@ const deleteSkill = async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // Remove skill from all education and work experience entries
+        // Remove skill from all education and work experience entries
+        await userModel.updateMany(
+            { _id: userId },
+            {
+                $pull: { 
+                    "education.$[].skills": { $regex: new RegExp(`^${skillName}$`, "i") },
+                    "workExperience.$[].skills": { $regex: new RegExp(`^${skillName}$`, "i") }
+                }
+            }
+        );
+
         res.status(200).json({ 
             message: 'Skill deleted successfully', 
             deletedSkill: skillToDelete 
         });
+
     } catch (error) {
         console.error('Error deleting skill:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+
 
 
 const addEndorsement = async (req, res) => {

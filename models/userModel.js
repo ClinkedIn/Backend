@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
         companyName: { type: String, required: true },
         fromDate: { type: Date, required: true },
         toDate: { type: Date },
-        currentlyWorking: {type: Boolean},
+        currentlyWorking: { type: Boolean, default: false },
         employmentType: { type: String, enum: ["Full Time", "Part Time", "Freelance", "Self Employed", "Contract", "Internship", "Apprenticeship", "Seasonal"], required: true },
         location: { type: String },
         locationType: { type: String, enum: ["Onsite", "Hybrid", "Remote"] },
@@ -36,7 +36,8 @@ const userSchema = new mongoose.Schema({
     skills: [{
         skillName: { type: String, required: true },
         endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-        education: [{ type: Number }] 
+        education: { type: [Number], default: [] },
+        experience: { type: [Number], default: []}
     }],
 
     education: [{

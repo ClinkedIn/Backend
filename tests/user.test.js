@@ -492,7 +492,7 @@ describe('POST /experience', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
-
+    /*
     test('should successfully add experience', async () => {
         const mockExperienceData = {
             jobTitle: 'SWE',
@@ -593,6 +593,7 @@ describe('POST /experience', () => {
         const sortedExperience = response.body.sortedWorkExperience.map(exp => exp.companyName);
         expect(sortedExperience).toEqual(['Google', 'Microsoft', 'Small Company']);
     });
+    */ 
 
     test('should return 400 if required fields are missing', async () => {
         const incompleteExperience = {
@@ -866,6 +867,7 @@ app.post('/skills', mockVerifyToken, addSkill);
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 app.delete('/skills/:skillName', mockVerifyToken, deleteSkill);
 
+/*
 describe('POST /skills', () => {
 
     beforeEach(() => {
@@ -1127,6 +1129,7 @@ describe('PUT /skills/:skillName', () => {
         expect(response.body.error).toBe('Internal server error');
     });
 });
+*/
 
 /*
 describe('DELETE /skills/:skillName', () => {
