@@ -264,6 +264,18 @@ const login = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    await userModel.findByIdAndDelete(req.user.id);
+    res.status(204).json({
+      status: "success",
+      data: null,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 const forgorPassword = async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email });
@@ -328,7 +340,7 @@ const resetPassword = async (req, res) => {
 
 const updatePassword = async (req, res) => {
   // get the user from the collection
-  const user = await userModel.findById(req.user._id);
+  const user = await userModel.findById(req.user.id);
   // check if the password is correct
   if (
     !user ||
@@ -351,4 +363,5 @@ module.exports = {
   forgorPassword,
   resetPassword,
   updatePassword,
+  deleteUser,
 };

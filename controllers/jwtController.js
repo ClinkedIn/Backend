@@ -5,7 +5,7 @@ const generateTokens = (userInfo, res) => {
   // Generate Access Token (short-lived)
   const accessToken = jwt.sign(
     {
-      _id: userInfo._id,
+      id: userInfo._id,
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
@@ -17,7 +17,7 @@ const generateTokens = (userInfo, res) => {
   // Generate Refresh Token (long-lived)
   const refreshToken = jwt.sign(
     {
-      _id: userInfo._id,
+      id: userInfo._id,
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,

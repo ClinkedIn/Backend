@@ -9,7 +9,10 @@ const {
 const userController = require("../controllers/userController");
 
 // router.post('/register', userController.registerUser)
-router.route("/").post(userController.registerUser);
+router
+  .route("/")
+  .post(userController.registerUser)
+  .delete(isLoggedIn, userController.deleteUser);
 
 // router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
 router.route("/confirm-email").patch(userController.confirmEmail);
