@@ -2453,56 +2453,65 @@
  *                   example: Internal server error details
  */
 
+
 /**
  * @swagger
- * /user/profile:
- *   post:
- *     summary: Create a user profile
+ * /user/profile-picture:
+ *   get:
+ *     summary: Get profile picture
  *     tags: [Users]
- *     description: Create a new user profile with basic information.
- *     operationId: createUserProfile
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UserProfile"
- *     responses:
- *       201:
- *         description: User profile created successfully
- *         content:
- *           application/json:
- *             example:
- *               message: User profile created successfully
- *               userId: "64f8a1b2c3d4e5f6a7b8c9d0"
- *       400:
- *         description: Bad request, invalid input
- *       500:
- *         description: Internal server error
- *   patch:
- *     summary: Update user profile
- *     tags: [Users]
- *     description: Update user profile details such as name, bio, location, work experience, education, and skills.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UpdateUserIntro"
+ *     description: Retrieve the user's profile picture
  *     responses:
  *       200:
- *         description: User profile updated successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Profile updated successfully"
+ *         description: Profile picture retrieved successfully
  *       400:
- *         description: Invalid input data
+ *         description: Profile picture not set
  *       401:
- *         description: Unauthorized, user must be logged in
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   post:
+ *     summary: Upload a profile picture
+ *     tags: [Users]
+ *     description: Upload or update a user's profile picture
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   delete:
+ *     summary: Delete profile picture
+ *     tags: [Users]
+ *     description: Remove a user's profile picture
+ *     responses:
+ *       200:
+ *         description: Profile picture deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Profile picture not found
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -2548,7 +2557,23 @@
 
 /**
  * @swagger
- * /user/cover-photo:
+ * /user/cover-picture:
+ *   get:
+ *     summary: Get cover photo
+ *     tags: [Users]
+ *     description: Retrieve the user's cover photo
+ *     responses:
+ *       200:
+ *         description: Cover photo retrieved successfully
+ *       400:
+ *         description: Cover photo not set
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
  *   post:
  *     summary: Upload a cover photo
  *     tags: [Users]
@@ -2587,6 +2612,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger

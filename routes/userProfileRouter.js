@@ -41,12 +41,12 @@ router.route('/skills/add-endorsement')
 router.route('/skills/remove-endorsement/:skillName')
     .delete(mockVerifyToken, user.deleteEndorsement);
 
-router.route('/add-profile-picture')
+router.route('/profile-picture')
     .get(mockVerifyToken, user.getProfilePicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
     .delete(mockVerifyToken, user.deleteProfilePicture);
 
-router.route('/add-cover-picture')
+router.route('/cover-picture')
     .get(mockVerifyToken, user.getCoverPicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
