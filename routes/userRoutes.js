@@ -17,9 +17,5 @@ router.route("/confirm-email").patch(userController.confirmEmail);
 router.route("/login").post(userController.login);
 router.route("/forgot-password").post(userController.forgorPassword);
 router.patch("/reset-password/:token", userController.resetPassword);
-router.patch(
-  "/update-password",
-  //authController.protect,
-  userController.updatePassword
-);
+router.patch("/update-password", isLoggedIn, userController.updatePassword);
 module.exports = router;

@@ -3,7 +3,7 @@ const postModel = require("../models/postModel");
 const commentModel = require("../models/commentModel");
 const repostModel = require("../models/repostModel");
 const reportModel = require("../models/reportModel");
-
+const crypto = require("crypto");
 const axios = require("axios");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
@@ -24,25 +24,10 @@ const signToken = (id) => {
 };
 
 const createSendToken = (user, statusCode, res) => {
-  const token = signToken(user._id);
-
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true,
-  };
-  if (process.env.NODE_ENV === "production") {
-    cookieOptions.secure = true;
-  }
-
-  res.cookie("jwt", token, cookieOptions);
-
-  user.password = undefined;
+  generateTokens(user, res);
 
   res.status(statusCode).json({
     status: "success",
-    token,
     data: {
       user,
     },
@@ -339,13 +324,12 @@ const forgorPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   //get user based on the token
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(req.params.token)
-    .digest("hex");
+  const token = req.params.token;
+  console.log(token);
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
   const user = await userModel.findOne({
     passwordResetToken: hashedToken,
-    passwordResetExpires: { $gt: Date.now() },
+    passwordResetExpiresAt: { $gt: Date.now() },
   });
   // if token is not expired
   if (!user) {
@@ -354,9 +338,8 @@ const resetPassword = async (req, res) => {
   // update changedpasswordat
   user.password = req.body.password;
   user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
+  user.passwordResetExpiresAt = undefined;
   await user.save();
-  // log the user in send jwt
 
   createSendToken(user, 200, res);
 };

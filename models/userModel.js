@@ -178,6 +178,15 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 ); // Adds createdAt & updatedAt automatically
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+  this.password = await bcrypt.hash(this.password, 10);
+
+  next();
+});
+
 userSchema.methods.correctPassword = async function (
   candidatePassword,
   userPassword
@@ -187,11 +196,13 @@ userSchema.methods.correctPassword = async function (
 
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
-
+  console.log(resetToken);
   this.passwordResetToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
+
+  console.log(resetToken);
 
   this.passwordResetExpiresAt = Date.now() + 10 * 60 * 1000;
   return resetToken;
