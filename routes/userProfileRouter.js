@@ -29,6 +29,12 @@ router.route('/skills/:skillName')
     .put(mockVerifyToken, user.updateSkill)
     .delete(mockVerifyToken, user.deleteSkill);
 
+router.route('/skills/add-endorsement')
+    .post(mockVerifyToken, user.addEndorsement);
+
+router.route('/skills/remove-endorsement/:skillName')
+    .delete(mockVerifyToken, user.deleteEndorsement);
+
 router.route('/add-profile-picture')
     .get(mockVerifyToken, user.getProfilePicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
@@ -39,7 +45,5 @@ router.route('/add-cover-picture')
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
 
-//router.route('/skills/endorse')
-//    .post(mockVerifyToken, user.endorseSkill);
 
 module.exports = router;

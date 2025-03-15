@@ -2,8 +2,8 @@ const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
-
-
+//import { ObjectId } from 'mongodb';
+const mongoose = require('mongoose')
 /*
 ****************************************************
 ************ PROFILE AND COVER PICTURES ************
@@ -344,7 +344,7 @@ const deleteExperience = async (req, res) => {
 const addSkill = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { skillName, endorsements = [] } = req.body;
+        const { skillName } = req.body;
 
         // Run validation and existence check in parallel
         const [skillValidation, skillExists] = await Promise.all([
@@ -356,7 +356,6 @@ const addSkill = async (req, res) => {
         ]);
 
         if (!skillValidation.valid) {
-            console.log('skill validation name error')
             return res.status(400).json({ error: skillValidation.message });
         }
 
@@ -365,23 +364,9 @@ const addSkill = async (req, res) => {
             return res.status(400).json({ error: 'Skill already exists' });
         }
 
-        // Validate endorsements
-        let validEndorsements = [];
-        if (endorsements.length > 0) {
-            const endorsementsValidation = await validateEndorsements(endorsements, userId);
-            if (!endorsementsValidation.valid) {
-                console.log('invalid endorsements')
-                return res.status(400).json({ 
-                    error: endorsementsValidation.message, 
-                    invalidUserIds: endorsementsValidation.invalidUserIds 
-                });
-            }
-            validEndorsements = endorsementsValidation.endorsements;
-        }
-
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { $push: { skills: { skillName, endorsements: validEndorsements } } },
+            { $push: { skills: { skillName, endorsements: [] } } },
             { new: true, select: 'skills', lean: true }
         );
 
@@ -447,9 +432,9 @@ const updateSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName } = req.params;
-        const { newSkillName, endorsements } = req.body;
+        const { newSkillName } = req.body;
 
-        if (!newSkillName && !endorsements) {
+        if (!newSkillName) {
             return res.status(400).json({ error: 'No updates provided' });
         }
 
@@ -463,7 +448,8 @@ const updateSkill = async (req, res) => {
         }
 
         let updates = {};
-        let validEndorsements;
+       // let validEndorsements;
+
         if (newSkillName) {
             const skillValidation = validateSkillName(newSkillName);
             if (!skillValidation.valid) {
@@ -485,6 +471,7 @@ const updateSkill = async (req, res) => {
             updates["skills.$.skillName"] = newSkillName;
         }
 
+        /*
         if (endorsements) {
             const endorsementsValidation = await validateEndorsements(endorsements, userId);
             if (!endorsementsValidation.valid) {
@@ -493,6 +480,7 @@ const updateSkill = async (req, res) => {
         validEndorsements = endorsementsValidation.endorsements;
         updates["skills.$.endorsements"] = validEndorsements;
         }
+        */
 
         const updatedUser = await userModel.findOneAndUpdate(
             { 
@@ -528,7 +516,7 @@ const updateSkill = async (req, res) => {
     }
 };
 
-// Delete skill by index
+// Delete skill by skill name
 const deleteSkill = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -564,6 +552,100 @@ const deleteSkill = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+
+const addEndorsement = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log("User ID: ", userId);
+        
+        const { skillOwnerId, skillName } = req.body;
+        
+        if (userId == skillOwnerId) {
+            return res.status(400).json({ error: "User cannot endorse himself" });
+        }
+
+        let user = await userModel.findOne(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { "skills.$": 1 }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User or skill not found" });
+        }
+
+        const skill = user.skills[0];
+        if (skill.endorsements.some(id => id.toString() === userId)) {
+            return res.status(400).json({ error: "You have already endorsed this skill once" });
+        }
+
+        user = await userModel.findOneAndUpdate(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { $push: { "skills.$.endorsements": new mongoose.Types.ObjectId(userId) } },
+            { new: true }
+        );
+
+        const updatedSkill = user.skills.find(skill => 
+            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
+        );
+
+        res.status(200).json({
+            message: "Skill endorsement created successfully",
+            skill: updatedSkill
+        });
+
+    } catch (error) {
+        console.error("Error endorsing skill:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+};
+
+const deleteEndorsement = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log("User ID:", userId);
+        
+        let { skillOwnerId } = req.body;
+        const skillName = req.params.skillName;
+        skillOwnerId = new mongoose.Types.ObjectId(skillOwnerId);
+        console.log("Skill Owner ID:", skillOwnerId);
+        console.log("Skill Name:", skillName);
+
+        let user = await userModel.findOne(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { "skills.$": 1 }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User or skill not found" });
+        }
+
+        const skill = user.skills[0];
+
+        if (!skill.endorsements.includes(userId)) {
+            return res.status(404).json({ error: "No endorsement found from this user for this skill" });
+        }
+
+        user = await userModel.findOneAndUpdate(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { $pull: { "skills.$.endorsements": userId } },
+            { new: true }
+        );
+
+        const updatedSkill = user.skills.find(skill =>
+            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
+        );
+
+        res.status(200).json({
+            message: "Skill endorsement deleted successfully",
+            skill: updatedSkill
+        });
+
+    } catch (error) {
+        console.error("Error Removing Skill Endorsement:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+};
+
 
 const addEducation = async (req, res) => {
     try {
@@ -690,5 +772,7 @@ module.exports = {
     getSkill,
     getExperience,
     getProfilePicture,
-    getCoverPicture
+    getCoverPicture,
+    addEndorsement,
+    deleteEndorsement
 };

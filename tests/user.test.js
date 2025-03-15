@@ -5,10 +5,10 @@ const { addEducation, editIntro, addExperience, getAllExperiences, updateExperie
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 const uploadMiddleware  = require('../middlewares/multer');
 
-jest.mock('../utilities/userProfileUtils', () => ({
-    validateSkillName: jest.requireActual('../utilities/userProfileUtils').validateSkillName,
-    validateEndorsements: jest.requireActual('../utilities/userProfileUtils').validateEndorsements,
-    sortWorkExperience: jest.requireActual('../utilities/userProfileUtils').sortWorkExperience
+jest.mock('../utils/userProfileUtils', () => ({
+    validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
+    validateEndorsements: jest.requireActual('../utils/userProfileUtils').validateEndorsements,
+    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience
   }));
 
 jest.mock('../models/userModel');
@@ -572,7 +572,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
 /*
 Skills Section Tests
 */ 
-const mongoose = require('mongoose');
+
 app.post('/skills', mockVerifyToken, addSkill);
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 
@@ -586,14 +586,7 @@ describe('POST /skills', () => {
         const mockUserId = '0b3169152ee6c171d25e6860';
         const mockSkillData = {
             skillName: 'Problem Solving',
-            endorsements: ['d29ccbd4ac1b1cb9faefb867', 'fcec43117bcfec7dedf7cd55'],
         };
-
-        userModel.find.mockResolvedValue([
-            { _id: 'd29ccbd4ac1b1cb9faefb867' },
-            { _id: 'fcec43117bcfec7dedf7cd55' }
-        ]);
-
         userModel.findByIdAndUpdate.mockResolvedValue({
             _id: mockUserId,
             skills: [mockSkillData],
@@ -630,18 +623,6 @@ describe('POST /skills', () => {
         expect(response.body.error).toBe('Skill name is required and must be a string');
     });
 
-    test('should return 400 if endorsements contain invalid user IDs', async () => {
-        userModel.exists.mockResolvedValue(null);
-        userModel.find.mockResolvedValue([]);
-        const response = await request(app)
-            .post('/skills')
-            .send({ skillName: 'hello', endorsements: ['invalid_user_id'] });
-        
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('No matching users found in database');
-       // expect(response.body.invalidUserIds).toContain('invalid_user_id');
-    });
-
     test('should return 404 if user is not found', async () => {
         userModel.exists.mockResolvedValue(null);
 
@@ -657,8 +638,6 @@ describe('POST /skills', () => {
 
     test('should return 500 if database update fails', async () => {
         userModel.exists.mockResolvedValue(null);
-     //   validateSkillName.mockResolvedValue({ valid: true });
-     //   validateEndorsements.mockResolvedValue({ valid: true, endorsements: [] });
 
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
 
@@ -670,7 +649,6 @@ describe('POST /skills', () => {
         expect(response.body.error).toBe('Internal server error');
     });
 });
-
 
 describe('PUT /skills/:skillName', () => {
     beforeEach(() => {
@@ -686,20 +664,37 @@ describe('PUT /skills/:skillName', () => {
         expect(response.body.error).toBe('No updates provided');
     });
 
-    test('should return 400 if new skill name already exists', async () => {
-        userModel.exists
-            .mockResolvedValueOnce(true)
-            .mockResolvedValueOnce(true);
-
-        const mockSkillData = {
-            newSkillName: 'Problem Solving',
-        };
-        
-        userModel.find.mockResolvedValue(['bacc96ea16038e4091b6cc55']);
+    test('should return 400 if new skill name is the same as the current one', async () => {
+        userModel.exists.mockResolvedValueOnce(true);
 
         const response = await request(app)
-            .put('/skills/data') 
-            .send(mockSkillData);
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Problem Solving' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Skill already exists');
+    });
+
+    test('should return 400 if new skill name is invalid', async () => {
+        userModel.exists.mockResolvedValueOnce(true);
+       // validateSkillName.mockReturnValue({ valid: false, message: 'Invalid skill name' });
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: '!' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid skill name');
+    });
+
+    test('should return 400 if new skill name already exists in user profile', async () => {
+        userModel.exists.mockResolvedValueOnce(true); // Skill exists
+       // validateSkillName.mockReturnValue({ valid: true });
+        userModel.exists.mockResolvedValueOnce(true); // Duplicate skill found
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill already exists');
@@ -716,20 +711,34 @@ describe('PUT /skills/:skillName', () => {
         expect(response.body.error).toBe('Skill not found');
     });
 
-    test('should return 500 if skill not found', async () => {
-        userModel.exists.mockResolvedValue(true);
-      //  validateSkillName.mockResolvedValue({ valid: true });
-        userModel.exists.mockResolvedValueOnce(null);
+    test('should update skill successfully', async () => {
+        userModel.exists.mockResolvedValueOnce(true); // Skill exists
+       // validateSkillName.mockReturnValue({ valid: true });
+        userModel.exists.mockResolvedValueOnce(false); // No duplicate
+        userModel.findOneAndUpdate.mockResolvedValue({
+            skills: [{ skillName: 'Critical Thinking' }],
+        });
 
         const response = await request(app)
             .put('/skills/Problem Solving')
             .send({ newSkillName: 'Critical Thinking' });
 
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('Skill not found');
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill updated successfully');
+        expect(response.body.skill.skillName).toBe('Critical Thinking');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        userModel.exists.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
     });
 });
-
 
 
 

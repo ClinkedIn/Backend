@@ -30,11 +30,11 @@ const validateSkillName = (skillName) => {
     }
         
     if (skillName.trim().length < 2) {
-        return { valid: false, message: 'Skill name must be at least 2 characters' };
+        return { valid: false, message: 'Invalid skill name' };
     }
         
     if (skillName.trim().length > 50) {
-        return { valid: false, message: 'Skill name cannot exceed 50 characters' };
+        return { valid: false, message: 'invalid skill name' };
     }
     return { valid: true };
 };
