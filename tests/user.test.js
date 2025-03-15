@@ -1001,8 +1001,6 @@ describe('PUT /skills/:skillName', () => {
     });
 });
 
-
-
 /*
 Profile and Cover Pictures Tests
 */

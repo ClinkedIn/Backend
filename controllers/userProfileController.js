@@ -553,99 +553,6 @@ const deleteSkill = async (req, res) => {
     }
 };
 
-const addEndorsement = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        console.log("User ID: ", userId);
-        
-        const { skillOwnerId, skillName } = req.body;
-        
-        if (userId == skillOwnerId) {
-            return res.status(400).json({ error: "User cannot endorse himself" });
-        }
-
-        let user = await userModel.findOne(
-            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
-            { "skills.$": 1 }
-        );
-
-        if (!user) {
-            return res.status(404).json({ error: "User or skill not found" });
-        }
-
-        const skill = user.skills[0];
-        if (skill.endorsements.some(id => id.toString() === userId)) {
-            return res.status(400).json({ error: "You have already endorsed this skill once" });
-        }
-
-        user = await userModel.findOneAndUpdate(
-            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
-            { $push: { "skills.$.endorsements": new mongoose.Types.ObjectId(userId) } },
-            { new: true }
-        );
-
-        const updatedSkill = user.skills.find(skill => 
-            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
-        );
-
-        res.status(200).json({
-            message: "Skill endorsement created successfully",
-            skill: updatedSkill
-        });
-
-    } catch (error) {
-        console.error("Error endorsing skill:", error);
-        res.status(500).json({ error: "Internal server error", details: error.message });
-    }
-};
-
-const deleteEndorsement = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        console.log("User ID:", userId);
-        
-        let { skillOwnerId } = req.body;
-        const skillName = req.params.skillName;
-        skillOwnerId = new mongoose.Types.ObjectId(skillOwnerId);
-        console.log("Skill Owner ID:", skillOwnerId);
-        console.log("Skill Name:", skillName);
-
-        let user = await userModel.findOne(
-            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
-            { "skills.$": 1 }
-        );
-
-        if (!user) {
-            return res.status(404).json({ error: "User or skill not found" });
-        }
-
-        const skill = user.skills[0];
-
-        if (!skill.endorsements.includes(userId)) {
-            return res.status(404).json({ error: "No endorsement found from this user for this skill" });
-        }
-
-        user = await userModel.findOneAndUpdate(
-            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
-            { $pull: { "skills.$.endorsements": userId } },
-            { new: true }
-        );
-
-        const updatedSkill = user.skills.find(skill =>
-            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
-        );
-
-        res.status(200).json({
-            message: "Skill endorsement deleted successfully",
-            skill: updatedSkill
-        });
-
-    } catch (error) {
-        console.error("Error Removing Skill Endorsement:", error);
-        res.status(500).json({ error: "Internal server error", details: error.message });
-    }
-};
-
 
 const addEndorsement = async (req, res) => {
     try {
@@ -708,13 +615,11 @@ const deleteEndorsement = async (req, res) => {
             { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
             { "skills.$": 1 }
         );
-
         if (!user) {
             return res.status(404).json({ error: "User or skill not found" });
         }
 
         const skill = user.skills[0];
-
         if (!skill.endorsements.includes(userId)) {
             return res.status(404).json({ error: "No endorsement found from this user for this skill" });
         }
