@@ -3,9 +3,33 @@
 const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
-const { addEducation,getEducation,editEducation,getEducations,deleteEducation, editIntro, addExperience, getAllExperiences, updateExperience, sortWorkExperience, addSkill, getAllSkills, updateSkill, uploadProfilePicture, uploadCoverPicture } = require('../controllers/userProfileController');
-const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
-const uploadMiddleware  = require('../middlewares/multer');
+const companyModel = require('../models/companyModel');
+const {
+    addEducation,
+    getEducation,
+    editEducation,
+    getEducations,
+    deleteEducation,
+    editIntro, addExperience,
+    getAllExperiences,
+    updateExperience,
+    sortWorkExperience,
+    addSkill,
+    getAllSkills,
+    updateSkill,
+    uploadProfilePicture,
+    uploadCoverPicture,
+    getResume,
+    uploadResume,
+    deleteResume,
+    updatePrivacySettings,
+    followEntity,
+    unfollowEntity,
+    getUserProfile,
+    getAllUsers
+} = require('../controllers/userProfileController');
+const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
+const uploadMiddleware = require('../middlewares/multer');
 
 jest.mock('../utils/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
@@ -16,6 +40,8 @@ jest.mock('../utils/userProfileUtils', () => ({
 jest.mock('../models/userModel');
 jest.mock('../utils/cloudinaryUpload', () => ({
     uploadFile: jest.fn(), // Mock upload function
+    uploadMultipleImages: jest.fn(),
+    deleteFileFromUrl: jest.fn()
 }));
 
 const app = express();
@@ -662,9 +688,9 @@ describe('POST /experience', () => {
 describe('GET /experience - Get User Experiences', () => {
     const userId = 'cc81c18d6b9fc1b83e2bebe3';
 
-   // beforeEach(() => {
-        //userId = new mongoose.Types.ObjectId();
-   // });
+    // beforeEach(() => {
+    //userId = new mongoose.Types.ObjectId();
+    // });
 
     it('should return 404 if user is not found', async () => {
         userModel.findById.mockResolvedValue(null); // Simulate user not found
@@ -834,6 +860,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
 Skills Section Tests
 */ 
 
+const mongoose = require('mongoose');
 app.post('/skills', mockVerifyToken, addSkill);
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 
@@ -882,6 +909,18 @@ describe('POST /skills', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill name is required and must be a string');
+    });
+
+    test('should return 400 if endorsements contain invalid user IDs', async () => {
+        userModel.exists.mockResolvedValue(null);
+        userModel.find.mockResolvedValue([]);
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'hello', endorsements: ['invalid_user_id'] });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('No matching users found in database');
+        // expect(response.body.invalidUserIds).toContain('invalid_user_id');
     });
 
     test('should return 404 if user is not found', async () => {
@@ -956,6 +995,22 @@ describe('PUT /skills/:skillName', () => {
         const response = await request(app)
             .put('/skills/Problem Solving')
             .send({ newSkillName: 'Critical Thinking' });
+    });
+    
+    test('should return 400 if new skill name already exists', async () => {
+        userModel.exists
+            .mockResolvedValueOnce(true)
+            .mockResolvedValueOnce(true);
+
+        const mockSkillData = {
+            newSkillName: 'Problem Solving',
+        };
+
+        userModel.find.mockResolvedValue(['bacc96ea16038e4091b6cc55']);
+
+        const response = await request(app)
+            .put('/skills/data')
+            .send(mockSkillData);
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill already exists');
@@ -974,11 +1029,15 @@ describe('PUT /skills/:skillName', () => {
 
     test('should update skill successfully', async () => {
         userModel.exists.mockResolvedValueOnce(true); // Skill exists
-       // validateSkillName.mockReturnValue({ valid: true });
         userModel.exists.mockResolvedValueOnce(false); // No duplicate
         userModel.findOneAndUpdate.mockResolvedValue({
             skills: [{ skillName: 'Critical Thinking' }],
         });
+
+    test('should return 500 if skill not found', async () => {
+        userModel.exists.mockResolvedValue(true);
+        //  validateSkillName.mockResolvedValue({ valid: true });
+        userModel.exists.mockResolvedValueOnce(null);
 
         const response = await request(app)
             .put('/skills/Problem Solving')
@@ -1018,23 +1077,23 @@ describe('POST /add-profile-picture', () => {
     test('should successfully upload a profile picture', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
         const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
-    
+
         userModel.findByIdAndUpdate.mockResolvedValue({
             _id: userId,
             profilePicture: mockUploadResult.url,
         });
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .set('Content-Type', 'multipart/form-data')
             .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Profile Picture updated successfully');
         expect(response.body.profilePicture).toBe(mockUploadResult.url);
-    
+
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
             userId,
             { profilePicture: mockUploadResult.url },
@@ -1055,11 +1114,11 @@ describe('POST /add-profile-picture', () => {
 
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
@@ -1067,11 +1126,11 @@ describe('POST /add-profile-picture', () => {
 
     test('should return 400 if file size exceeds limit', async () => {
         const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
     });
@@ -1080,14 +1139,14 @@ describe('POST /add-profile-picture', () => {
     test('should return 500 if database update fails', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
         const mockUploadResult = { url: 'https://cloudinary.com/mock-image-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockImageBuffer, { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
     });
@@ -1096,16 +1155,16 @@ describe('POST /add-profile-picture', () => {
     test('should return 404 if user is not found', async () => {
         uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-image-url' });
         userModel.findByIdAndUpdate.mockResolvedValue(null);
-    
+
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'profile.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('User not found');
-    });    
+    });
 
-    
+
     test('should return 500 if Cloudinary upload fails', async () => {
         uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
 
@@ -1119,7 +1178,7 @@ describe('POST /add-profile-picture', () => {
         expect(response.body.message).toBe('Internal server error');
         expect(response.body.error).toBeDefined();
     });
-    
+
 });
 
 
@@ -1133,23 +1192,23 @@ describe('POST /add-cover-picture', () => {
     test('should successfully upload a cover picture', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]); // Simulated valid image buffer
         const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
-    
+
         userModel.findByIdAndUpdate.mockResolvedValue({
             _id: userId,
             coverPicture: mockUploadResult.url,
         });
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .set('Content-Type', 'multipart/form-data')
             .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Cover Picture updated successfully');
         expect(response.body.coverPicture).toBe(mockUploadResult.url);
-    
+
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
             userId,
             { coverPicture: mockUploadResult.url },
@@ -1168,22 +1227,22 @@ describe('POST /add-cover-picture', () => {
 
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
 
     test('should return 400 if file size exceeds limit', async () => {
         const largeBuffer = Buffer.alloc(10 * 1024 * 1024, 0); // 10MB file
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', largeBuffer, { filename: 'large.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('File size too large. Maximum allowed size is 5MB.');
     });
@@ -1191,14 +1250,14 @@ describe('POST /add-cover-picture', () => {
     test('should return 500 if database update fails', async () => {
         const mockImageBuffer = Buffer.from([0xff, 0xd8, 0xff]);
         const mockUploadResult = { url: 'https://cloudinary.com/mock-cover-url' };
-    
+
         uploadFile.mockResolvedValue(mockUploadResult);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', mockImageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
     });
@@ -1206,14 +1265,14 @@ describe('POST /add-cover-picture', () => {
     test('should return 404 if user is not found', async () => {
         uploadFile.mockResolvedValue({ url: 'https://cloudinary.com/mock-cover-url' });
         userModel.findByIdAndUpdate.mockResolvedValue(null);
-    
+
         const response = await request(app)
             .post('/add-cover-picture')
             .attach('file', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'cover.jpg', contentType: 'image/jpeg' });
-    
+
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('User not found');
-    });    
+    });
 
     test('should return 500 if Cloudinary upload fails', async () => {
         uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
@@ -1227,5 +1286,1027 @@ describe('POST /add-cover-picture', () => {
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
         expect(response.body.error).toBeDefined();
+    });
+});
+
+
+app.get('/resume', mockVerifyToken, getResume);
+app.post('/resume', mockVerifyToken, uploadMiddleware.single('resume'), uploadResume);
+app.delete('/resume', mockVerifyToken, deleteResume);
+
+describe('GET /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve resume URL', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+    
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        };
+    
+        // Mock the chainable query pattern correctly
+        const mockSelectFn = jest.fn().mockResolvedValue(mockUser);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume retrieved successfully');
+        expect(response.body.resume).toBe(resumeUrl);
+        expect(response.body.googleDocsUrl).toBe(
+            `https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=true`
+        );
+    });
+
+    test('should return 404 if user not found', async () => {
+        // Correctly mock a "user not found" scenario with chainable API
+        const mockSelectFn = jest.fn().mockResolvedValue(null);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if resume not uploaded', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        };
+    
+        // Use the chainable mock pattern
+        const mockSelectFn = jest.fn().mockResolvedValue(mockUser);
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Resume not uploaded');
+    });
+
+    test('should return 500 if server error occurs', async () => {
+        // Mock the chainable query pattern with an error on select()
+        const mockSelectFn = jest.fn().mockRejectedValue(new Error('Database error'));
+        userModel.findById = jest.fn().mockReturnValue({
+            select: mockSelectFn
+        });
+    
+        const response = await request(app).get('/resume');
+    
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve resume');
+    });
+});
+
+describe('POST /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully upload resume', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+        const mockResumeBuffer = Buffer.from('mock PDF content');
+
+        uploadFile.mockResolvedValue({ url: resumeUrl });
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        });
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', mockResumeBuffer, {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume uploaded successfully');
+        expect(response.body.resume).toBe(resumeUrl);
+        expect(uploadFile).toHaveBeenCalledWith(expect.any(Buffer), 'raw');
+    });
+
+    test('should return 400 if no file is uploaded', async () => {
+        const response = await request(app)
+            .post('/resume')
+            .send();
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No file uploaded');
+    });
+
+    test('should return 400 for invalid file type', async () => {
+        const mockImageBuffer = Buffer.from('fake image data');
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', mockImageBuffer, {
+                filename: 'resume.jpg',
+                contentType: 'image/jpeg'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid file type. Only PDF, DOC, and DOCX are allowed.');
+    });
+
+    test('should return 400 if file size exceeds 10MB', async () => {
+        const largeBuffer = Buffer.alloc(11 * 1024 * 1024); // 11MB file
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', largeBuffer, {
+                filename: 'large.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('File size too large. Maximum allowed size is 10MB.');
+    });
+
+    test('should return 404 if user not found', async () => {
+        uploadFile.mockResolvedValue({ url: 'https://example.com/resume.pdf' });
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', Buffer.from('mock PDF content'), {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 if Cloudinary upload fails', async () => {
+        uploadFile.mockRejectedValue(new Error('Cloudinary upload failed'));
+
+        const response = await request(app)
+            .post('/resume')
+            .attach('resume', Buffer.from('mock PDF content'), {
+                filename: 'resume.pdf',
+                contentType: 'application/pdf'
+            });
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to upload resume');
+    });
+});
+
+describe('DELETE /resume', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully delete resume', async () => {
+        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
+
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: resumeUrl
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'ok' });
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        });
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Resume deleted successfully');
+        expect(deleteFileFromUrl).toHaveBeenCalledWith(resumeUrl);
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            'cc81c18d6b9fc1b83e2bebe3',
+            { resume: null },
+            { new: true }
+        );
+    });
+
+    test('should return 404 if user not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if no resume to delete', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('No resume to delete');
+    });
+
+    test('should return 500 if Cloudinary deletion fails', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockRejectedValue(new Error('Cloudinary deletion failed'));
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume');
+    });
+
+    test('should return 500 if Cloudinary reports file not found', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'not found' });
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: null
+        });
+
+        const response = await request(app).delete('/resume');
+
+        // should throw error if file not found
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume from storage');
+    });
+
+    test('should return 500 if database update fails', async () => {
+        const mockUser = {
+            _id: 'cc81c18d6b9fc1b83e2bebe3',
+            resume: 'https://example.com/resume.pdf'
+        };
+
+        userModel.findById.mockResolvedValue(mockUser);
+        deleteFileFromUrl.mockResolvedValue({ result: 'ok' });
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database update failed'));
+
+        const response = await request(app).delete('/resume');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to delete resume');
+        expect(response.body.error).toBe('Database update failed');
+    });
+});
+
+app.patch('/privacy-settings', mockVerifyToken, updatePrivacySettings);
+
+describe('PATCH /privacy-settings', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully update privacy settings', async () => {
+        const mockUserId = 'cc81c18d6b9fc1b83e2bebe3';
+        const privacySettings = {
+            profilePrivacySettings: 'private'
+        };
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: mockUserId,
+            profilePrivacySettings: 'private'
+        });
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send(privacySettings);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Profile privacy settings updated successfully');
+        expect(response.body.profilePrivacySettings).toBe('private');
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            mockUserId,
+            { $set: { profilePrivacySettings: 'private' } },
+            { new: true, select: 'profilePrivacySettings' }
+        );
+    });
+
+    test('should return 400 if profilePrivacySettings is missing', async () => {
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('profilePrivacySettings is required');
+    });
+
+    test('should return 400 if invalid value for profilePrivacySettings is provided', async () => {
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'invalid-value' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid value for profilePrivacySettings. Must be one of: public, private, connectionsOnly');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'public' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 if database update fails', async () => {
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .patch('/privacy-settings')
+            .send({ profilePrivacySettings: 'connectionsOnly' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to update privacy settings');
+        expect(response.body.details).toBe('Database error');
+    });
+});
+
+app.post('/follow/:userId', mockVerifyToken, followEntity);
+app.delete('/follow/:userId', mockVerifyToken, unfollowEntity);
+
+describe('POST /follow/:userId - Follow Entity', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully follow a user', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [],
+            blockedUsers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: [],
+            blockedUsers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(targetUser);   // Second call for target
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User followed successfully');
+        expect(followerUser.following.length).toBe(1);
+        expect(followerUser.following[0].entity).toBe(targetUserId);
+        expect(followerUser.following[0].entityType).toBe('User');
+        expect(targetUser.followers.length).toBe(1);
+        expect(targetUser.followers[0].entity).toBe(followerId);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetUser.save).toHaveBeenCalled();
+    });
+    
+    test('should successfully follow a company', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetCompanyId = 'c18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target company
+        const targetCompany = {
+            _id: targetCompanyId,
+            followers: [],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        companyModel.findById = jest.fn().mockResolvedValue(targetCompany);
+        
+        const response = await request(app)
+            .post(`/follow/${targetCompanyId}`)
+            .send({ entityType: 'Company' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Company followed successfully');
+        expect(followerUser.following.length).toBe(1);
+        expect(followerUser.following[0].entity).toBe(targetCompanyId);
+        expect(followerUser.following[0].entityType).toBe('Company');
+        expect(targetCompany.followers.length).toBe(1);
+        expect(targetCompany.followers[0].entity).toBe(followerId);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetCompany.save).toHaveBeenCalled();
+    });
+    
+    test('should return 400 when trying to follow yourself', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const response = await request(app)
+            .post(`/follow/${userId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You cannot follow yourself');
+    });
+    
+    test('should return 400 for invalid entity type', async () => {
+        const targetId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        const response = await request(app)
+            .post(`/follow/${targetId}`)
+            .send({ entityType: 'InvalidType' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('Invalid entity type. Must be one of: User, Company');
+    });
+    
+    test('should return 400 if already following', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user already following the target
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }]
+        };
+        
+        // Setup mock
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You are already following this user');
+    });
+    
+    test('should return 404 if follower user not found', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock user not found
+        userModel.findById = jest.fn().mockResolvedValue(null);
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('Your user account not found');
+    });
+    
+    test('should return 404 if target entity not found', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: []
+        };
+        
+        // Setup mocks - follower exists but target doesn't
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(null);         // Second call for target
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    
+    test('should return 500 if database error occurs', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock database error
+        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
+        
+        const response = await request(app)
+            .post(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to follow entity');
+    });
+});
+
+describe('DELETE /follow/:entityId - Unfollow Entity', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully unfollow a user', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: [{
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)  // First call for follower
+            .mockResolvedValueOnce(targetUser);   // Second call for target
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User unfollowed successfully');
+        expect(followerUser.following.length).toBe(0);
+        expect(targetUser.followers.length).toBe(0);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetUser.save).toHaveBeenCalled();
+    });
+    
+    test('should successfully unfollow a company', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetCompanyId = 'c18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetCompanyId,
+                entityType: 'Company',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Mock the target company
+        const targetCompany = {
+            _id: targetCompanyId,
+            followers: [{
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            }],
+            save: jest.fn().mockResolvedValue(true)
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn().mockResolvedValue(followerUser);
+        companyModel.findById = jest.fn().mockResolvedValue(targetCompany);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetCompanyId}`)
+            .send({ entityType: 'Company' });
+            
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Company unfollowed successfully');
+        expect(followerUser.following.length).toBe(0);
+        expect(targetCompany.followers.length).toBe(0);
+        expect(followerUser.save).toHaveBeenCalled();
+        expect(targetCompany.save).toHaveBeenCalled();
+    });
+    
+    test('should return 400 when trying to unfollow yourself', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const response = await request(app)
+            .delete(`/follow/${userId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You cannot unfollow yourself');
+    });
+    
+    test('should return 400 if not following the entity', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user not following the target
+        const followerUser = {
+            _id: followerId,
+            following: []
+        };
+        
+        // Mock the target user
+        const targetUser = {
+            _id: targetUserId,
+            followers: []
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)
+            .mockResolvedValueOnce(targetUser);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('You are not following this user');
+    });
+    
+    test('should return 404 if target entity not found', async () => {
+        const followerId = 'cc81c18d6b9fc1b83e2bebe3';
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock the follower user
+        const followerUser = {
+            _id: followerId,
+            following: [{
+                entity: targetUserId,
+                entityType: 'User',
+                followedAt: new Date()
+            }]
+        };
+        
+        // Setup mocks
+        userModel.findById = jest.fn()
+            .mockResolvedValueOnce(followerUser)
+            .mockResolvedValueOnce(null);
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    
+    test('should return 500 if database error occurs', async () => {
+        const targetUserId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        // Mock database error
+        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
+        
+        const response = await request(app)
+            .delete(`/follow/${targetUserId}`)
+            .send({ entityType: 'User' });
+            
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to unfollow entity');
+    });
+});
+
+
+// Mock routes for testing
+app.get('/user/:userId', mockVerifyToken, getUserProfile);
+app.get('/user', mockVerifyToken, getAllUsers);
+
+describe('GET /user/:userId - Get User Profile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve own profile', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';  // Same as authenticated user ID
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'private',  // Even if private, own profile should be accessible
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should successfully retrieve public profile', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            email: 'jane.smith@example.com',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should return 403 when trying to access private profile', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'private',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is private');
+    });
+
+    test('should return 403 when trying to access connections-only profile without being connected', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'connectionsOnly',
+            connectionList: ['e5f6g7h8i9j0'],  // Current user not in connections list
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is only visible to connections');
+    });
+
+    test('should return 403 when blocked by the user', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';  // Different from authenticated user
+        const authenticatedUserId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: [authenticatedUserId]  // Current user is blocked
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(403);
+        expect(response.body.message).toBe('This profile is not available');
+    });
+
+    test('should return 404 when user not found', async () => {
+        const userId = 'nonexistentid';
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 when server error occurs', async () => {
+        const userId = 'a18b9c2d3e4f5a6b7c8d9e0f';
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+        
+        const response = await request(app).get(`/user/${userId}`);
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve user profile');
+        expect(response.body.error).toBe('Database error');
+    });
+});
+
+describe('GET /user - Get All Users', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve users with no filters', async () => {
+        const mockUsers = [
+            { _id: '1', firstName: 'John', lastName: 'Doe', profilePrivacySettings: 'public' },
+            { _id: '2', firstName: 'Jane', lastName: 'Smith', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            skip: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockResolvedValue(mockUsers)
+        }));
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(2);
+        
+        const response = await request(app).get('/user');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Users retrieved successfully');
+        expect(response.body.users).toEqual(mockUsers);
+        expect(response.body.pagination).toEqual({
+            total: 2,
+            page: 1,
+            limit: 10,
+            pages: 1
+        });
+    });
+
+    test('should apply name filter', async () => {
+        const mockUsers = [
+            { _id: '1', firstName: 'John', lastName: 'Doe', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains name search
+            expect(filter.$or).toContainEqual(
+                { firstName: { $regex: 'john', $options: 'i' } }
+            );
+            expect(filter.$or).toContainEqual(
+                { lastName: { $regex: 'john', $options: 'i' } }
+            );
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?name=john');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+        expect(response.body.pagination.total).toBe(1);
+    });
+
+    test('should apply location filter', async () => {
+        const mockUsers = [
+            { _id: '2', firstName: 'Jane', lastName: 'Smith', location: 'New York', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains location search
+            expect(filter.location).toEqual({ $regex: 'new york', $options: 'i' });
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?location=new%20york');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should apply industry filter', async () => {
+        const mockUsers = [
+            { _id: '3', firstName: 'Alex', lastName: 'Johnson', industry: 'Technology', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation((filter) => {
+            // Verify filter contains industry search
+            expect(filter.industry).toEqual({ $regex: 'technology', $options: 'i' });
+            
+            return {
+                select: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue(mockUsers)
+            };
+        });
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(1);
+        
+        const response = await request(app).get('/user?industry=technology');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should handle pagination', async () => {
+        const mockUsers = [
+            { _id: '4', firstName: 'Sarah', lastName: 'Williams', profilePrivacySettings: 'public' }
+        ];
+        
+        userModel.find = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockReturnThis(),
+            skip: jest.fn((skipVal) => {
+                // Verify skip value is calculated correctly
+                expect(skipVal).toBe(20); // (page 3 - 1) * 10
+                return {
+                    limit: jest.fn((limitVal) => {
+                        // Verify limit value is set correctly
+                        expect(limitVal).toBe(10);
+                        return Promise.resolve(mockUsers);
+                    })
+                };
+            })
+        }));
+        
+        userModel.countDocuments = jest.fn().mockResolvedValue(25);
+        
+        const response = await request(app).get('/user?page=3&limit=10');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.pagination).toEqual({
+            total: 25,
+            page: 3,
+            limit: 10,
+            pages: 3
+        });
+    });
+
+    test('should return 500 when server error occurs', async () => {
+        userModel.find = jest.fn().mockImplementation(() => {
+            throw new Error('Database error');
+        });
+        
+        const response = await request(app).get('/user');
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve users');
+        expect(response.body.error).toBe('Database error');
     });
 });

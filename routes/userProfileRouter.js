@@ -4,7 +4,10 @@ const { verifyToken, isLoggedIn, verifyGoogleToken, mockVerifyToken } = require(
 const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
-
+router.route('/:userId')
+    .get(mockVerifyToken, user.getUserProfile);
+router.route('/')
+    .get(mockVerifyToken, user.getAllUsers);
 router.route('/education')
     .post(mockVerifyToken,user.addEducation)
     .get(mockVerifyToken,user.getEducations);
@@ -23,7 +26,6 @@ router.route('/experience/:index')
     .get(mockVerifyToken, user.getExperience)
     .put(mockVerifyToken,  user.updateExperience)
     .delete(mockVerifyToken, user.deleteExperience);
-
 router.route('/skills')
     .get(mockVerifyToken, user.getAllSkills)
     .post(mockVerifyToken, user.addSkill);
@@ -49,5 +51,16 @@ router.route('/add-cover-picture')
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
 
+router.route('/resume')
+    .get(mockVerifyToken, user.getResume)
+    .post(mockVerifyToken, upload.single('resume'), user.uploadResume)
+    .delete(mockVerifyToken, user.deleteResume);
+router.route('/privacy-settings')
+    .patch(mockVerifyToken, user.updatePrivacySettings);
+router.route('/follow/:userId')
+    .post(mockVerifyToken, user.followEntity)
+    .delete(mockVerifyToken, user.unfollowEntity);
+//router.route('/skills/endorse')
+//    .post(mockVerifyToken, user.endorseSkill);
 
 module.exports = router;

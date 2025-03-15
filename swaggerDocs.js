@@ -2126,27 +2126,331 @@
 /**
  * @swagger
  * /user/{userId}:
- *    get:
- *      summary: Get user data by ID
- *      tags: [Users]
- *      description: Retrieve a user's public profile data by their ID
- *      parameters:
- *        - name: userId
- *          in: path
- *          required: true
- *          schema:
- *            type: string
- *      responses:
- *        200:
- *          description: User data retrieved successfully
- *          content:
- *            application/json:
- *              schema:
- *                $ref: "#/components/schemas/User"
- *        404:
- *          description: User not found
- *        500:
- *          description: Internal server error
+ *   get:
+ *     summary: Get user profile by ID
+ *     tags: [Users]
+ *     description: Retrieves a user's profile with privacy filtering based on requester's relationship with the user
+ *     operationId: getUserProfile
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: ID of the user whose profile to retrieve
+ *         schema:
+ *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User profile retrieved successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 5a96ecd7fc5c55fee3eab5fe
+ *                     firstName:
+ *                       type: string
+ *                       example: Torrance
+ *                     lastName:
+ *                       type: string
+ *                       example: Willms
+ *                     email:
+ *                       type: string
+ *                       example: Cyril.Wunsch62@yahoo.com
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/81.jpg
+ *                     coverPicture:
+ *                       type: string
+ *                       example: https://picsum.photos/seed/MFzbMCDqC/675/1424
+ *                     resume:
+ *                       type: string
+ *                       example: https://content-cutlet.info
+ *                     bio:
+ *                       type: string
+ *                       example: Stipes conatus creber sit.
+ *                     location:
+ *                       type: string
+ *                       example: Kalebchester
+ *                     lastJobTitle:
+ *                       type: string
+ *                       example: Global Response Planner
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                     mainEducation:
+ *                       type: string
+ *                       nullable: true
+ *                     profilePrivacySettings:
+ *                       type: string
+ *                       enum: [public, private, connectionsOnly]
+ *                       example: public
+ *                     workExperience:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           jobTitle:
+ *                             type: string
+ *                           companyName:
+ *                             type: string
+ *                           fromDate:
+ *                             type: string
+ *                             format: date-time
+ *                           toDate:
+ *                             type: string
+ *                             format: date-time
+ *                           employmentType:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           locationType:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           skillName:
+ *                             type: string
+ *                           endorsements:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                           degree:
+ *                             type: string
+ *                           fieldOfStudy:
+ *                             type: string
+ *                           startDate:
+ *                             type: string
+ *                             format: date-time
+ *                           endDate:
+ *                             type: string
+ *                             format: date-time
+ *                           grade:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     connectionList:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       403:
+ *         description: Access denied due to privacy settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: This profile is private
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve user profile
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get a list of users
+ *     tags: [Users]
+ *     description: Retrieves a paginated and filtered list of users, respecting privacy settings
+ *     operationId: getAllUsers
+ *     parameters:
+ *       - name: name
+ *         in: query
+ *         description: Filter by first name or last name (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: location
+ *         in: query
+ *         description: Filter by location (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: industry
+ *         in: query
+ *         description: Filter by industry (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number for pagination
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *       - name: limit
+ *         in: query
+ *         description: Number of users per page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Users retrieved successfully
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: 5a96ecd7fc5c55fee3eab5fe
+ *                       firstName:
+ *                         type: string
+ *                         example: John
+ *                       lastName:
+ *                         type: string
+ *                         example: Doe
+ *                       profilePicture:
+ *                         type: string
+ *                         example: https://example.com/profile.jpg
+ *                       location:
+ *                         type: string
+ *                         example: San Francisco, CA
+ *                       industry:
+ *                         type: string
+ *                         example: Technology
+ *                       mainEducation:
+ *                         type: string
+ *                         example: Stanford University
+ *                       bio:
+ *                         type: string
+ *                         example: Software engineer with 10+ years of experience
+ *                       profilePrivacySettings:
+ *                         type: string
+ *                         enum: [public, private, connectionsOnly]
+ *                         example: public
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of users matching the filters
+ *                       example: 243
+ *                     page:
+ *                       type: integer
+ *                       description: Current page number
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       description: Number of users per page
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       description: Total number of pages
+ *                       example: 25
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Authentication required
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve users
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error details
  */
 
 /**
@@ -2287,10 +2591,52 @@
 /**
  * @swagger
  * /user/resume:
+ *   get:
+ *     summary: Get user resume
+ *     tags: [Users]
+ *     description: Retrieves the current user's resume URL
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume retrieved successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
+ *                 googleDocsUrl:
+ *                   type: string
+ *                   example: "https://docs.google.com/viewer?url=https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can&embedded=true"
+ *       400:
+ *         description: Resume not uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume not uploaded"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ *
  *   post:
  *     summary: Upload resume
  *     tags: [Users]
  *     description: Upload or update a user's resume
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -2301,15 +2647,71 @@
  *               resume:
  *                 type: string
  *                 format: binary
+ *                 description: PDF, DOC or DOCX file (max 10MB)
  *     responses:
  *       200:
  *         description: Resume uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume uploaded successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
  *       400:
- *         description: Invalid file format
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid file type. Only PDF, DOC, and DOCX are allowed."
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: User not found
  *       500:
- *         description: Internal Server Error
+ *         description: Server error
+ *
+ *   delete:
+ *     summary: Delete resume
+ *     tags: [Users]
+ *     description: Remove a user's resume
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume deleted successfully"
+ *       400:
+ *         description: No resume to delete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No resume to delete"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
 
 /**
@@ -3355,60 +3757,84 @@
 
 /**
  * @swagger
- * /user/follow/{userId}:
+ * /user/follow/{entityId}:
  *   post:
- *     summary: Follow a user without connecting
+ *     summary: Follow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to follow another user without sending a connection request.
- *     operationId: followUser
+ *     description: Allows a user to follow another user or a company.
+ *     operationId: followEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to follow
+ *         description: The ID of the entity (user or company) to follow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to follow (User or Company)
  *     responses:
  *       200:
- *         description: User followed successfully
+ *         description: Entity followed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User followed successfully"
  *       400:
- *         description: Cannot follow this user
+ *         description: Cannot follow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  * 
  *   delete:
- *     summary: Unfollow a user
+ *     summary: Unfollow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to unfollow another user.
- *     operationId: unfollowUser
+ *     description: Allows a user to unfollow another user or company.
+ *     operationId: unfollowEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to unfollow
+ *         description: The ID of the entity (user or company) to unfollow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to unfollow (User or Company)
  *     responses:
  *       200:
- *         description: User unfollowed successfully
+ *         description: Entity unfollowed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User unfollowed successfully"
  *       400:
- *         description: Cannot unfollow this user
+ *         description: Cannot unfollow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  */

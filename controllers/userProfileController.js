@@ -4,6 +4,112 @@ const cloudinary = require('../utils/cloudinary');
 const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
+const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
+const companyModel = require('../models/companyModel');
+const { get } = require('mongoose');
+
+
+const getUserProfile = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        // Find the user by ID
+        const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check privacy settings
+        const requesterId = req.user.id; // Current authenticated user
+        
+        // If not requesting own profile and profile is private
+        if (userId !== requesterId && user.profilePrivacySettings === 'private') {
+            return res.status(403).json({ message: 'This profile is private' });
+        }
+        
+        // If profile is set to connections only, check if they're connected
+        if (userId !== requesterId && 
+            user.profilePrivacySettings === 'connectionsOnly' &&
+            !user.connectionList.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is only visible to connections' });
+        }
+        if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        res.status(200).json({ 
+            message: 'User profile retrieved successfully',
+            user
+        });
+    } catch (error) {
+        console.error('Error retrieving user profile:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve user profile',
+            error: error.message 
+        });
+    }
+};
+
+const getAllUsers = async (req, res) => {
+    try {
+        // Extract query parameters for filtering
+        const { name, location, industry, page = 1, limit = 10 } = req.query;
+        
+        // Build query filter
+        const filter = {};
+        
+        if (name) {
+            filter.$or = [
+                { firstName: { $regex: name, $options: 'i' } },
+                { lastName: { $regex: name, $options: 'i' } }
+            ];
+        }
+        
+        if (location) {
+            filter.location = { $regex: location, $options: 'i' };
+        }
+        
+        if (industry) {
+            filter.industry = { $regex: industry, $options: 'i' };
+        }
+        
+        // Only return public profiles and the current user's profile
+        filter.$or = filter.$or || [];
+        filter.$or.push(
+            { profilePrivacySettings: 'public' },
+            { _id: req.user.id }
+        );
+        
+        // Pagination setup
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Find users with filtering and pagination
+        const users = await userModel.find(filter)
+            .select('firstName lastName profilePicture location industry mainEducation bio profilePrivacySettings')
+            .skip(skip)
+            .limit(parseInt(limit));
+            
+        // Count total matching documents for pagination info
+        const total = await userModel.countDocuments(filter);
+        
+        res.status(200).json({
+            message: 'Users retrieved successfully',
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error retrieving users:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve users',
+            error: error.message 
+        });
+    }
+};
 /*
 ****************************************************
 ************ PROFILE AND COVER PICTURES ************
@@ -128,8 +234,148 @@ const getProfilePicture = (req, res) => getUserPicture(req, res, 'profilePicture
 // Get cover picture
 const getCoverPicture = (req, res) => getUserPicture(req, res, 'coverPicture');
 
+/*
+************************************************
+*********** RESUME UPLOAD ************
+************************************************
+*/
+const getResume = async (req, res) => {
+    try {
+        const userId = req.user.id;
 
+        // Find the user and retrieve only the resume field
+        const user = await userModel.findById(userId).select('resume');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
+        if (!user.resume) {
+            return res.status(400).json({ message: 'Resume not uploaded' });
+        } 
+        // Create a Google Docs viewer URL as fallback
+        const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(user.resume)}&embedded=true`;
+
+        res.status(200).json({ 
+            message: 'Resume retrieved successfully',
+            resume: user.resume,
+            googleDocsUrl: googleDocsUrl
+        });
+    } catch (error) {
+        console.error('Error retrieving resume:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve resume',
+            error: error.message 
+        });
+    }
+};
+const uploadResume = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        
+        const userId = req.user.id;
+        
+        // Validate file type (allow PDF, DOC, DOCX)
+        const allowedMimeTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+          
+        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ 
+                message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.' 
+            });
+        }
+        
+        // Validate file size (limit: 10MB)
+        const MAX_FILE_SIZE = 10 * 1024 * 1024;
+        if (req.file.size > MAX_FILE_SIZE) {
+            return res.status(400).json({ 
+                message: 'File size too large. Maximum allowed size is 10MB.' 
+            });
+        }
+
+        console.log('Uploading file with mimetype:', req.file.mimetype);
+
+        // Use 'raw' resource type for documents instead of 'document'
+        const uploadResult = await uploadFile(req.file.buffer, 'raw');
+
+        if (!uploadResult || !uploadResult.url) {
+            throw new Error('Failed to get upload URL from Cloudinary');
+        }
+
+        console.log('Cloudinary upload successful:', uploadResult);
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { resume: uploadResult.url },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Resume uploaded successfully',
+            resume: uploadResult.url
+        });
+    } catch (error) {
+        console.error('Error uploading resume:', error);
+        res.status(500).json({ 
+            message: 'Failed to upload resume',
+            error: error.message,
+            details: error.http_code ? `HTTP Code: ${error.http_code}` : 'Unknown error'
+        });
+    }
+};
+
+const deleteResume = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Find user and get current resume URL
+      const user = await userModel.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      if (!user.resume) {
+        return res.status(400).json({ message: 'No resume to delete' });
+      }
+      
+      // Delete file from Cloudinary
+      const deleteResult = await deleteFileFromUrl(user.resume);
+      
+      if (deleteResult.result !== 'ok' && deleteResult.result !== 'no file to delete') {
+        return res.status(500).json({ 
+          message: 'Failed to delete resume from storage',
+          details: deleteResult
+        });
+      }
+      
+      // Update user in database
+      const updatedUser = await userModel.findByIdAndUpdate(
+        userId,
+        { resume: null },
+        { new: true }
+      );
+      
+      res.status(200).json({
+        message: 'Resume deleted successfully'
+      });
+      
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      res.status(500).json({ 
+        message: 'Failed to delete resume',
+        error: error.message 
+      });
+    }
+  };
 
 /*
 ***************************************************
@@ -812,7 +1058,11 @@ const deleteEducation = async (req, res) => {
     }
 }
 
-//======================INTRO=====================
+/*
+************************************************
+*********** Intro ************
+************************************************
+*/
 const editIntro = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -874,9 +1124,226 @@ const editIntro = async (req, res) => {
         });
     }
 };
+/*
+************************************************
+*********** privacy settings ************
+************************************************
+*/
+const updatePrivacySettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { profilePrivacySettings } = req.body;
+        
+        if (!profilePrivacySettings) {
+            return res.status(400).json({ 
+                error: 'profilePrivacySettings is required' 
+            });
+        }
+        
+        // Validate that the value is one of the allowed enum values
+        const allowedValues = ["public", "private", "connectionsOnly"];
+        if (!allowedValues.includes(profilePrivacySettings)) {
+            return res.status(400).json({
+                error: `Invalid value for profilePrivacySettings. Must be one of: ${allowedValues.join(', ')}`
+            });
+        }
 
+        // Update the field directly, not as a nested property
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: { profilePrivacySettings: profilePrivacySettings } },
+            { new: true, select: 'profilePrivacySettings' }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: 'Profile privacy settings updated successfully',
+            profilePrivacySettings: updatedUser.profilePrivacySettings
+        });
+
+    } catch (error) {
+        console.error('Error updating privacy settings:', error);
+        res.status(500).json({
+            error: 'Failed to update privacy settings',
+            details: error.message
+        });
+    }
+};
+
+/*
+************************************************
+*********** follow/unfollow ************
+************************************************
+*/
+const followEntity = async (req, res) => {
+    try {
+        const followerId = req.user.id; // Current authenticated user
+        const targetId = req.params.userId; // Entity to follow
+        const { entityType = 'User' } = req.body; // Default to User if not specified
+        
+        // Validate entity type
+        const validEntityTypes = ['User', 'Company'];
+        if (!validEntityTypes.includes(entityType)) {
+            return res.status(400).json({ 
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            });
+        }
+
+        // If following a user, prevent self-following
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You cannot follow yourself' });
+        }
+
+        // Get follower user
+        const followerUser = await userModel.findById(followerId);
+        if (!followerUser) {
+            return res.status(404).json({ message: 'Your user account not found' });
+        }
+
+        // Get target entity
+        let targetEntity;
+        if (entityType === 'User') {
+            targetEntity = await userModel.findById(targetId);
+        } else if (entityType === 'Company') {
+            targetEntity = await companyModel.findById(targetId);
+        }
+
+        if (!targetEntity) {
+            return res.status(404).json({ message: `${entityType} not found` });
+        }
+
+        // Check if target user blocked the follower (only applicable for User entities)
+        if (entityType === 'User' && 
+            targetEntity.blockedUsers && 
+            targetEntity.blockedUsers.includes(followerId)) {
+            return res.status(400).json({ message: 'Cannot follow this user' });
+        }
+
+        // Check if already following
+        const alreadyFollowing = followerUser.following.some(
+            follow => follow.entity.toString() === targetId && follow.entityType === entityType
+        );
+
+        if (alreadyFollowing) {
+            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
+        }
+
+        // Update follower's following list
+        followerUser.following.push({
+            entity: targetId,
+            entityType: entityType,
+            followedAt: new Date()
+        });
+
+        // Update target entity's followers list
+        if (entityType === 'User') {
+            targetEntity.followers.push({
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            });
+            await Promise.all([followerUser.save(), targetEntity.save()]);
+        } else if (entityType === 'Company') {
+            targetEntity.followers.push({
+                entity: followerId,
+                entityType: 'User',
+                followedAt: new Date()
+            });
+            await Promise.all([followerUser.save(), targetEntity.save()]);
+        }
+
+        res.status(200).json({ message: `${entityType} followed successfully` });
+    } catch (error) {
+        console.error('Error following entity:', error);
+        res.status(500).json({ 
+            message: 'Failed to follow entity',
+            error: error.message 
+        });
+    }
+};
+
+const unfollowEntity = async (req, res) => {
+    try {
+        const followerId = req.user.id; // Current authenticated user
+        const targetId = req.params.userId; // Entity to unfollow
+        const { entityType = 'User' } = req.body; // Default to User if not specified
+        
+        // Validate entity type
+        const validEntityTypes = ['User', 'Company'];
+        if (!validEntityTypes.includes(entityType)) {
+            return res.status(400).json({ 
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            });
+        }
+
+        // If unfollowing a user, prevent self-unfollowing
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You cannot unfollow yourself' });
+        }
+
+        // Get follower user
+        const followerUser = await userModel.findById(followerId);
+        if (!followerUser) {
+            return res.status(404).json({ message: 'Your user account not found' });
+        }
+
+        // Get target entity
+        let targetEntity;
+        if (entityType === 'User') {
+            targetEntity = await userModel.findById(targetId);
+        } else if (entityType === 'Company') {
+            targetEntity = await companyModel.findById(targetId);
+        }
+
+        if (!targetEntity) {
+            return res.status(404).json({ message: `${entityType} not found` });
+        }
+
+        // Check if actually following
+        const followingIndex = followerUser.following.findIndex(
+            follow => follow.entity.toString() === targetId && follow.entityType === entityType
+        );
+
+        if (followingIndex === -1) {
+            return res.status(400).json({ message: `You are not following this ${entityType.toLowerCase()}` });
+        }
+
+        // Remove from follower's following list
+        followerUser.following.splice(followingIndex, 1);
+
+        // Remove from target entity's followers list
+        if (targetEntity.followers) {
+            const followerIndex = targetEntity.followers.findIndex(
+                follow => follow.entity.toString() === followerId && follow.entityType === 'User'
+            );
+            
+            if (followerIndex !== -1) {
+                targetEntity.followers.splice(followerIndex, 1);
+            }
+        }
+
+        // Save both updates in parallel
+        await Promise.all([
+            followerUser.save(),
+            targetEntity.save()
+        ]);
+
+        res.status(200).json({ message: `${entityType} unfollowed successfully` });
+    } catch (error) {
+        console.error('Error unfollowing entity:', error);
+        res.status(500).json({ 
+            message: 'Failed to unfollow entity',
+            error: error.message 
+        });
+    }
+};
 
 module.exports = {
+    getAllUsers,
+    getUserProfile,
     addEducation,
     editEducation,
     getEducation,
@@ -892,6 +1359,9 @@ module.exports = {
     updateSkill,
     uploadProfilePicture,
     uploadCoverPicture,
+    getResume,
+    uploadResume,
+    deleteResume,
     deleteSkill,
     deleteExperience,
     deleteProfilePicture,
@@ -902,4 +1372,7 @@ module.exports = {
     getCoverPicture,
     addEndorsement,
     deleteEndorsement
+    updatePrivacySettings,
+    followEntity,
+    unfollowEntity
 };
