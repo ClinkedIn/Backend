@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
         companyName: { type: String, required: true },
         fromDate: { type: Date, required: true },
         toDate: { type: Date },
+        currentlyWorking: { type: Boolean },
         employmentType: {
           type: String,
           enum: [

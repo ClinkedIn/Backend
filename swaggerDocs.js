@@ -2126,27 +2126,331 @@
 /**
  * @swagger
  * /user/{userId}:
- *    get:
- *      summary: Get user data by ID
- *      tags: [Users]
- *      description: Retrieve a user's public profile data by their ID
- *      parameters:
- *        - name: userId
- *          in: path
- *          required: true
- *          schema:
- *            type: string
- *      responses:
- *        200:
- *          description: User data retrieved successfully
- *          content:
- *            application/json:
- *              schema:
- *                $ref: "#/components/schemas/User"
- *        404:
- *          description: User not found
- *        500:
- *          description: Internal server error
+ *   get:
+ *     summary: Get user profile by ID
+ *     tags: [Users]
+ *     description: Retrieves a user's profile with privacy filtering based on requester's relationship with the user
+ *     operationId: getUserProfile
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         description: ID of the user whose profile to retrieve
+ *         schema:
+ *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User profile retrieved successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 5a96ecd7fc5c55fee3eab5fe
+ *                     firstName:
+ *                       type: string
+ *                       example: Torrance
+ *                     lastName:
+ *                       type: string
+ *                       example: Willms
+ *                     email:
+ *                       type: string
+ *                       example: Cyril.Wunsch62@yahoo.com
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/81.jpg
+ *                     coverPicture:
+ *                       type: string
+ *                       example: https://picsum.photos/seed/MFzbMCDqC/675/1424
+ *                     resume:
+ *                       type: string
+ *                       example: https://content-cutlet.info
+ *                     bio:
+ *                       type: string
+ *                       example: Stipes conatus creber sit.
+ *                     location:
+ *                       type: string
+ *                       example: Kalebchester
+ *                     lastJobTitle:
+ *                       type: string
+ *                       example: Global Response Planner
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                     mainEducation:
+ *                       type: string
+ *                       nullable: true
+ *                     profilePrivacySettings:
+ *                       type: string
+ *                       enum: [public, private, connectionsOnly]
+ *                       example: public
+ *                     workExperience:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           jobTitle:
+ *                             type: string
+ *                           companyName:
+ *                             type: string
+ *                           fromDate:
+ *                             type: string
+ *                             format: date-time
+ *                           toDate:
+ *                             type: string
+ *                             format: date-time
+ *                           employmentType:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           locationType:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           skillName:
+ *                             type: string
+ *                           endorsements:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                           degree:
+ *                             type: string
+ *                           fieldOfStudy:
+ *                             type: string
+ *                           startDate:
+ *                             type: string
+ *                             format: date-time
+ *                           endDate:
+ *                             type: string
+ *                             format: date-time
+ *                           grade:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     connectionList:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       403:
+ *         description: Access denied due to privacy settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: This profile is private
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve user profile
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get a list of users
+ *     tags: [Users]
+ *     description: Retrieves a paginated and filtered list of users, respecting privacy settings
+ *     operationId: getAllUsers
+ *     parameters:
+ *       - name: name
+ *         in: query
+ *         description: Filter by first name or last name (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: location
+ *         in: query
+ *         description: Filter by location (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: industry
+ *         in: query
+ *         description: Filter by industry (case-insensitive, partial match)
+ *         required: false
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number for pagination
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *       - name: limit
+ *         in: query
+ *         description: Number of users per page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Users retrieved successfully
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: 5a96ecd7fc5c55fee3eab5fe
+ *                       firstName:
+ *                         type: string
+ *                         example: John
+ *                       lastName:
+ *                         type: string
+ *                         example: Doe
+ *                       profilePicture:
+ *                         type: string
+ *                         example: https://example.com/profile.jpg
+ *                       location:
+ *                         type: string
+ *                         example: San Francisco, CA
+ *                       industry:
+ *                         type: string
+ *                         example: Technology
+ *                       mainEducation:
+ *                         type: string
+ *                         example: Stanford University
+ *                       bio:
+ *                         type: string
+ *                         example: Software engineer with 10+ years of experience
+ *                       profilePrivacySettings:
+ *                         type: string
+ *                         enum: [public, private, connectionsOnly]
+ *                         example: public
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of users matching the filters
+ *                       example: 243
+ *                     page:
+ *                       type: integer
+ *                       description: Current page number
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       description: Number of users per page
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       description: Total number of pages
+ *                       example: 25
+ *       401:
+ *         description: Unauthorized - User must be logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Authentication required
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve users
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error details
  */
 
 /**
@@ -2287,10 +2591,52 @@
 /**
  * @swagger
  * /user/resume:
+ *   get:
+ *     summary: Get user resume
+ *     tags: [Users]
+ *     description: Retrieves the current user's resume URL
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume retrieved successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
+ *                 googleDocsUrl:
+ *                   type: string
+ *                   example: "https://docs.google.com/viewer?url=https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can&embedded=true"
+ *       400:
+ *         description: Resume not uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume not uploaded"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ *
  *   post:
  *     summary: Upload resume
  *     tags: [Users]
  *     description: Upload or update a user's resume
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -2301,47 +2647,340 @@
  *               resume:
  *                 type: string
  *                 format: binary
+ *                 description: PDF, DOC or DOCX file (max 10MB)
  *     responses:
  *       200:
  *         description: Resume uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume uploaded successfully"
+ *                 resume:
+ *                   type: string
+ *                   example: "https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can"
  *       400:
- *         description: Invalid file format
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid file type. Only PDF, DOC, and DOCX are allowed."
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: User not found
  *       500:
- *         description: Internal Server Error
+ *         description: Server error
+ *
+ *   delete:
+ *     summary: Delete resume
+ *     tags: [Users]
+ *     description: Remove a user's resume
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resume deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Resume deleted successfully"
+ *       400:
+ *         description: No resume to delete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No resume to delete"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
 
 /**
  * @swagger
- * /user/work-experience:
+ * /user/experience:
  *   post:
- *     summary: Add work experience
+ *     summary: Add a new work experience
  *     tags: [Users]
- *     description: Add work experience to a user's profile
+ *     security:
+ *       - BearerAuth: []
+ *     description: Adds a work experience entry to the user's profile.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: "#/components/schemas/WorkExperience"
+ *             type: object
+ *             properties:
+ *               jobTitle:
+ *                 type: string
+ *                 example: "Software Engineer"
+ *               companyName:
+ *                 type: string
+ *                 example: "TechCorp"
+ *               fromDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2022-01-01"
+ *               toDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "2023-06-01"
+ *               currentlyWorking:
+ *                 type: boolean
+ *                 example: false
+ *               employmentType:
+ *                 type: string
+ *                 example: "Full-time"
+ *               location:
+ *                 type: string
+ *                 example: "New York, USA"
+ *               locationType:
+ *                 type: string
+ *                 example: "Remote"
+ *               description:
+ *                 type: string
+ *                 example: "Worked on backend development."
  *     responses:
  *       200:
- *         description: Work experience added successfully
+ *         description: Experience added successfully
  *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
+ *         description: Invalid input
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error
  */
 
 /**
  * @swagger
+ * /user/experience:
+ *   get:
+ *     summary: Get user's work experiences
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Retrieves all work experiences of the authenticated user.
+ *     responses:
+ *       200:
+ *         description: A list of experiences
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/experience/{index}:
+ *   get:
+ *     summary: Get a specific experience by index
+ *     description: Retrieves a specific work experience entry from the user's profile based on the given index.
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: index
+ *         in: path
+ *         required: true
+ *         description: The index of the experience to retrieve.
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the experience.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 experience:
+ *                   type: object
+ *                   properties:
+ *                     jobTitle:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Google"
+ *                     fromDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2022-06-01"
+ *                     toDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2023-08-30"
+ *                     currentlyWorking:
+ *                       type: boolean
+ *                       example: false
+ *                     employmentType:
+ *                       type: string
+ *                       example: "Full-time"
+ *                     location:
+ *                       type: string
+ *                       example: "New York, USA"
+ *                     locationType:
+ *                       type: string
+ *                       example: "On-site"
+ *                     description:
+ *                       type: string
+ *                       example: "Developed and maintained scalable applications."
+ *                     foundVia:
+ *                       type: string
+ *                       example: "LinkedIn"
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["JavaScript", "React", "Node.js"]
+ *                     media:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["https://example.com/project.pdf"]
+ *       400:
+ *         description: Invalid experience index or out of range.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid experience index"
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message here"
+ */
+
+/**
+ * @swagger
+ * /user/experience/{index}:
+ *   put:
+ *     summary: Update an experience by index
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Updates an existing work experience entry of a user.
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the experience to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               jobTitle:
+ *                 type: string
+ *               companyName:
+ *                 type: string
+ *               fromDate:
+ *                 type: string
+ *                 format: date
+ *               toDate:
+ *                 type: string
+ *                 format: date
+ *               currentlyWorking:
+ *                 type: boolean
+ *               employmentType:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *               locationType:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Experience updated successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: Experience not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/experience/{index}:
+ *   delete:
+ *     summary: Delete a work experience by index
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Removes a specific work experience entry from the user's profile.
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the experience to delete
+ *     responses:
+ *       200:
+ *         description: Work experience deleted successfully
+ *       400:
+ *         description: Invalid experience index
+ *       404:
+ *         description: Experience not found
+ *       500:
+ *         description: Internal server error
+ */
+
+
+/**
+ * @swagger
  * /user/education:
- *   patch:
+ *   post:
  *     summary: Add education
  *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
  *     description: Add an education entry to a user's profile
  *     requestBody:
  *       required: true
@@ -2359,6 +2998,325 @@
  *       500:
  *         description: Internal Server Error
  */
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   patch:
+ *     summary: Update a specific education entry
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               school:
+ *                 type: string
+ *                 description: Name of the school/university
+ *               degree:
+ *                 type: string
+ *                 description: Degree obtained
+ *               fieldOfStudy:
+ *                 type: string
+ *                 description: Field of study
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Start date of education (YYYY-MM-DD)
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *                 description: End date of education (YYYY-MM-DD)
+ *               grade:
+ *                 type: string
+ *                 description: Grade achieved
+ *               activities:
+ *                 type: string
+ *                 description: Activities and societies
+ *               description:
+ *                 type: string
+ *                 description: Description of education
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Skills acquired during education
+ *               media:
+ *                 type: string
+ *                 description: URL to education-related media
+ *     responses:
+ *       200:
+ *         description: Education entry updated successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Education updated successfully
+ *               education:
+ *                 school: Harvard University
+ *                 degree: Master of Science
+ *                 fieldOfStudy: Computer Science
+ *                 startDate: 2020-09-01
+ *                 endDate: 2022-06-30
+ *       400:
+ *         description: Bad request (missing school name or invalid data)
+ *       404:
+ *         description: User or education entry not found
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   get:
+ *     summary: Get a specific education entry
+ *     tags: [Users]
+ *     description: Retrieves a single education entry by its index
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to retrieve
+ *     responses:
+ *       200:
+ *         description: Education entry retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 education:
+ *                   type: object
+ *                   properties:
+ *                     school:
+ *                       type: string
+ *                       example: Harvard University
+ *                     degree:
+ *                       type: string
+ *                       example: Bachelor of Science
+ *                     fieldOfStudy:
+ *                       type: string
+ *                       example: Computer Science
+ *                     startDate:
+ *                       type: string
+ *                       format: date
+ *                       example: 2020-09-01
+ *                     endDate:
+ *                       type: string
+ *                       format: date
+ *                       example: 2024-06-30
+ *                     grade:
+ *                       type: string
+ *                       example: 3.8
+ *                     activities:
+ *                       type: string
+ *                       example: Coding Club
+ *                     description:
+ *                       type: string
+ *                       example: Focus on AI and ML
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Python", "Machine Learning"]
+ *                     media:
+ *                       type: string
+ *                       example: https://example.com/certificate.pdf
+ *       400:
+ *         description: Invalid education index
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Invalid education index
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education:
+ *   get:
+ *     summary: Get all education entries
+ *     tags: [Users]
+ *     description: Retrieves all education entries for the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of education entries retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 educations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       school:
+ *                         type: string
+ *                         example: Harvard University
+ *                       degree:
+ *                         type: string
+ *                         example: Bachelor of Science
+ *                       fieldOfStudy:
+ *                         type: string
+ *                         example: Computer Science
+ *                       startDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2020-09-01
+ *                       endDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2024-06-30
+ *                       grade:
+ *                         type: string
+ *                         example: 3.8
+ *                       activities:
+ *                         type: string
+ *                         example: Coding Club, Research Group
+ *                       description:
+ *                         type: string
+ *                         example: Major in AI and ML
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "Machine Learning"]
+ *                       media:
+ *                         type: string
+ *                         example: https://example.com/certificate.pdf
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   delete:
+ *     summary: Delete an education entry
+ *     tags: [Users]
+ *     description: Removes a specific education entry by its index
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to delete
+ *     responses:
+ *       200:
+ *         description: Education entry deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Education deleted successfully
+ *                 educations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       school:
+ *                         type: string
+ *                         example: Harvard University
+ *                       degree:
+ *                         type: string
+ *                         example: Bachelor of Science
+ *                       fieldOfStudy:
+ *                         type: string
+ *                         example: Computer Science
+ *                       startDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2020-09-01
+ *                       endDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2024-06-30
+ *                       grade:
+ *                         type: string
+ *                         example: 3.8
+ *                       activities:
+ *                         type: string
+ *                         example: Coding Club, Research Group
+ *                       description:
+ *                         type: string
+ *                         example: Major in AI and ML
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "Machine Learning"]
+ *                       media:
+ *                         type: string
+ *                         example: https://example.com/certificate.pdf
+ *       400:
+ *         description: Invalid education index
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid education index
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
+ */
 
 /**
  * @swagger
@@ -2366,6 +3324,8 @@
  *   post:
  *     summary: Add certification
  *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
  *     description: Add a certification to a user's profile
  *     requestBody:
  *       required: true
@@ -2388,9 +3348,12 @@
  * @swagger
  * /user/skills:
  *   post:
- *     summary: Add skills
+ *     summary: Add a skill to user's profile
  *     tags: [Users]
- *     description: Add skills to a user's profile
+ *     security:
+ *       - BearerAuth: []
+ *     description: Add a skill with optional endorsements to a user's profile. 
+ *                  Ensures skill name is valid, checks for duplicates, and validates endorsements.
  *     requestBody:
  *       required: true
  *       content:
@@ -2398,20 +3361,333 @@
  *           schema:
  *             type: object
  *             properties:
- *               skills:
+ *               skillName:
+ *                 type: string
+ *                 example: "JavaScript"
+ *               endorsements:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["JavaScript", "Python", "Machine Learning"]
+ *                 example: ["userId1", "userId2"]
  *     responses:
  *       200:
- *         description: Skills added successfully
+ *         description: Skill added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill added successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
  *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
+ *         description: Invalid input data, endorsements, or skill already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill already exists"
+ *                 invalidUserIds:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["invalidUserId1"]
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ * 
+ *   get:
+ *     summary: Get all user skills
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Retrieve all skills associated with the authenticated user.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user skills
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 skills:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
+ *                         type: string
+ *                         example: "JavaScript"
+ *                       endorsements:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["userId1", "userId2"]
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
+ * 
+ *   get:
+ *     summary: Get a specific skill by name
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Retrieve a specific skill from a user's profile by skill name.
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "JavaScript"
+ *         description: The name of the skill to retrieve.
+ *     responses:
+ *       200:
+ *         description: Skill retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
+ *       404:
+ *         description: User not found or skill not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ * 
+ *   put:
+ *     summary: Update a user's skill by name
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Update the skill name or endorsements for a specific skill in the user's profile.
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "JavaScript"
+ *         description: The name of the skill to update.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newSkillName:
+ *                 type: string
+ *                 example: "ReactJS"
+ *               endorsements:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["userId1", "userId2"]
+ *     responses:
+ *       200:
+ *         description: Skill updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill updated successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "ReactJS"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
+ *       400:
+ *         description: Invalid request data (e.g., duplicate skill name or validation errors)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill already exists"
+ *       404:
+ *         description: User not found or skill not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ * 
+ *   delete:
+ *     summary: Delete a skill by name
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Remove a skill from a user's profile by specifying its name.
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "JavaScript"
+ *         description: The name of the skill to delete.
+ *     responses:
+ *       200:
+ *         description: Skill deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill deleted successfully"
+ *                 deletedSkill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
+ *       404:
+ *         description: User not found or skill not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
  */
 
 /**
@@ -2478,60 +3754,84 @@
 
 /**
  * @swagger
- * /user/follow/{userId}:
+ * /user/follow/{entityId}:
  *   post:
- *     summary: Follow a user without connecting
+ *     summary: Follow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to follow another user without sending a connection request.
- *     operationId: followUser
+ *     description: Allows a user to follow another user or a company.
+ *     operationId: followEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to follow
+ *         description: The ID of the entity (user or company) to follow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to follow (User or Company)
  *     responses:
  *       200:
- *         description: User followed successfully
+ *         description: Entity followed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User followed successfully"
  *       400:
- *         description: Cannot follow this user
+ *         description: Cannot follow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  * 
  *   delete:
- *     summary: Unfollow a user
+ *     summary: Unfollow an entity (user or company)
  *     tags: [Users]
- *     description: Allows a user to unfollow another user.
- *     operationId: unfollowUser
+ *     description: Allows a user to unfollow another user or company.
+ *     operationId: unfollowEntity
  *     parameters:
- *       - name: userId
+ *       - name: entityId
  *         in: path
  *         required: true
- *         description: The ID of the user to unfollow
+ *         description: The ID of the entity (user or company) to unfollow
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               entityType:
+ *                 type: string
+ *                 enum: [User, Company]
+ *                 default: User
+ *                 description: Type of entity to unfollow (User or Company)
  *     responses:
  *       200:
- *         description: User unfollowed successfully
+ *         description: Entity unfollowed successfully
  *         content:
  *           application/json:
  *             example:
  *               message: "User unfollowed successfully"
  *       400:
- *         description: Cannot unfollow this user
+ *         description: Cannot unfollow this entity or invalid entity type
  *       401:
  *         description: Unauthorized, user must be logged in
  *       404:
- *         description: User not found
+ *         description: Entity not found
  *       500:
  *         description: Internal server error
  */
