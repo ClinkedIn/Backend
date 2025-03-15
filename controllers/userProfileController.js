@@ -989,14 +989,16 @@ const editIntro = async (req, res) => {
         const {
             firstName,
             lastName,
-            bio,
+            additinalName,
+            headLine,
+            website,
             location,
             mainEducation,
             industry
         } = req.body;
 
         // Validate required fields
-        const requiredFields = ['firstName', 'lastName', 'bio', 'location', 'industry', 'mainEducation'];
+        const requiredFields = ['firstName', 'lastName', 'location', 'industry', 'mainEducation',"headLine"];
         const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
 
         if (missingFields.length > 0) {
@@ -1012,7 +1014,9 @@ const editIntro = async (req, res) => {
                 $set: {
                     firstName,
                     lastName,
-                    bio,
+                    headLine,
+                    additinalName,
+                    website,
                     location,
                     mainEducation,
                     industry
@@ -1030,7 +1034,9 @@ const editIntro = async (req, res) => {
             user: {
                 firstName: updatedUser.firstName,
                 lastName: updatedUser.lastName,
-                bio: updatedUser.bio,
+                headLine: updatedUser.headLine,
+                additionalName: updatedUser.additionalName,
+                website: updatedUser.website,
                 location: updatedUser.location,
                 industry: updatedUser.industry
             }

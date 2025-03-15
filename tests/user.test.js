@@ -393,7 +393,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            additionalName: 'JD',
+            website: 'https://johndoe.com',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1
@@ -415,7 +417,9 @@ describe('PATCH /profile', () => {
         expect(response.body.user).toMatchObject({
             firstName: mockIntroData.firstName,
             lastName: mockIntroData.lastName,
-            bio: mockIntroData.bio,
+            headLine: mockIntroData.headLine,
+            additionalName: mockIntroData.additionalName,
+            website: mockIntroData.website,
             location: mockIntroData.location,
             industry: mockIntroData.industry
         });
@@ -434,7 +438,7 @@ describe('PATCH /profile', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Missing required fields');
-        expect(response.body.missingFields).toContain('bio');
+        expect(response.body.missingFields).toContain('headLine');
         expect(response.body.missingFields).toContain('location');
         expect(response.body.missingFields).toContain('industry');
         expect(response.body.missingFields).toContain('mainEducation');
@@ -444,7 +448,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            website: 'https://johndoe.com',
+            additionalName: 'JD',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1
@@ -464,7 +470,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            website: 'https://johndoe.com',
+            additionalName: 'JD',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1

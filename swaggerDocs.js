@@ -4730,3 +4730,128 @@
  *       401:
  *         description: Unauthorized, user must be logged in
  */
+
+/**
+ * @swagger
+ * /user/profile:
+ *   patch:
+ *     summary: Update user profile intro information
+ *     tags: [Users]
+ *     description: Updates basic profile information for the authenticated user
+ *     operationId: editIntro
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - location
+ *               - industry
+ *               - mainEducation
+ *               - headLine
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
+ *               additinalName:
+ *                 type: string
+ *                 example: "Robert"
+ *               headLine:
+ *                 type: string
+ *                 example: "Senior Software Engineer at Tech Corp"
+ *               website:
+ *                 type: string
+ *                 example: "https://johndoe.com"
+ *               location:
+ *                 type: string
+ *                 example: "San Francisco, CA"
+ *               mainEducation:
+ *                 type: string
+ *                 example: "Stanford University"
+ *               industry:
+ *                 type: string
+ *                 example: "Software Development"
+ *     responses:
+ *       200:
+ *         description: Profile information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Intro updated successfully"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headLine:
+ *                       type: string
+ *                       example: "Senior Software Engineer at Tech Corp"
+ *                     additionalName:
+ *                       type: string
+ *                       example: "Robert"
+ *                     website:
+ *                       type: string
+ *                       example: "https://johndoe.com"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     industry:
+ *                       type: string
+ *                       example: "Software Development"
+ *       400:
+ *         description: Bad request - missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Missing required fields"
+ *                 missingFields:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["firstName", "industry"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update profile"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */
