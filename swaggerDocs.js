@@ -2574,7 +2574,7 @@
 /**
  * @swagger
  * /user/education:
- *   patch:
+ *   post:
  *     summary: Add education
  *     tags: [Users]
  *     security:
@@ -2595,6 +2595,325 @@
  *         description: Unauthorized
  *       500:
  *         description: Internal Server Error
+ */
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   patch:
+ *     summary: Update a specific education entry
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               school:
+ *                 type: string
+ *                 description: Name of the school/university
+ *               degree:
+ *                 type: string
+ *                 description: Degree obtained
+ *               fieldOfStudy:
+ *                 type: string
+ *                 description: Field of study
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Start date of education (YYYY-MM-DD)
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *                 description: End date of education (YYYY-MM-DD)
+ *               grade:
+ *                 type: string
+ *                 description: Grade achieved
+ *               activities:
+ *                 type: string
+ *                 description: Activities and societies
+ *               description:
+ *                 type: string
+ *                 description: Description of education
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Skills acquired during education
+ *               media:
+ *                 type: string
+ *                 description: URL to education-related media
+ *     responses:
+ *       200:
+ *         description: Education entry updated successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Education updated successfully
+ *               education:
+ *                 school: Harvard University
+ *                 degree: Master of Science
+ *                 fieldOfStudy: Computer Science
+ *                 startDate: 2020-09-01
+ *                 endDate: 2022-06-30
+ *       400:
+ *         description: Bad request (missing school name or invalid data)
+ *       404:
+ *         description: User or education entry not found
+ *       500:
+ *         description: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   get:
+ *     summary: Get a specific education entry
+ *     tags: [Users]
+ *     description: Retrieves a single education entry by its index
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to retrieve
+ *     responses:
+ *       200:
+ *         description: Education entry retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 education:
+ *                   type: object
+ *                   properties:
+ *                     school:
+ *                       type: string
+ *                       example: Harvard University
+ *                     degree:
+ *                       type: string
+ *                       example: Bachelor of Science
+ *                     fieldOfStudy:
+ *                       type: string
+ *                       example: Computer Science
+ *                     startDate:
+ *                       type: string
+ *                       format: date
+ *                       example: 2020-09-01
+ *                     endDate:
+ *                       type: string
+ *                       format: date
+ *                       example: 2024-06-30
+ *                     grade:
+ *                       type: string
+ *                       example: 3.8
+ *                     activities:
+ *                       type: string
+ *                       example: Coding Club
+ *                     description:
+ *                       type: string
+ *                       example: Focus on AI and ML
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Python", "Machine Learning"]
+ *                     media:
+ *                       type: string
+ *                       example: https://example.com/certificate.pdf
+ *       400:
+ *         description: Invalid education index
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Invalid education index
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education:
+ *   get:
+ *     summary: Get all education entries
+ *     tags: [Users]
+ *     description: Retrieves all education entries for the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of education entries retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 educations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       school:
+ *                         type: string
+ *                         example: Harvard University
+ *                       degree:
+ *                         type: string
+ *                         example: Bachelor of Science
+ *                       fieldOfStudy:
+ *                         type: string
+ *                         example: Computer Science
+ *                       startDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2020-09-01
+ *                       endDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2024-06-30
+ *                       grade:
+ *                         type: string
+ *                         example: 3.8
+ *                       activities:
+ *                         type: string
+ *                         example: Coding Club, Research Group
+ *                       description:
+ *                         type: string
+ *                         example: Major in AI and ML
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "Machine Learning"]
+ *                       media:
+ *                         type: string
+ *                         example: https://example.com/certificate.pdf
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: User not found
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Server error
+ */
+
+/**
+ * @swagger
+ * /user/education/{index}:
+ *   delete:
+ *     summary: Delete an education entry
+ *     tags: [Users]
+ *     description: Removes a specific education entry by its index
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Index of the education entry to delete
+ *     responses:
+ *       200:
+ *         description: Education entry deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Education deleted successfully
+ *                 educations:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       school:
+ *                         type: string
+ *                         example: Harvard University
+ *                       degree:
+ *                         type: string
+ *                         example: Bachelor of Science
+ *                       fieldOfStudy:
+ *                         type: string
+ *                         example: Computer Science
+ *                       startDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2020-09-01
+ *                       endDate:
+ *                         type: string
+ *                         format: date
+ *                         example: 2024-06-30
+ *                       grade:
+ *                         type: string
+ *                         example: 3.8
+ *                       activities:
+ *                         type: string
+ *                         example: Coding Club, Research Group
+ *                       description:
+ *                         type: string
+ *                         example: Major in AI and ML
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "Machine Learning"]
+ *                       media:
+ *                         type: string
+ *                         example: https://example.com/certificate.pdf
+ *       400:
+ *         description: Invalid education index
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid education index
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error
  */
 
 /**
