@@ -3522,7 +3522,7 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
-
+*/
 
 /**
  * @swagger
@@ -3686,7 +3686,7 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
-
+ */
 
 /**
  * @swagger
