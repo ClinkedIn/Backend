@@ -15,6 +15,7 @@ router.route('/education/:index')
     .get(mockVerifyToken,user.getEducation)
     .patch(mockVerifyToken,user.editEducation)
     .delete(mockVerifyToken,user.deleteEducation);
+
 router.route('/profile')
     .patch(mockVerifyToken,user.editIntro);
 
@@ -35,12 +36,18 @@ router.route('/skills/:skillName')
     .put(mockVerifyToken, user.updateSkill)
     .delete(mockVerifyToken, user.deleteSkill);
 
-router.route('/add-profile-picture')
+router.route('/skills/add-endorsement')
+    .post(mockVerifyToken, user.addEndorsement);
+
+router.route('/skills/remove-endorsement/:skillName')
+    .delete(mockVerifyToken, user.deleteEndorsement);
+
+router.route('/profile-picture')
     .get(mockVerifyToken, user.getProfilePicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
     .delete(mockVerifyToken, user.deleteProfilePicture);
 
-router.route('/add-cover-picture')
+router.route('/cover-picture')
     .get(mockVerifyToken, user.getCoverPicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);

@@ -1,6 +1,8 @@
 const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
+//import { ObjectId } from 'mongodb';
+const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
@@ -587,50 +589,49 @@ const deleteExperience = async (req, res) => {
 const addSkill = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { skillName, endorsements = [] } = req.body;
+        const { skillName, educationIndexes } = req.body;
 
-        // Run validation and existence check in parallel
-        const [skillValidation, skillExists] = await Promise.all([
+        // Validate skill name and check for duplicates
+        const [skillValidation, skillExists, user] = await Promise.all([
             validateSkillName(skillName),
             userModel.exists({ 
                 _id: userId, 
                 "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") }
-            })
+            }),
+            userModel.findById(userId, "education skills") // Fetch user education and skills
         ]);
 
         if (!skillValidation.valid) {
-            console.log('skill validation name error')
             return res.status(400).json({ error: skillValidation.message });
         }
 
         if (skillExists) {
-            console.log('skill exists')
             return res.status(400).json({ error: 'Skill already exists' });
         }
 
-        // Validate endorsements
-        let validEndorsements = [];
-        if (endorsements.length > 0) {
-            const endorsementsValidation = await validateEndorsements(endorsements, userId);
-            if (!endorsementsValidation.valid) {
-                console.log('invalid endorsements')
-                return res.status(400).json({ 
-                    error: endorsementsValidation.message, 
-                    invalidUserIds: endorsementsValidation.invalidUserIds 
-                });
-            }
-            validEndorsements = endorsementsValidation.endorsements;
-        }
-
-        const updatedUser = await userModel.findByIdAndUpdate(
-            userId,
-            { $push: { skills: { skillName, endorsements: validEndorsements } } },
-            { new: true, select: 'skills', lean: true }
-        );
-
-        if (!updatedUser) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        // Validate education indexes
+        if (!Array.isArray(educationIndexes)) {
+            return res.status(400).json({ error: "Education indexes must be an array" });
+        }
+
+        const validIndexes = educationIndexes.filter(index => 
+            Number.isInteger(index) && index >= 0 && index < user.education.length
+        );
+
+        if (validIndexes.length !== educationIndexes.length) {
+            return res.status(400).json({ error: "Some provided education indexes are invalid" });
+        }
+
+        // Add the skill with associated education indexes
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $push: { skills: { skillName, endorsements: [], education: validIndexes } } },
+            { new: true, select: 'skills', lean: true }
+        );
 
         res.status(200).json({ 
             message: 'Skill added successfully', 
@@ -642,6 +643,7 @@ const addSkill = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+
 
 // Get a specific user skill
 const getSkill = async (req, res) => {
@@ -685,93 +687,87 @@ const getAllSkills = async (req, res) => {
     }
 };
 
-// Update skill by index
 const updateSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName } = req.params;
-        const { newSkillName, endorsements } = req.body;
+        const { newSkillName, educationIndexes } = req.body;
 
-        if (!newSkillName && !endorsements) {
+        if (!newSkillName && !Array.isArray(educationIndexes)) {
             return res.status(400).json({ error: 'No updates provided' });
         }
 
-        const skillExists = await userModel.exists({ 
-            _id: userId, 
-            "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") }
-        });
-        
-        if (!skillExists) {
+        // Fetch user details
+        const user = await userModel.findById(userId, "skills education");
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Find the skill index
+        const skillIndex = user.skills.findIndex(skill => 
+            skill.skillName.toLowerCase() === skillName.toLowerCase()
+        );
+
+        if (skillIndex === -1) {
             return res.status(404).json({ error: 'Skill not found' });
         }
 
         let updates = {};
-        let validEndorsements;
+        
+        // Validate and update skill name
         if (newSkillName) {
             const skillValidation = validateSkillName(newSkillName);
             if (!skillValidation.valid) {
                 return res.status(400).json({ error: skillValidation.message });
             }
-            if (newSkillName.toLowerCase() == skillName.toLowerCase()) {
-                return res.status(400).json({ error: 'Skill already exists' });
+
+            if (newSkillName.toLowerCase() === skillName.toLowerCase()) {
+                return res.status(400).json({ error: 'Skill name is the same' });
             }
-            const duplicateExists = await userModel.exists({ 
-                 _id: userId, 
-                "skills.skillName": { $regex: new RegExp(`^${newSkillName}$`, "i") }
-             });
-            console.log('Duplicate Exists: ', duplicateExists )
+
+            const duplicateExists = user.skills.some(skill => 
+                skill.skillName.toLowerCase() === newSkillName.toLowerCase()
+            );
+
             if (duplicateExists) {
-                console.log(duplicateExists)
                 return res.status(400).json({ error: 'Skill already exists' });
             }
-            
-            updates["skills.$.skillName"] = newSkillName;
+
+            updates[`skills.${skillIndex}.skillName`] = newSkillName;
         }
 
-        if (endorsements) {
-            const endorsementsValidation = await validateEndorsements(endorsements, userId);
-            if (!endorsementsValidation.valid) {
-                return res.status(400).json({ error: endorsementsValidation.message, invalidUserIds: endorsementsValidation.invalidUserIds });
-        }
-        validEndorsements = endorsementsValidation.endorsements;
-        updates["skills.$.endorsements"] = validEndorsements;
-        }
+        // Validate and update education indexes
+        if (Array.isArray(educationIndexes)) {
+            const validIndexes = educationIndexes.filter(index => 
+                Number.isInteger(index) && index >= 0 && index < user.education.length
+            );
 
-        const updatedUser = await userModel.findOneAndUpdate(
-            { 
-                _id: userId, 
-                "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") } 
-            },
-            { $set: updates },
-            { 
-                new: true,
-                projection: { 
-                    skills: { 
-                        $elemMatch: { 
-                            skillName: newSkillName ? 
-                                new RegExp(`^${newSkillName}$`, "i") : 
-                                new RegExp(`^${skillName}$`, "i") 
-                        } 
-                    } 
-                }
+            if (validIndexes.length !== educationIndexes.length) {
+                return res.status(400).json({ error: "Some provided education indexes are invalid" });
             }
-        );
 
-        if (!updatedUser || !updatedUser.skills || updatedUser.skills.length === 0) {
-            return res.status(404).json({ error: 'Failed to update skill' });
+            updates[`skills.${skillIndex}.education`] = validIndexes;
         }
+
+        // Apply updates
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updates },
+            { new: true, projection: { skills: 1 } }
+        );
 
         res.status(200).json({ 
             message: 'Skill updated successfully', 
-            skill: updatedUser.skills[0] 
+            skill: updatedUser.skills[skillIndex] 
         });
+
     } catch (error) {
         console.error('Error updating skill:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
 
-// Delete skill by index
+// Delete skill by skill name
 const deleteSkill = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -808,11 +804,100 @@ const deleteSkill = async (req, res) => {
     }
 };
 
-/*
-************************************************
-*********** Education ************
-************************************************
-*/
+
+const addEndorsement = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log("User ID: ", userId);
+        
+        const { skillOwnerId, skillName } = req.body;
+        
+        if (userId == skillOwnerId) {
+            return res.status(400).json({ error: "User cannot endorse himself" });
+        }
+
+        let user = await userModel.findOne(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { "skills.$": 1 }
+        );
+
+        if (!user) {
+            return res.status(404).json({ error: "User or skill not found" });
+        }
+
+        const skill = user.skills[0];
+        if (skill.endorsements.some(id => id.toString() === userId)) {
+            return res.status(400).json({ error: "You have already endorsed this skill once" });
+        }
+
+        user = await userModel.findOneAndUpdate(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { $push: { "skills.$.endorsements": new mongoose.Types.ObjectId(userId) } },
+            { new: true }
+        );
+
+        const updatedSkill = user.skills.find(skill => 
+            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
+        );
+
+        res.status(200).json({
+            message: "Skill endorsement created successfully",
+            skill: updatedSkill
+        });
+
+    } catch (error) {
+        console.error("Error endorsing skill:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+};
+
+const deleteEndorsement = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log("User ID:", userId);
+        
+        let { skillOwnerId } = req.body;
+        const skillName = req.params.skillName;
+        skillOwnerId = new mongoose.Types.ObjectId(skillOwnerId);
+        console.log("Skill Owner ID:", skillOwnerId);
+        console.log("Skill Name:", skillName);
+
+        let user = await userModel.findOne(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { "skills.$": 1 }
+        );
+        if (!user) {
+            return res.status(404).json({ error: "User or skill not found" });
+        }
+
+        const skill = user.skills[0];
+        if (!skill.endorsements.includes(userId)) {
+            return res.status(404).json({ error: "No endorsement found from this user for this skill" });
+        }
+
+        user = await userModel.findOneAndUpdate(
+            { _id: skillOwnerId, "skills.skillName": new RegExp(`^${skillName}$`, "i") },
+            { $pull: { "skills.$.endorsements": userId } },
+            { new: true }
+        );
+
+        const updatedSkill = user.skills.find(skill =>
+            new RegExp(`^${skillName}$`, "i").test(skill.skillName)
+        );
+
+        res.status(200).json({
+            message: "Skill endorsement deleted successfully",
+            skill: updatedSkill
+        });
+
+    } catch (error) {
+        console.error("Error Removing Skill Endorsement:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+};
+
+
+//------------------------------------------EDUCATION--------------------------
 const addEducation = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -1290,6 +1375,8 @@ module.exports = {
     getExperience,
     getProfilePicture,
     getCoverPicture,
+    addEndorsement,
+    deleteEndorsement,
     updatePrivacySettings,
     followEntity,
     unfollowEntity

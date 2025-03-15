@@ -2453,56 +2453,65 @@
  *                   example: Internal server error details
  */
 
+
 /**
  * @swagger
- * /user/profile:
- *   post:
- *     summary: Create a user profile
+ * /user/profile-picture:
+ *   get:
+ *     summary: Get profile picture
  *     tags: [Users]
- *     description: Create a new user profile with basic information.
- *     operationId: createUserProfile
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UserProfile"
- *     responses:
- *       201:
- *         description: User profile created successfully
- *         content:
- *           application/json:
- *             example:
- *               message: User profile created successfully
- *               userId: "64f8a1b2c3d4e5f6a7b8c9d0"
- *       400:
- *         description: Bad request, invalid input
- *       500:
- *         description: Internal server error
- *   patch:
- *     summary: Update user profile
- *     tags: [Users]
- *     description: Update user profile details such as name, bio, location, work experience, education, and skills.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UpdateUserIntro"
+ *     description: Retrieve the user's profile picture
  *     responses:
  *       200:
- *         description: User profile updated successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Profile updated successfully"
+ *         description: Profile picture retrieved successfully
  *       400:
- *         description: Invalid input data
+ *         description: Profile picture not set
  *       401:
- *         description: Unauthorized, user must be logged in
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   post:
+ *     summary: Upload a profile picture
+ *     tags: [Users]
+ *     description: Upload or update a user's profile picture
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   delete:
+ *     summary: Delete profile picture
+ *     tags: [Users]
+ *     description: Remove a user's profile picture
+ *     responses:
+ *       200:
+ *         description: Profile picture deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Profile picture not found
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -2548,7 +2557,23 @@
 
 /**
  * @swagger
- * /user/cover-photo:
+ * /user/cover-picture:
+ *   get:
+ *     summary: Get cover photo
+ *     tags: [Users]
+ *     description: Retrieve the user's cover photo
+ *     responses:
+ *       200:
+ *         description: Cover photo retrieved successfully
+ *       400:
+ *         description: Cover photo not set
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
  *   post:
  *     summary: Upload a cover photo
  *     tags: [Users]
@@ -2587,6 +2612,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -3344,31 +3370,37 @@
  *         description: Internal Server Error
  */
 
+
+
 /**
  * @swagger
  * /user/skills:
  *   post:
- *     summary: Add a skill to user's profile
+ *     summary: Add a new skill to the user's profile
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Add a skill with optional endorsements to a user's profile. 
- *                  Ensures skill name is valid, checks for duplicates, and validates endorsements.
+ *     description: Adds a skill to the authenticated user's profile and associates it with their education records.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - skillName
+ *               - educationIndexes
  *             properties:
  *               skillName:
  *                 type: string
  *                 example: "JavaScript"
- *               endorsements:
+ *                 description: "The name of the skill to be added."
+ *               educationIndexes:
  *                 type: array
  *                 items:
- *                   type: string
- *                 example: ["userId1", "userId2"]
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: "Array of indexes referring to the user's education records."
  *     responses:
  *       200:
  *         description: Skill added successfully
@@ -3390,9 +3422,14 @@
  *                       type: array
  *                       items:
  *                         type: string
- *                       example: ["userId1", "userId2"]
+ *                       example: []
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       400:
- *         description: Invalid input data, endorsements, or skill already exists
+ *         description: Bad request - Invalid input data
  *         content:
  *           application/json:
  *             schema:
@@ -3401,62 +3438,6 @@
  *                 error:
  *                   type: string
  *                   example: "Skill already exists"
- *                 invalidUserIds:
- *                   type: array
- *                   items:
- *                     type: string
- *                   example: ["invalidUserId1"]
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "User not found"
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal server error"
- *                 details:
- *                   type: string
- *                   example: "Error message details"
- * 
- *   get:
- *     summary: Get all user skills
- *     tags: [Users]
- *     security:
- *       - BearerAuth: []
- *     description: Retrieve all skills associated with the authenticated user.
- *     responses:
- *       200:
- *         description: Successfully retrieved user skills
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 skills:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       skillName:
- *                         type: string
- *                         example: "JavaScript"
- *                       endorsements:
- *                         type: array
- *                         items:
- *                           type: string
- *                         example: ["userId1", "userId2"]
  *       404:
  *         description: User not found
  *         content:
@@ -3485,14 +3466,73 @@
 
 /**
  * @swagger
+ * /user/skills:
+ *   get:
+ *     summary: Get all user skills
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Retrieve all skills associated with the authenticated user.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user skills
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 skills:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
+ *                         type: string
+ *                         example: "JavaScript"
+ *                       endorsements:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["userId1", "userId2"]
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+*/
+
+/**
+ * @swagger
  * /user/skills/{skillName}:
- * 
  *   get:
  *     summary: Get a specific skill by name
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Retrieve a specific skill from a user's profile by skill name.
+ *     description: Retrieve a specific skill from the authenticated user's profile by skill name.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3520,6 +3560,11 @@
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       404:
  *         description: User not found or skill not found
  *         content:
@@ -3543,13 +3588,19 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- * 
+ */
+
+
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
  *   put:
- *     summary: Update a user's skill by name
+ *     summary: Update a user's skill
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Update the skill name or endorsements for a specific skill in the user's profile.
+ *     description: Update the skill name or associated education indexes for a given skill.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3557,7 +3608,7 @@
  *         schema:
  *           type: string
  *           example: "JavaScript"
- *         description: The name of the skill to update.
+ *         description: The current name of the skill to be updated.
  *     requestBody:
  *       required: true
  *       content:
@@ -3567,12 +3618,14 @@
  *             properties:
  *               newSkillName:
  *                 type: string
- *                 example: "ReactJS"
- *               endorsements:
+ *                 example: "Node.js"
+ *                 description: The new name for the skill (optional).
+ *               educationIndexes:
  *                 type: array
  *                 items:
- *                   type: string
- *                 example: ["userId1", "userId2"]
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: List of education indexes to associate with the skill (optional).
  *     responses:
  *       200:
  *         description: Skill updated successfully
@@ -3589,14 +3642,19 @@
  *                   properties:
  *                     skillName:
  *                       type: string
- *                       example: "ReactJS"
+ *                       example: "Node.js"
  *                     endorsements:
  *                       type: array
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       400:
- *         description: Invalid request data (e.g., duplicate skill name or validation errors)
+ *         description: Invalid request or duplicate skill
  *         content:
  *           application/json:
  *             schema:
@@ -3604,9 +3662,9 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill already exists"
+ *                   example: "Skill name is the same"
  *       404:
- *         description: User not found or skill not found
+ *         description: User or skill not found
  *         content:
  *           application/json:
  *             schema:
@@ -3628,13 +3686,17 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- * 
+ */
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
  *   delete:
- *     summary: Delete a skill by name
+ *     summary: Delete a user's skill
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Remove a skill from a user's profile by specifying its name.
+ *     description: Remove a skill from the authenticated user's profile.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3665,8 +3727,13 @@
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
  *       404:
- *         description: User not found or skill not found
+ *         description: Skill not found
  *         content:
  *           application/json:
  *             schema:
@@ -3690,13 +3757,16 @@
  *                   example: "Error message details"
  */
 
+
 /**
  * @swagger
- * /user/skills/endorse:
+ * /user/skills/add-endorsement:
  *   post:
- *     summary: Endorse a skill
+ *     summary: Endorse a user's skill
  *     tags: [Users]
- *     description: Endorse a user's skill
+ *     description: Adds an endorsement to a user's skill.
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -3704,17 +3774,107 @@
  *           schema:
  *             type: object
  *             properties:
- *               userId:
+ *               skillOwnerId:
  *                 type: string
  *                 example: "64f8a1b2c3d4e5f6a7b8c9d0"
- *               skill:
+ *               skillName:
  *                 type: string
  *                 example: "JavaScript"
  *     responses:
  *       200:
- *         description: Skill endorsed successfully
+ *         description: Skill endorsement created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill endorsement created successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["USER_ID_1", "USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
  *       400:
- *         description: Invalid input data
+ *         description: Bad request (e.g., User cannot endorse themselves, already endorsed)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User or skill not found
+ *       500:
+ *         description: Internal Server Error
+ *
+ * /user/skills/remove-endorsement/{skillName}:
+ *   delete:
+ *     summary: Remove endorsement from a skill
+ *     tags: [Users]
+ *     description: Removes an endorsement from a user's skill.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The skill name to remove endorsement from
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               skillOwnerId:
+ *                 type: string
+ *                 example: "64f8a1b2c3d4e5f6a7b8c9d0"
+ *     responses:
+ *       200:
+ *         description: Skill endorsement deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill endorsement deleted successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
+ *       400:
+ *         description: Bad request (e.g., missing fields)
  *       401:
  *         description: Unauthorized
  *       404:
@@ -3722,6 +3882,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
