@@ -61,6 +61,8 @@ router.route('/privacy-settings')
 router.route('/follow/:userId')
     .post(mockVerifyToken, user.followEntity)
     .delete(mockVerifyToken, user.unfollowEntity);
+router.route('/contact-info')
+    .patch(mockVerifyToken, user.editContactInfo);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
 
