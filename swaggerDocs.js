@@ -3884,7 +3884,6 @@
  */
 
 
-
 /**
  * @swagger
  * /user/privacy-settings:

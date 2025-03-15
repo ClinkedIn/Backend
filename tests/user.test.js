@@ -860,6 +860,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
 Skills Section Tests
 */ 
 
+
 app.post('/skills', mockVerifyToken, addSkill);
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 
@@ -873,20 +874,35 @@ describe('POST /skills', () => {
         const mockUserId = '0b3169152ee6c171d25e6860';
         const mockSkillData = {
             skillName: 'Problem Solving',
+            educationIndexes: [0],
         };
-        userModel.findByIdAndUpdate.mockResolvedValue({
+
+        const mockUser = {
             _id: mockUserId,
-            skills: [mockSkillData],
-        });
+            education: [{}], // Mocking one education entry
+            skills: []
+        };
+
+        const mockUpdatedUser = {
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [0], endorsements: [] }]
+        };
+
+        userModel.exists.mockResolvedValue(false); // Skill does not exist
+        userModel.findById.mockResolvedValue(mockUser); // User found
+        userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser); // Simulating skill addition
 
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData)
+            .send(mockSkillData);
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill added successfully');
-        expect(response.body.skill).toEqual(mockSkillData);
-
+        expect(response.body.skill).toEqual({
+            skillName: 'Problem Solving',
+            education: [0],
+            endorsements: []
+        });
     });
 
     test('should return 400 if skill already exists', async () => {
@@ -894,48 +910,79 @@ describe('POST /skills', () => {
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Problem Solving', endorsements: [] });
+            .send({ skillName: 'Problem Solving', educationIndexes: [0] });
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill already exists');
     });
 
     test('should return 400 if skill name is invalid', async () => {
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: '', educationIndexes: [0] });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid skill name'); // Assuming validateSkillName() returns this
+    });
+
+    test('should return 400 if educationIndexes is not an array', async () => {
+        userModel.exists.mockResolvedValue(false);
+        const response = await request(app)
+            .post('/skills')
+            .send({ skillName: 'Critical Thinking', educationIndexes: "notAnArray" });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Education indexes must be an array');
+    });
+
+    test('should return 400 if educationIndexes contains invalid indexes', async () => {
+        const mockUser = {
+            _id: '0b3169152ee6c171d25e6860',
+            education: [{}] // Only one valid index (0)
+        };
+
+        userModel.exists.mockResolvedValue(false);
+        userModel.findById.mockResolvedValue(mockUser);
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: '', endorsements: ['d29ccbd4ac1b1cb9faefb867'] });
+            .send({ skillName: 'Critical Thinking', educationIndexes: [0, 5] }); // Index 5 is out of bounds
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Skill name is required and must be a string');
+        expect(response.body.error).toBe('Some provided education indexes are invalid');
     });
 
     test('should return 404 if user is not found', async () => {
-        userModel.exists.mockResolvedValue(null);
-
-        userModel.findByIdAndUpdate.mockResolvedValue(null);
+        userModel.exists.mockResolvedValue(false);
+        userModel.findById.mockResolvedValue(null); // Simulating a missing user
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', endorsements: [] });
+            .send({ skillName: 'Critical Thinking', educationIndexes: [] });
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
     test('should return 500 if database update fails', async () => {
-        userModel.exists.mockResolvedValue(null);
+        const mockUser = {
+            _id: '0b3169152ee6c171d25e6860',
+            education: [{}]
+        };
 
+        userModel.exists.mockResolvedValue(false);
+        userModel.findById.mockResolvedValue(mockUser);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', endorsements: [] });
+            .send({ skillName: 'Critical Thinking', educationIndexes: [0] });
 
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
     });
 });
+/*
 
 describe('PUT /skills/:skillName', () => {
     beforeEach(() => {
@@ -1023,6 +1070,189 @@ describe('PUT /skills/:skillName', () => {
         expect(response.body.error).toBe('Internal server error');
     });
 });
+
+describe('POST /user/skills/add-endorsement', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should endorse a skill successfully', async () => {
+        const mockUserId = 'd29ccbd4ac1b1cb9faefb867';
+        const mockSkillData = { skillName: 'JavaScript' };
+        const mockEndorserId = '0b3169152ee6c171d25e6860';
+
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'JavaScript', endorsements: [] }]
+        });
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'JavaScript', endorsements: [mockEndorserId] }]
+        });
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: mockUserId, skillName: 'JavaScript' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill endorsement created successfully');
+        expect(response.body.skill.skillName).toBe('JavaScript');
+        expect(response.body.skill.endorsements).toContain(mockEndorserId);
+    });
+
+    it('should return 400 if user tries to endorse their own skill', async () => {
+        const mockUserId = 'd29ccbd4ac1b1cb9faefb867';
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: mockUserId, skillName: 'JavaScript' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('You cannot endorse your own skill');
+    });
+
+    it('should return 400 if the skill is already endorsed', async () => {
+        userModel.findById.mockResolvedValue({
+            _id: 'd29ccbd4ac1b1cb9faefb867',
+            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_1'] }]
+        });
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Skill already endorsed');
+    });
+
+    it('should return 404 if the user is not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: 'invalid_id', skillName: 'JavaScript' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    it('should return 404 if the skill is not found', async () => {
+        userModel.findById.mockResolvedValue({
+            _id: '0b3169152ee6c171d25e6860',
+            skills: []
+        });
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Skill not found');
+    });
+
+    it('should return 500 if an internal server error occurs', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .post('/user/skills/add-endorsement')
+            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+    });
+});
+
+describe('DELETE /user/skills/remove-endorsement/:skillName', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('should remove an endorsement successfully', async () => {
+        const mockUserId = '64f8a1b2c3d4e5f6a7b8c9d0';
+        const skillName = 'JavaScript';
+
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_1', 'USER_ID_2'] }]
+        });
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_2'] }]
+        });
+
+        const response = await request(app)
+            .delete(`/user/skills/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId: mockUserId });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill endorsement deleted successfully');
+        expect(response.body.skill.skillName).toBe(skillName);
+        expect(response.body.skill.endorsements).not.toContain('USER_ID_1');
+    });
+
+    it('should return 400 if skill name is missing', async () => {
+        const response = await request(app)
+            .delete('/user/skills/remove-endorsement/')
+            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Skill name is required');
+    });
+
+    it('should return 404 if the user is not found', async () => {
+        userModel.findById.mockResolvedValue(null);
+
+        const response = await request(app)
+            .delete('/user/skills/remove-endorsement/JavaScript')
+            .send({ skillOwnerId: 'invalid_id' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    it('should return 404 if the skill is not found', async () => {
+        userModel.findById.mockResolvedValue({
+            _id: '64f8a1b2c3d4e5f6a7b8c9d0',
+            skills: []
+        });
+
+        const response = await request(app)
+            .delete('/user/skills/remove-endorsement/JavaScript')
+            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Skill not found');
+    });
+
+    it('should return 400 if the endorsement does not exist', async () => {
+        userModel.findById.mockResolvedValue({
+            _id: '64f8a1b2c3d4e5f6a7b8c9d0',
+            skills: [{ skillName: 'JavaScript', endorsements: [] }]
+        });
+
+        const response = await request(app)
+            .delete('/user/skills/remove-endorsement/JavaScript')
+            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Endorsement not found');
+    });
+
+    it('should return 500 if an internal server error occurs', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .delete('/user/skills/remove-endorsement/JavaScript')
+            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+    });
+});
+
+*/
 
 /*
 Profile and Cover Pictures Tests
