@@ -14,21 +14,16 @@ const {
   validateEmail,
   validatePassword,
 } = require("../utils/validateEmailPassword");
-const { generateTokens } = require("./jwtController");
-
-const signToken = (id) => {
-  const token = jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  });
-  return token;
-};
+const { generateTokens, refreshToken } = require("./jwtController");
 
 const createSendToken = (user, statusCode, res) => {
-  generateTokens(user, res);
+  const { accessToken, refreshToken } = generateTokens(user, res);
 
   res.status(statusCode).json({
     status: "success",
     data: {
+      accessToken,
+      refreshToken,
       user,
     },
   });
@@ -263,20 +258,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "wrong password" });
     }
 
-    /* const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    }); */
-
-    generateTokens(user, res);
-
-    res.status(200).json({
-      success: true,
-      message: "User signed in successfully",
-      data: {
-        //token,
-        user,
-      },
-    });
+    createSendToken(user, 200, res);
   } catch (error) {
     console.log(error);
   }
@@ -344,7 +326,22 @@ const resetPassword = async (req, res) => {
   createSendToken(user, 200, res);
 };
 
-const updatePassword = async (req, res) => {};
+const updatePassword = async (req, res) => {
+  // get the user from the collection
+  const user = await userModel.findById(req.user._id);
+  // check if the password is correct
+  if (
+    !user ||
+    !(await user.correctPassword(req.body.passwordCurrent, user.password))
+  ) {
+    return res.status(401).json({ message: "your current password is wrong" });
+  }
+  // if so update password
+  user.password = req.body.password;
+  await user.save();
+  // log user in send jwt
+  createSendToken(user, 200, res);
+};
 
 module.exports = {
   dummyData,

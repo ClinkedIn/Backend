@@ -5,10 +5,10 @@ const generateTokens = (userInfo, res) => {
   // Generate Access Token (short-lived)
   const accessToken = jwt.sign(
     {
-      userId: userInfo._id,
+      _id: userInfo._id,
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
-      userEmail: userInfo.email,
+      email: userInfo.email,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "10m" }
@@ -17,10 +17,10 @@ const generateTokens = (userInfo, res) => {
   // Generate Refresh Token (long-lived)
   const refreshToken = jwt.sign(
     {
-      userId: userInfo._id,
+      _id: userInfo._id,
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
-      userEmail: userInfo.email,
+      email: userInfo.email,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "1d" }
@@ -42,7 +42,7 @@ const generateTokens = (userInfo, res) => {
     //path: process.env.REFRESH_TOKEN_PATH || '/'
   });
 
-  return { refreshToken };
+  return { accessToken, refreshToken };
 };
 
 /**

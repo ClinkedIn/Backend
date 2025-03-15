@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const {
-  verifyToken,
   isLoggedIn,
   verifyGoogleToken,
   mockVerifyToken,
