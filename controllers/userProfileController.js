@@ -1,7 +1,6 @@
 const userModel = require('../models/userModel');
 const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
-const { uploadFile, uploadMultipleImages } = require('../utils/cloudinaryUpload');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
@@ -690,6 +689,7 @@ const updateSkill = async (req, res) => {
         });
         
         if (!skillExists) {
+            console.log('Skill Exists: ', skillExists)
             return res.status(404).json({ error: 'Skill not found' });
         }
 
@@ -1371,7 +1371,7 @@ module.exports = {
     getProfilePicture,
     getCoverPicture,
     addEndorsement,
-    deleteEndorsement
+    deleteEndorsement,
     updatePrivacySettings,
     followEntity,
     unfollowEntity
