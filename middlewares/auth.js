@@ -5,7 +5,7 @@ const isLoggedIn = async (req, res, next) => {
   if (req.cookies.accessToken) {
     return verifyToken(req, res, next);
   }
-  next();
+  return res.status(401).json({ message: "Unauthorized" });
 };
 
 const verifyToken = async (req, res, next) => {
