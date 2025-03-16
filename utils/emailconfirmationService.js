@@ -51,19 +51,19 @@ exports.sendEmailConfirmation = async (userId) => {
         await user.save();
 
         const emailSent = await createSendConfirmationEmail(user.email, user.emailVerificationToken);
-        console.log('Email sent:', emailSent);
+        // console.log('Email sent:', emailSent);
         if (emailSent.messageId) {
             return {
                 success: true,
                 message: "Confirmation email sent successfully",
-                email: userEmail,
-                emailVerificationToken: emailVerificationToken
+                email: user.email,
+                emailVerificationToken: user.emailVerificationToken
             };
         }
         else {
             
             // throw new Error("failed to send confirmation email");
-            // Resend Confirmation email
+            // Resend Confirmation email 10 times forloop
             await createSendConfirmationEmail(user.email, user.emailVerificationToken);
         }
         }
