@@ -810,16 +810,13 @@ const updateSkill = async (req, res) => {
         const { skillName } = req.params;
         const { newSkillName, educationIndexes, experienceIndexes } = req.body;
 
-        if (!newSkillName && (!Array.isArray(educationIndexes) || !Array.isArray(experienceIndexes))) {
-            return res.status(400).json({ error: 'No updates provided' });
-        }
-
+        // Find the user with the relevant fields
         const user = await userModel.findById(userId, "skills education workExperience");
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Find skill index
+        // Find the skill index
         const skillIndex = user.skills.findIndex(skill => skill.skillName.toLowerCase() === skillName.toLowerCase());
         if (skillIndex === -1) {
             return res.status(404).json({ error: 'Skill not found' });
@@ -827,7 +824,7 @@ const updateSkill = async (req, res) => {
 
         let updates = {};
 
-        // Validate and update skill name
+        // Validate and update skill name if provided
         if (newSkillName) {
             const skillValidation = validateSkillName(newSkillName);
             if (!skillValidation.valid) {
@@ -849,51 +846,76 @@ const updateSkill = async (req, res) => {
             updates[`skills.${skillIndex}.skillName`] = newSkillName;
         }
 
-        // Validate and update education/work experience indexes
-        const validEducationIndexes = educationIndexes.filter(index => 
-            Number.isInteger(index) && index >= 0 && index < user.education.length
-        );
-        const validExperienceIndexes = experienceIndexes.filter(index => 
-            Number.isInteger(index) && index >= 0 && index < user.workExperience.length
-        );
+        // Validate and update education indexes if provided
+        if (educationIndexes) {
+            if (!Array.isArray(educationIndexes)) {
+                return res.status(400).json({ error: 'Invalid education indexes format' });
+            }
 
-        if (validEducationIndexes.length !== educationIndexes.length) {
-            return res.status(400).json({ error: "Some provided education indexes are invalid" });
+            const validEducationIndexes = educationIndexes.filter(index => 
+                Number.isInteger(index) && index >= 0 && index < user.education.length
+            );
+
+            if (validEducationIndexes.length !== educationIndexes.length) {
+                return res.status(400).json({ error: "Some provided education indexes are invalid" });
+            }
+
+            updates[`skills.${skillIndex}.education`] = validEducationIndexes;
         }
-        if (validExperienceIndexes.length !== experienceIndexes.length) {
-            return res.status(400).json({ error: "Some provided experience indexes are invalid" });
+
+        // Validate and update experience indexes if provided
+        if (experienceIndexes) {
+            if (!Array.isArray(experienceIndexes)) {
+                return res.status(400).json({ error: 'Invalid experience indexes format' });
+            }
+
+            const validExperienceIndexes = experienceIndexes.filter(index => 
+                Number.isInteger(index) && index >= 0 && index < user.workExperience.length
+            );
+
+            if (validExperienceIndexes.length !== experienceIndexes.length) {
+                return res.status(400).json({ error: "Some provided experience indexes are invalid" });
+            }
+
+            updates[`skills.${skillIndex}.experience`] = validExperienceIndexes;
         }
 
-        updates[`skills.${skillIndex}.education`] = validEducationIndexes;
-        updates[`skills.${skillIndex}.experience`] = validExperienceIndexes;
+        // If no updates were provided, return an error
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: 'No valid updates provided' });
+        }
 
-        // Apply skill update inside the transaction
+        // Apply skill updates
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { $set: updates },
             { new: true, projection: { skills: 1 } }
         );
 
-        // Update education and work experience skills
-        const updateEducationPromises = validEducationIndexes.map(index =>
-            userModel.updateOne(
-                { _id: userId },
-                { $addToSet: { [`education.${index}.skills`]: skillName } }
+        // Update linked education and work experience skills
+        const updateEducationPromises = educationIndexes 
+            ? educationIndexes.map(index =>
+                userModel.updateOne(
+                    { _id: userId },
+                    { $addToSet: { [`education.${index}.skills`]: skillName } }
+                )
             )
-        );
+            : [];
 
-        const updateWorkExperiencePromises = validExperienceIndexes.map(index =>
-            userModel.updateOne(
-                { _id: userId },
-                { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
+        const updateWorkExperiencePromises = experienceIndexes 
+            ? experienceIndexes.map(index =>
+                userModel.updateOne(
+                    { _id: userId },
+                    { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
+                )
             )
-        );
+            : [];
 
         await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
 
         res.status(200).json({ 
             message: 'Skill updated successfully', 
-            skill: updatedUser.skills[skillIndex] 
+            skills: updatedUser.skills
         });
 
     } catch (error) {
@@ -901,6 +923,7 @@ const updateSkill = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
+
 
 
 const deleteSkill = async (req, res) => {
@@ -953,8 +976,6 @@ const deleteSkill = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
-
-
 
 const addEndorsement = async (req, res) => {
     try {

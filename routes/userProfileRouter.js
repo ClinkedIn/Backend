@@ -25,7 +25,7 @@ router.route('/experience')
 
 router.route('/experience/:index')
     .get(mockVerifyToken, user.getExperience)
-    .put(mockVerifyToken,  user.updateExperience)
+    .patch(mockVerifyToken,  user.updateExperience)
     .delete(mockVerifyToken, user.deleteExperience);
     
 router.route('/skills')
@@ -34,7 +34,7 @@ router.route('/skills')
 
 router.route('/skills/:skillName')
     .get(mockVerifyToken, user.getSkill)
-    .put(mockVerifyToken, user.updateSkill)
+    .patch(mockVerifyToken, user.updateSkill)
     .delete(mockVerifyToken, user.deleteSkill);
 
 router.route('/skills/add-endorsement')
