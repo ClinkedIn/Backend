@@ -9,7 +9,7 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { sendEmailConfirmation } = require("../utils/emailconfirmationService");
+const { sendEmailConfirmation } = require("../utils/emailService");
 const {
   validateEmail,
   validatePassword,
@@ -190,17 +190,17 @@ const registerUser = async (req, res) => {
 
 const confirmEmail = async (req, res) => {
   try {
-    const { emailVerificationToken } = req.body;
-    if (!emailVerificationToken) {
+    const { token } = req.params;
+    if (!token) {
       return res.status(400).json({
         success: false,
-        message: "Verification token is required",
+        message: "Verification Token is required",
       });
     }
 
     const verificationDate = new Date(Date.now());
     const user = await userModel.findOne({
-      emailVerificationToken: emailVerificationToken,
+      emailVerificationToken: token,
       emailVerificationExpiresAt: { $gt: verificationDate },
     });
 
