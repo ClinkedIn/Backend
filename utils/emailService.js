@@ -12,20 +12,17 @@ const transporter = nodemailer.createTransport({
 });
 
 
-// create forgotPasswordEmail(url, email);
-// {
 
-// }
 
-const createSendConfirmationEmail = async (email, token) => {
+const createConfirmationEmail = async (email, token) => {
     const mailOptions = {
         from: process.env.LOCKEDIN_EMAIL,
         to: email,
         subject: 'Confirm Your Email - Lockedin',
         html: `
-      <h1>Email Confirmation</h1>
+      <h2>Email Confirmation</h2>
       <p>Thank you for registering with our Lockedin. Please confirm your email by clicking the link below:</p>
-      <a href="http://localhost:3000/user/confirm-email/${token}""
+      <a href="http://localhost:3000/user/confirm-email/${token}"
    onclick="event.preventDefault(); fetch(this.href, {
      method: 'GET',
      headers: { 'Content-Type': 'application/json' },
@@ -55,8 +52,8 @@ exports.sendEmailConfirmation = async (userId) => {
         user.emailVerificationToken = uuidv4(); // can be replaced by crypto.randomBytes(32).toString('hex') for more security 
         user.emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);;
         await user.save();
-
-        const emailSent = await createSendConfirmationEmail(user.email, user.emailVerificationToken);
+        // const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
+        const emailSent = await createConfirmationEmail(user.email, user.emailVerificationToken);
         // console.log('Email sent:', emailSent);
         if (emailSent.messageId) {
             return {
@@ -68,13 +65,58 @@ exports.sendEmailConfirmation = async (userId) => {
         }
         else {
             
+            throw new Error("failed to send confirmation email");
             // throw new Error("failed to send confirmation email");
             // Resend Confirmation email 10 times forloop
-            await createSendConfirmationEmail(user.email, user.emailVerificationToken);
+            // await createConfirmationEmail(user.email, user.emailVerificationToken);
         }
         }
 
     catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+exports.sendForgotPasswordEmail = async (resetURL,email) => {
+    try {
+        const mailOptions = {
+            from: process.env.LOCKEDIN_EMAIL,
+            to: email,
+            subject: 'Forgot Your Password ? - Lockedin',
+            html: `
+      <h2>Email reset</h2>
+    <p>forgot your password? Submit a patch request with your new password to: ${resetURL} .\n If you didn't forget your password, ignore this email</p>
+      <a href="${resetURL}"
+   onclick="event.preventDefault(); 
+   fetch(this.href, {
+     method: 'PATCH',
+     headers: { 'Content-Type': 'application/json' },
+   });">
+   reset Password</a>` };
+
+
+        const emailSent = await transporter.sendMail(mailOptions);
+        // console.log('Email sent:', emailSent);
+        if (emailSent.messageId) {
+            return {
+                success: true,
+                message: "forgot password email sent successfully",
+                email: user.email,
+            };
+        }
+        else {
+            throw new Error("failed to send forgot password email");
+            // Resend Forgot password email 10 times forloop
+            // await transporter.sendMail(mailOptions);
+        }
+    } catch (error) {
+        
+        user.passwordResetToken = undefined;
+        user.passwordResetExpiresAt = undefined;
+        await user.save({ validateBeforeSave: false });
+        
         return {
             success: false,
             error: error.message

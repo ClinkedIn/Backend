@@ -9,7 +9,7 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { sendEmailConfirmation } = require("../utils/emailService");
+const { sendEmailConfirmation, sendForgotPasswordEmail } = require("../utils/emailService");
 const {
   validateEmail,
   validatePassword,
@@ -190,8 +190,8 @@ const registerUser = async (req, res) => {
 
 const confirmEmail = async (req, res) => {
   try {
-    const { token } = req.params;
-    if (!token) {
+    const { emailVerificationToken } = req.params;
+    if (!emailVerificationToken) {
       return res.status(400).json({
         success: false,
         message: "Verification Token is required",
@@ -200,7 +200,7 @@ const confirmEmail = async (req, res) => {
 
     const verificationDate = new Date(Date.now());
     const user = await userModel.findOne({
-      emailVerificationToken: token,
+      emailVerificationToken: emailVerificationToken,
       emailVerificationExpiresAt: { $gt: verificationDate },
     });
 
@@ -272,39 +272,37 @@ const forgotPassword = async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email });
     if (!user) {
-      const error = new Error("There is no such email address");
-      error.statusCode = 404;
-      throw error;
+      return res.status(404).json({
+        success: false,
+        message: "Password reset failed",
+        error: "There is no such email address",
+      });
     }
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/user/reset-password/${resetToken} `;
-    const message = `forgot your password? Submit a patch request with your new password to: ${resetURL} .\n If you didn't forget your password, ignore this email`;
-    try {
-      /* await sendEmail({
-            email: user.email,
-            subject: 'your password reset token (valid for 10 mins)',
-            message,
-        }); */
 
-      res.status(200).json({
-        status: "success",
-        message: "Token sent to email",
-        resetToken,
+
+const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
+    const emailSent = await sendForgotPasswordEmail(resetURL, user.email);
+    
+    if (emailSent.success) {
+      return res.status(200).json({
+        success: true,
+        message: "forgot password email sent successfully"
+
       });
-    } catch (err) {
-      console.log(err);
-      user.passwordResetToken = undefined;
-      user.passwordResetExpiresAt = undefined;
-      await user.save({ validateBeforeSave: false });
-      const error = new Error("There was an error sending the email");
-      error.statusCode = 500;
-      throw error;
     }
-  } catch (error) {
-    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: emailSent.error,
+    });
+  }
+  catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: "Password reset failed11",
+      error: error.message,
+    });
   }
 };
 

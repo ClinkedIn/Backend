@@ -15,7 +15,7 @@ router
   .delete(isLoggedIn, userController.deleteUser);
 
 // router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
-router.route("/confirm-email/:token").get(userController.confirmEmail);
+router.route("/confirm-email/:emailVerificationToken").get(userController.confirmEmail);
 router.route("/login").post(userController.login);
 router.route("/forgot-password").post(userController.forgotPassword);
 router.patch("/reset-password/:token", userController.resetPassword);
