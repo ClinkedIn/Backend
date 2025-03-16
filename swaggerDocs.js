@@ -5142,3 +5142,112 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /user/about:
+ *   patch:
+ *     summary: Update user about section
+ *     tags: [Users]
+ *     description: Update a user's about section including description and skills (limited to 5 skills)
+ *     operationId: editAbout
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - about
+ *             properties:
+ *               about:
+ *                 type: object
+ *                 properties:
+ *                   description:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "Full-stack developer with 5+ years experience building scalable web applications."
+ *                   skills:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     maxItems: 5
+ *                     example: ["React", "Node.js", "MongoDB", "Express", "TypeScript"]
+ *     responses:
+ *       200:
+ *         description: About section updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "About section updated successfully"
+ *                 about:
+ *                   type: object
+ *                   properties:
+ *                     description:
+ *                       type: string
+ *                       example: "Full-stack developer with 5+ years experience building scalable web applications."
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["React", "Node.js", "MongoDB", "Express", "TypeScript"]
+ *                 skillsAdded:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
+ *                         type: string
+ *                         example: "React"
+ *                       endorsements:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: []
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: []
+ *       400:
+ *         description: Validation error or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skills array cannot contain more than 5 items"
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update about section"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */

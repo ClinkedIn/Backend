@@ -84,10 +84,14 @@ async function createRandomUsers() {
             lastName: faker.person.lastName(),
             email: faker.internet.email(),
             password: hashedPassword,
+            headLine: faker.lorem.sentence(),
             profilePicture: faker.image.avatar(),
             coverPicture: faker.image.url(),
             resume: faker.datatype.boolean() ? faker.internet.url() : null,
-            bio: faker.lorem.sentence(),
+            about: {
+                description: faker.lorem.paragraph(),
+                skills: []
+            },
             location: faker.location.city(),
             lastJobTitle: faker.person.jobTitle(),
             workExperience,

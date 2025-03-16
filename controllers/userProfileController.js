@@ -1462,6 +1462,77 @@ const editContactInfo = async (req, res) => {
         });
     }
 };
+const editAbout = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { about } = req.body;
+
+        if (!about) {
+            return res.status(400).json({ error: 'About section is required' });
+        }
+
+        // Validate skills array length
+        if (about.skills && Array.isArray(about.skills) && about.skills.length > 5) {
+            return res.status(400).json({ 
+                error: 'Skills array cannot contain more than 5 items'
+            });
+        }
+
+        // First find the user to check existing skills
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found ' });
+        }
+
+        // Create a set of existing skill names for quick lookup
+        const existingSkillNames = new Set(user.skills.map(skill => skill.skillName));
+        const skillsToAdd = [];
+        
+        // Check if there are new skills in the about section to add to the main skills array
+        if (about.skills && Array.isArray(about.skills)) {
+            about.skills.forEach(skill => {
+                if (skill && !existingSkillNames.has(skill)) {
+                    skillsToAdd.push({
+                        skillName: skill,
+                        endorsements: [],
+                        education: []
+                    });
+                    existingSkillNames.add(skill);
+                }
+            });
+        }
+
+        // Update operations
+        const updateOps = {
+            about: about
+        };
+
+        // If there are skills to add, update the skills array
+        if (skillsToAdd.length > 0) {
+            updateOps.skills = [...user.skills, ...skillsToAdd];
+        }
+
+        // Update the user document
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updateOps },
+            { new: true, runValidators: true }
+        );
+        
+        res.status(200).json({
+            message: 'About section updated successfully',
+            about: updatedUser.about,
+            skillsAdded: skillsToAdd.length > 0 ? skillsToAdd : undefined
+        });
+
+    } catch (error) {
+        console.error('Error updating about section:', error);
+        res.status(500).json({
+            error: 'Failed to update about section',
+            details: error.message
+        });
+    }
+};
 module.exports = {
     getAllUsers,
     getUserProfile,
@@ -1496,5 +1567,6 @@ module.exports = {
     updatePrivacySettings,
     followEntity,
     unfollowEntity,
-    editContactInfo
+    editContactInfo,
+    editAbout
 };

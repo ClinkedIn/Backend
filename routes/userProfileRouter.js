@@ -65,5 +65,6 @@ router.route('/contact-info')
     .patch(mockVerifyToken, user.editContactInfo);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
-
+router.route('/about')
+    .patch(mockVerifyToken, user.editAbout);
 module.exports = router;

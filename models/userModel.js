@@ -25,7 +25,18 @@ const userSchema = new mongoose.Schema({
     },
     additionalName: { type: String, default: null },
     headline: { type: String, default: null },
-    bio: { type: String, default: null },
+    about: { 
+        description: { type: String, default: null }, 
+        skills: {
+            type: [{type: String, default: null}],
+            validate: [
+                function(val) {
+                    return val.length <= 5;
+                },
+                'Skills array cannot contain more than 5 items'
+            ]
+        } 
+    },
     location: { type: String,default: null },
     lastJobTitle: { type: String, default: null },
     industry: { type: String, default: null },
