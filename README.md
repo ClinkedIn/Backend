@@ -4,7 +4,7 @@
 Module 1: Authentication & User Management
 ●	Login 💻
 ●	Register a new user (with CAPTCHA “I am not a robot”)(web) ✅
-●	Update user name ❌
+●	Update first last  name ✅
 ●	Verify email 🆗
 ●	Password reset request via email ->	Forgot Password
 ●	Update password

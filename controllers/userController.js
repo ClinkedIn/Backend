@@ -94,6 +94,8 @@ const removeResume = async (req, res) => {
 };
 
 const registerUser = async (req, res) => {
+
+
   try {
     // get registration data
     const { firstName, lastName, email, password, recaptchaResponseToken } =
@@ -121,7 +123,7 @@ const registerUser = async (req, res) => {
           "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
       });
     }
-
+    
     //verify CAPTCHA
     const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response${recaptchaResponseToken}`;
     const captchaResponseData = await axios.post(captchaVerificationUrl);
@@ -131,45 +133,43 @@ const registerUser = async (req, res) => {
         message: "CAPCHA Verification failed",
       });
     }
-    console.log("------------------------------------------");
     //check if user already exists
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       return res
-        .status(409)
-        .json({ message: "The User already exist use another email" });
+      .status(409)
+      .json({ message: "The User already exist use another email" });
     }
-
+    
     //Hash the Password
     const hashsalt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, hashsalt);
-
+    
     //start a session
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // const session = await mongoose.startSession();
+    // session.startTransaction();
     //Create new User
     const newUser = await userModel.create(
-      [
+      
         {
           firstName,
           lastName,
           email,
           password: hashedPassword,
           isEmailConfirmed: false,
-        },
-      ],
-      { session }
-    );
-
+        });
+    
     // use generateTokens from jwt controller and fix it ✅
-    const jwtrefreshToken = generateTokens(newUser[0], res);
-    console.log(`refresh tokeen:  ${jwtrefreshToken}`);
-    await session.commitTransaction();
-    session.endSession();
-
+    const jwtrefreshToken = generateTokens(newUser, res);
+    // console.log(`refresh tokeen:  ${jwtrefreshToken}`);
+    // await session.commitTransaction();
+    // session.endSession();
+    
     // remove get confirm-email end point and directly send from here ✅
-    const isEmailSent = await sendEmailConfirmation(newUser[0]._id);
+    const isEmailSent = await sendEmailConfirmation(newUser._id);
+    console.log(isEmailSent);
     if (!isEmailSent.success) {
+     
       return res.status(400).json({
         success: false,
         message: isEmailSent.error,
@@ -178,15 +178,15 @@ const registerUser = async (req, res) => {
     return res.status(201).json({
       success: true,
       message:
-        "User registered successfully. Please check your email to confirm your account.",
+      "User registered successfully. Please check your email to confirm your account.",
       data: {
         token: jwtrefreshToken,
-        user: newUser[0],
+        user: newUser,
       },
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    // await session.abortTransaction();
+    // session.endSession();
     // console.error(error.statusCode);
     return res.status(error.statusCode || 500).json({
       success: false,
