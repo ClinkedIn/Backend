@@ -133,7 +133,7 @@ const registerUser = async (req, res) => {
     }
 
     //verify CAPTCHA
-    const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response${recaptchaResponseToken}`;
+    const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaResponseToken}`;
     const captchaResponseData = await axios.post(captchaVerificationUrl);
     if (!captchaResponseData.data.success) {
       return res.status(400).json({
@@ -272,24 +272,22 @@ const forgotPassword = async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email });
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Password reset failed",
-        error: "There is no such email address",
-      });
+      const error = new Error("There is no such email address");
+      error.statusCode = 404;
+      throw error;
     }
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
 
-const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
-    const emailSent = await sendForgotPasswordEmail(resetURL, user.email);
+// const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
+    const emailSent = await sendForgotPasswordEmail(resetToken, user.email);
     
     if (emailSent.success) {
       return res.status(200).json({
         success: true,
-        message: "forgot password email sent successfully"
-
+        message: "forgot password email sent successfully",
+        email: user.email,
       });
     }
     return res.status(500).json({
@@ -298,11 +296,7 @@ const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${res
     });
   }
   catch (error) {
-    res.status(error.statusCode || 500).json({
-      success: false,
-      message: "Password reset failed11",
-      error: error.message,
-    });
+    console.log(error);
   }
 };
 
