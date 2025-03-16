@@ -29,6 +29,16 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 
+const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedFields.includes(el)) {
+      newObj[el] = obj[el];
+    }
+  });
+  return newObj;
+};
+
 const dummyData = async (req, res) => {
   res.status(200).json({ message: "Dummy data" });
 };
@@ -276,7 +286,7 @@ const deleteUser = async (req, res) => {
   }
 };
 
-const forgorPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email });
     if (!user) {
@@ -317,42 +327,92 @@ const forgorPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  //get user based on the token
-  const token = req.params.token;
-  console.log(token);
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-  const user = await userModel.findOne({
-    passwordResetToken: hashedToken,
-    passwordResetExpiresAt: { $gt: Date.now() },
-  });
-  // if token is not expired
-  if (!user) {
-    return res.status(400).json({ message: "Token is invalid or has expired" });
-  }
-  // update changedpasswordat
-  user.password = req.body.password;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpiresAt = undefined;
-  await user.save();
+  try {
+    //get user based on the token
+    const token = req.params.token;
+    console.log(token);
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await userModel.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpiresAt: { $gt: Date.now() },
+    });
+    // if token is not expired
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Token is invalid or has expired" });
+    }
+    // update changedpasswordat
+    user.password = req.body.password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
 
-  createSendToken(user, 200, res);
+    createSendToken(user, 200, res);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const updatePassword = async (req, res) => {
-  // get the user from the collection
-  const user = await userModel.findById(req.user.id);
-  // check if the password is correct
-  if (
-    !user ||
-    !(await user.correctPassword(req.body.passwordCurrent, user.password))
-  ) {
-    return res.status(401).json({ message: "your current password is wrong" });
+  try {
+    // get the user from the collection
+    const user = await userModel.findById(req.user.id);
+    // check if the password is correct
+    if (
+      !user ||
+      !(await user.correctPassword(req.body.passwordCurrent, user.password))
+    ) {
+      return res
+        .status(401)
+        .json({ message: "your current password is wrong" });
+    }
+    // if so update password
+    user.password = req.body.password;
+    await user.save();
+    // log user in send jwt
+    createSendToken(user, 200, res);
+  } catch (error) {
+    console.log(error);
   }
-  // if so update password
-  user.password = req.body.password;
-  await user.save();
-  // log user in send jwt
-  createSendToken(user, 200, res);
+};
+
+const updateEmail = async (req, res) => {
+  try {
+    // get the user from the collection
+    const user = await userModel.findById(req.user.id);
+    const { newEmail, password } = req.body;
+    // check if the password is correct
+    if (!user || !(await user.correctPassword(password, user.password))) {
+      return res
+        .status(401)
+        .json({ message: "please enter the correct password" });
+    }
+    user.email = newEmail;
+    user.isConfirmed = false;
+    await user.save();
+    // log user in send jwt
+    createSendToken(user, 200, res);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const updateName = async (req, res) => {
+  try {
+    const filteredBody = filterObj(req.body, "firstName", "lastName");
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      filteredBody,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    createSendToken(updatedUser, 200, res);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 module.exports = {
@@ -360,8 +420,10 @@ module.exports = {
   registerUser,
   confirmEmail,
   login,
-  forgorPassword,
+  forgotPassword,
   resetPassword,
   updatePassword,
   deleteUser,
+  updateName,
+  updateEmail,
 };

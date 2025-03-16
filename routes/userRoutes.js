@@ -17,7 +17,10 @@ router
 // router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
 router.route("/confirm-email").patch(userController.confirmEmail);
 router.route("/login").post(userController.login);
-router.route("/forgot-password").post(userController.forgorPassword);
+router.route("/forgot-password").post(userController.forgotPassword);
 router.patch("/reset-password/:token", userController.resetPassword);
 router.patch("/update-password", isLoggedIn, userController.updatePassword);
+router.patch("/update-email", isLoggedIn, userController.updateEmail);
+router.patch("/update-name", isLoggedIn, userController.updateName);
+
 module.exports = router;
