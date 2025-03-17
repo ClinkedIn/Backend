@@ -121,6 +121,9 @@ const registerUser = async (req, res) => {
 const resendConfirmationEmail = async (req, res) => {
   try {
     const id = req.user.id;
+    if (req.user.isConfirmed) {
+      return res.status(400).json({ message: "User is already confirmed!!" });
+    }
     const isSent = await sendEmailConfirmation(id);
     if (!isSent) {
       return res.status(500).json({ message: "Internal server error" });
