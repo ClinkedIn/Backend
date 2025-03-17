@@ -79,11 +79,15 @@ const registerUser = async (req, res) => {
     }
 
     //check if user already exists
-    const existingUser = await userModel.findOne({ email });
+    const existingUser = await userModel.findOne({ email, isActive: true });
     if (existingUser) {
       return res
         .status(409)
         .json({ message: "The User already exist use another email" });
+    }
+    const deactivatedUser = await userModel.findOne({ email, isActive: false });
+    if (deactivatedUser) {
+      await userModel.deleteOne({ email });
     }
 
     //Create new User
@@ -150,6 +154,7 @@ const confirmEmail = async (req, res) => {
 
     const verificationDate = new Date(Date.now());
     const user = await userModel.findOne({
+      isActive: true,
       emailVerificationToken: emailVerificationToken,
       emailVerificationExpiresAt: { $gt: verificationDate },
     });
@@ -198,8 +203,8 @@ const googleLogin = async (req, res) => {
     const googleUid = decoded.firebase?.identities?.["google.com"]?.[0];
 
     let user = await userModel.findOne({ email });
-
-    if (!user) {
+    if (!user || !user.isActive) {
+      await userModel.findOneAndDelete({ email });
       const newUser = await userModel.create({
         firstName: name,
         lastName: name,
@@ -208,7 +213,6 @@ const googleLogin = async (req, res) => {
         isEmailConfirmed: true,
         googleId: googleUid,
       });
-
       return createSendToken(newUser, 201, res, "Account created sucessfully");
     }
 
@@ -239,7 +243,7 @@ const login = async (req, res) => {
         .json({ message: "please provide email and password" });
     }
 
-    const user = await userModel.findOne({ email });
+    const user = await userModel.findOne({ email, isActive: true });
 
     if (!user) {
       return res.status(401).json({ message: "wrong email" });
@@ -259,19 +263,20 @@ const login = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    await userModel.findByIdAndDelete(req.user.id);
-    res.status(204).json({
-      status: "success",
-      data: null,
-    });
+    await userModel.findByIdAndUpdate(req.user.id, { isActive: false });
+    res.status(204).json({ status: "success", data: null });
   } catch (error) {
     console.log(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const forgotPassword = async (req, res) => {
   try {
-    const user = await userModel.findOne({ email: req.body.email });
+    const user = await userModel.findOne({
+      email: req.body.email,
+      isActive: true,
+    });
     if (!user) {
       const error = new Error("There is no such email address");
       error.statusCode = 404;
@@ -308,6 +313,7 @@ const resetPassword = async (req, res) => {
     console.log(token);
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await userModel.findOne({
+      isActive: true,
       passwordResetToken: hashedToken,
       passwordResetExpiresAt: { $gt: Date.now() },
     });
@@ -345,6 +351,7 @@ const verifyResetPasswordToken = async (req, res) => {
     //console.log(token);
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await userModel.findOne({
+      isActive: true,
       passwordResetToken: hashedToken,
       passwordResetExpiresAt: { $gt: Date.now() },
     });
