@@ -1,11 +1,11 @@
 // userController.test.js
 
-const userController = require("./userController");
+const userController = require("../controllers/userController.js");
 const userModel = require("../models/userModel");
 const { sendEmailConfirmation, sendForgotPasswordEmail } = require("../utils/emailService");
 const { validateEmail, validatePassword } = require("../utils/validateEmailPassword");
 const { verifyCaptcha } = require("../utils/verifyCaptcha");
-const { generateTokens } = require("./jwtController");
+const { generateTokens } = require("./../middlewares/auth");
 const firebaseAdmin = require("../utils/firebase");
 const crypto = require("crypto");
 
@@ -28,7 +28,7 @@ jest.mock("../models/userModel");
 jest.mock("../utils/emailService");
 jest.mock("../utils/validateEmailPassword");
 jest.mock("../utils/verifyCaptcha");
-jest.mock("./jwtController");
+jest.mock("./../middlewares/auth");
 jest.mock("../utils/firebase");
 
 // =======================
