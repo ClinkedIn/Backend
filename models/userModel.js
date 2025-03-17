@@ -1,17 +1,43 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
+const { PhoneModule } = require('@faker-js/faker');
 
 const userSchema = new mongoose.Schema({
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     email: { type: String, unique: true, required: true },
-    password: { type: String },
-    profilePicture: { type: String },
-    coverPicture: { type: String },
-    resume: { type: String },
-    bio: { type: String },
-    location: { type: String },
+    password: { type: String, required: true },
+    profilePicture: { type: String, default: null },
+    coverPicture: { type: String, default: null },
+    resume: { type: String, default: null },
+    website: { type: String, default: null },
+    contactInfo:{
+        phone: { type: String, default: "" },
+        phoneType: { type: String, enum:["Home", "Work", "Mobile"],default: "Home" },
+        address: { type: String, default: "" },
+        birthDay:  {
+            day: { type: Number, default: 1 },
+            month: { type: String, enum:["January", "February", "March", "April","May", "June", "July", "August", "September", "October", "November", "December"],
+                 default: "January" },
+        },
+        website: { url: { type: String, default: null }, type: { type: String,enum:["Personal", "Company", "Blog","RSS Feed", "Portfolio","Other"] ,default: null } },
+    },
+    additionalName: { type: String, default: null },
+    headline: { type: String, default: null },
+    about: { 
+        description: { type: String, default: null }, 
+        skills: {
+            type: [{type: String, default: null}],
+            validate: [
+                function(val) {
+                    return val.length <= 5;
+                },
+                'Skills array cannot contain more than 5 items'
+            ]
+        } 
+    },
+    location: { type: String,default: null },
     lastJobTitle: { type: String, default: null },
     industry: { type: String, default: null },
     certificates: [{ type: String }],
@@ -53,7 +79,7 @@ const userSchema = new mongoose.Schema({
         media: { type: String }
     }],
     transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Subscription" }],
-    subscription: { type: mongoose.Schema.Types.ObjectId, ref: "Subscription" },
+    subscription: { type: mongoose.Schema.Types.ObjectId, ref: "Subscription", default: null },
     isPremium: { type: Boolean, default: false },
     companies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company" }],
     adminInCompanies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Company" }],

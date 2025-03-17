@@ -1365,14 +1365,16 @@ const editIntro = async (req, res) => {
         const {
             firstName,
             lastName,
-            bio,
+            additinalName,
+            headLine,
+            website,
             location,
             mainEducation,
             industry
         } = req.body;
 
         // Validate required fields
-        const requiredFields = ['firstName', 'lastName', 'bio', 'location', 'industry', 'mainEducation'];
+        const requiredFields = ['firstName', 'lastName', 'location', 'industry', 'mainEducation',"headLine"];
         const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
 
         if (missingFields.length > 0) {
@@ -1388,7 +1390,9 @@ const editIntro = async (req, res) => {
                 $set: {
                     firstName,
                     lastName,
-                    bio,
+                    headLine,
+                    additinalName,
+                    website,
                     location,
                     mainEducation,
                     industry
@@ -1406,7 +1410,9 @@ const editIntro = async (req, res) => {
             user: {
                 firstName: updatedUser.firstName,
                 lastName: updatedUser.lastName,
-                bio: updatedUser.bio,
+                headLine: updatedUser.headLine,
+                additionalName: updatedUser.additionalName,
+                website: updatedUser.website,
                 location: updatedUser.location,
                 industry: updatedUser.industry
             }
@@ -1636,7 +1642,188 @@ const unfollowEntity = async (req, res) => {
         });
     }
 };
+const editContactInfo = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { 
+            phone, 
+            phoneType, 
+            address, 
+            birthDay,
+            website 
+        } = req.body;
 
+        // Build the update object with only provided fields
+        const updateFields = {};
+        
+        // Handle phone updates
+        if (phone !== undefined) {
+            updateFields['contactInfo.phone'] = phone;
+        }
+        
+        // Handle phoneType updates with validation
+        if (phoneType !== undefined) {
+            const validPhoneTypes = ["Home", "Work", "Mobile"];
+            if (phoneType && !validPhoneTypes.includes(phoneType)) {
+                return res.status(400).json({
+                    error: 'Invalid phoneType',
+                    validValues: validPhoneTypes
+                });
+            }
+            updateFields['contactInfo.phoneType'] = phoneType;
+        }
+        
+        // Handle address updates
+        if (address !== undefined) {
+            updateFields['contactInfo.address'] = address;
+        }
+        
+        // Handle birthday updates with validation
+        if (birthDay) {
+            if (birthDay.day !== undefined) {
+                if (birthDay.day !== null && (birthDay.day < 1 || birthDay.day > 31)) {
+                    return res.status(400).json({
+                        error: 'Invalid day value',
+                        message: 'Day must be between 1 and 31'
+                    });
+                }
+                updateFields['contactInfo.birthDay.day'] = birthDay.day;
+            }
+            
+            if (birthDay.month !== undefined) {
+                const validMonths = ["January", "February", "March", "April", "May", "June", 
+                                     "July", "August", "September", "October", "November", "December"];
+                if (birthDay.month !== null && !validMonths.includes(birthDay.month)) {
+                    return res.status(400).json({
+                        error: 'Invalid month value',
+                        validValues: validMonths
+                    });
+                }
+                updateFields['contactInfo.birthDay.month'] = birthDay.month;
+            }
+        }
+        
+        // Handle website updates with validation
+        if (website) {
+            if (website.url !== undefined) {
+                updateFields['contactInfo.website.url'] = website.url;
+            }
+            
+            if (website.type !== undefined) {
+                const validWebsiteTypes = ["Personal", "Company", "Blog", "RSS Feed", "Portfolio", "Other"];
+                if (website.type !== null && !validWebsiteTypes.includes(website.type)) {
+                    return res.status(400).json({
+                        error: 'Invalid website type',
+                        validValues: validWebsiteTypes
+                    });
+                }
+                updateFields['contactInfo.website.type'] = website.type;
+            }
+        }
+        
+        // If no fields were provided for update, return an error
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({
+                error: 'No fields provided for update',
+                message: 'Please provide at least one contact information field to update'
+            });
+        }
+        
+        // Find user and update contact information
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        ).select('contactInfo');
+        
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.status(200).json({
+            message: 'Contact information updated successfully',
+            contactInfo: updatedUser.contactInfo
+        });
+        
+    } catch (error) {
+        console.error('Error updating contact information:', error);
+        res.status(500).json({
+            error: 'Failed to update contact information',
+            details: error.message
+        });
+    }
+};
+const editAbout = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { about } = req.body;
+
+        if (!about) {
+            return res.status(400).json({ error: 'About section is required' });
+        }
+
+        // Validate skills array length
+        if (about.skills && Array.isArray(about.skills) && about.skills.length > 5) {
+            return res.status(400).json({ 
+                error: 'Skills array cannot contain more than 5 items'
+            });
+        }
+
+        // First find the user to check existing skills
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found ' });
+        }
+
+        // Create a set of existing skill names for quick lookup
+        const existingSkillNames = new Set(user.skills.map(skill => skill.skillName));
+        const skillsToAdd = [];
+        
+        // Check if there are new skills in the about section to add to the main skills array
+        if (about.skills && Array.isArray(about.skills)) {
+            about.skills.forEach(skill => {
+                if (skill && !existingSkillNames.has(skill)) {
+                    skillsToAdd.push({
+                        skillName: skill,
+                        endorsements: [],
+                        education: []
+                    });
+                    existingSkillNames.add(skill);
+                }
+            });
+        }
+
+        // Update operations
+        const updateOps = {
+            about: about
+        };
+
+        // If there are skills to add, update the skills array
+        if (skillsToAdd.length > 0) {
+            updateOps.skills = [...user.skills, ...skillsToAdd];
+        }
+
+        // Update the user document
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $set: updateOps },
+            { new: true, runValidators: true }
+        );
+        
+        res.status(200).json({
+            message: 'About section updated successfully',
+            about: updatedUser.about,
+            skillsAdded: skillsToAdd.length > 0 ? skillsToAdd : undefined
+        });
+
+    } catch (error) {
+        console.error('Error updating about section:', error);
+        res.status(500).json({
+            error: 'Failed to update about section',
+            details: error.message
+        });
+    }
+};
 module.exports = {
     getAllUsers,
     getUserProfile,
@@ -1670,5 +1857,7 @@ module.exports = {
     deleteEndorsement,
     updatePrivacySettings,
     followEntity,
-    unfollowEntity
+    unfollowEntity,
+    editContactInfo,
+    editAbout
 };

@@ -27,7 +27,8 @@ const {
     unfollowEntity,
     getUserProfile,
     getAllUsers,
-    deleteSkill
+    deleteSkill,
+    editContactInfo
 } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const uploadMiddleware = require('../middlewares/multer');
@@ -396,7 +397,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            additionalName: 'JD',
+            website: 'https://johndoe.com',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1
@@ -418,7 +421,9 @@ describe('PATCH /profile', () => {
         expect(response.body.user).toMatchObject({
             firstName: mockIntroData.firstName,
             lastName: mockIntroData.lastName,
-            bio: mockIntroData.bio,
+            headLine: mockIntroData.headLine,
+            additionalName: mockIntroData.additionalName,
+            website: mockIntroData.website,
             location: mockIntroData.location,
             industry: mockIntroData.industry
         });
@@ -437,7 +442,7 @@ describe('PATCH /profile', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Missing required fields');
-        expect(response.body.missingFields).toContain('bio');
+        expect(response.body.missingFields).toContain('headLine');
         expect(response.body.missingFields).toContain('location');
         expect(response.body.missingFields).toContain('industry');
         expect(response.body.missingFields).toContain('mainEducation');
@@ -447,7 +452,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            website: 'https://johndoe.com',
+            additionalName: 'JD',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1
@@ -467,7 +474,9 @@ describe('PATCH /profile', () => {
         const mockIntroData = {
             firstName: 'John',
             lastName: 'Doe',
-            bio: 'Software Engineer',
+            headLine: 'Software Engineer',
+            website: 'https://johndoe.com',
+            additionalName: 'JD',
             location: 'New York',
             industry: 'Technology',
             mainEducation: 1
@@ -2627,5 +2636,217 @@ describe('GET /user - Get All Users', () => {
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Failed to retrieve users');
         expect(response.body.error).toBe('Database error');
+    });
+});
+app.patch('/contact-info', mockVerifyToken, editContactInfo);
+
+describe('PATCH /contact-info - Edit Contact Info', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully update all contact info fields', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        const contactInfoData = {
+            phone: '+1234567890',
+            phoneType: 'Mobile',
+            address: '123 Main St, Anytown, USA',
+            birthDay: {
+                day: 15,
+                month: 'June'
+            },
+            website: {
+                url: 'https://example.com',
+                type: 'Personal'
+            }
+        };
+    
+        const mockUpdatedUser = {
+            _id: userId,
+            contactInfo: contactInfoData
+        };
+    
+        // Create mock that supports chained method calls
+        const selectMock = jest.fn().mockResolvedValue(mockUpdatedUser);
+        userModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+            select: selectMock
+        });
+    
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+    
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Contact information updated successfully');
+        expect(response.body.contactInfo).toEqual(contactInfoData);
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            userId,
+            { 
+                $set: {
+                    'contactInfo.phone': contactInfoData.phone,
+                    'contactInfo.phoneType': contactInfoData.phoneType,
+                    'contactInfo.address': contactInfoData.address,
+                    'contactInfo.birthDay.day': contactInfoData.birthDay.day,
+                    'contactInfo.birthDay.month': contactInfoData.birthDay.month,
+                    'contactInfo.website.url': contactInfoData.website.url,
+                    'contactInfo.website.type': contactInfoData.website.type
+                } 
+            },
+            { new: true, runValidators: true }
+        );
+        expect(selectMock).toHaveBeenCalledWith('contactInfo');
+    });
+
+    test('should successfully update only provided fields', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        const contactInfoData = {
+            phone: '+1234567890',
+            address: '123 Main St, Anytown, USA'
+        };
+
+        const mockUpdatedUser = {
+            _id: userId,
+            contactInfo: {
+                phone: '+1234567890',
+                phoneType: 'Mobile',
+                address: '123 Main St, Anytown, USA'
+            }
+        };
+
+        // Create mock that supports chained method calls
+        const selectMock = jest.fn().mockResolvedValue(mockUpdatedUser);
+        userModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+            select: selectMock
+        });
+
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Contact information updated successfully');
+        expect(response.body.contactInfo).toEqual(mockUpdatedUser.contactInfo);
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+            userId,
+            { 
+                $set: {
+                    'contactInfo.phone': contactInfoData.phone,
+                    'contactInfo.address': contactInfoData.address
+                } 
+            },
+            { new: true, runValidators: true }
+        );
+        expect(selectMock).toHaveBeenCalledWith('contactInfo');
+    });
+
+    test('should return 400 for invalid phoneType', async () => {
+        const contactInfoData = {
+            phoneType: 'Invalid'
+        };
+
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid phoneType');
+        expect(response.body.validValues).toEqual(['Home', 'Work', 'Mobile']);
+        expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 for invalid day in birthDay', async () => {
+        const contactInfoData = {
+            birthDay: {
+                day: 32,
+                month: 'June'
+            }
+        };
+
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid day value');
+        expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 for invalid month in birthDay', async () => {
+        const contactInfoData = {
+            birthDay: {
+                day: 15,
+                month: 'InvalidMonth'
+            }
+        };
+
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid month value');
+        expect(response.body.validValues).toContain('January');
+        expect(response.body.validValues).toContain('December');
+        expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 for invalid website type', async () => {
+        const contactInfoData = {
+            website: {
+                url: 'https://example.com',
+                type: 'InvalidType'
+            }
+        };
+
+        const response = await request(app)
+            .patch('/contact-info')
+            .send(contactInfoData);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid website type');
+        expect(response.body.validValues).toContain('Personal');
+        expect(response.body.validValues).toContain('Portfolio');
+        expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('should return 400 when no fields are provided', async () => {
+        const response = await request(app)
+            .patch('/contact-info')
+            .send({});
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('No fields provided for update');
+        expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    test('should return 404 when user not found', async () => {
+        // Create mock that supports chained method calls
+        const selectMock = jest.fn().mockResolvedValue(null);
+        userModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+            select: selectMock
+        });
+    
+        const response = await request(app)
+            .patch('/contact-info')
+            .send({ phone: '+1234567890' });
+    
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 when database error occurs', async () => {
+        // Create mock that throws error when select is called
+        const selectMock = jest.fn().mockRejectedValue(new Error('Database error'));
+        userModel.findByIdAndUpdate = jest.fn().mockReturnValue({
+            select: selectMock
+        });
+    
+        const response = await request(app)
+            .patch('/contact-info')
+            .send({ phone: '+1234567890' });
+    
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Failed to update contact information');
+        expect(response.body.details).toBe('Database error');
     });
 });
