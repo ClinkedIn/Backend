@@ -73,12 +73,14 @@ describe('POST /education', () => {
             skills: ['JavaScript', 'Python'],
             media: ['link-to-certificate']
         };
-
+        
         const mockUpdatedUser = {
             _id: 'a0a20b073ac7c8facebfaa11',
-            education: [mockEducationData]
+            education: [mockEducationData],
+            skills: [],
+            save: jest.fn().mockResolvedValue(true) // Changed this line
         };
-
+        
         userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser);
 
         const response = await request(app)
@@ -784,7 +786,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
         expect(mockUser.workExperience[0].jobTitle).toBe('Tech Lead');
 
         // Ensure sorting is correct (newest first)
-        const sortedJobTitles = response.body.experience.map(exp => exp.jobTitle);
+        const sortedJobTitles = response.body.sortedWorkExperience.map(exp => exp.jobTitle);
         expect(sortedJobTitles).toEqual(['Tech Lead', 'Junior Developer']);
 
         expect(mockUser.save).toHaveBeenCalled(); // Ensure save() was called
