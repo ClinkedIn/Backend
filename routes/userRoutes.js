@@ -24,6 +24,8 @@ router.route("/forgot-password").post(userController.forgotPassword);
 router
   .patch("/reset-password/:token", userController.resetPassword)
   .get("/reset-password/:token", userController.verifyResetPasswordToken);
+
+router.post("/auth/google", userController.googleLogin);
 router.patch("/update-password", protect, userController.updatePassword);
 router.patch("/update-email", protect, userController.updateEmail);
 router.patch("/update-name", protect, userController.updateName);

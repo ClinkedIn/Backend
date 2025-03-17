@@ -8,6 +8,7 @@ const axios = require("axios");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const firebaseAdmin = require("./../utils/firebase");
 require("dotenv").config();
 const {
   sendEmailConfirmation,
@@ -17,12 +18,12 @@ const {
   validateEmail,
   validatePassword,
 } = require("../utils/validateEmailPassword");
-const { generateTokens, refreshToken } = require("./jwtController");
+const { generateTokens } = require("./jwtController");
 
 const createSendToken = (user, statusCode, res) => {
   const { accessToken, refreshToken } = generateTokens(user, res);
 
-  res.status(statusCode).json({
+  return res.status(statusCode).json({
     status: "success",
     data: {
       accessToken,
@@ -40,70 +41,6 @@ const filterObj = (obj, ...allowedFields) => {
     }
   });
   return newObj;
-};
-
-const dummyData = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const getUser = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-// const createUser = async (req, res) => {
-//     res.status(200).json({ message: 'Dummy data' });
-// };
-
-const sendConnectionRequest = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const acceptConnectionRequest = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const declineConnectionRequest = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const removeConnection = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const addProfilePicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const updateProfilePicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const removeProfilePicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const addCoverPicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const updateCoverPicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const removeCoverPicture = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const addResume = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const updateResume = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
-};
-
-const removeResume = async (req, res) => {
-  res.status(200).json({ message: "Dummy data" });
 };
 
 const registerUser = async (req, res) => {
@@ -228,6 +165,57 @@ const confirmEmail = async (req, res) => {
       message: "Email confirmation failed",
       error: error.message,
     });
+  }
+};
+
+const googleLogin = async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const token = authHeader.split("Bearer ")[1];
+  console.log(token);
+  try {
+    const decoded = await firebaseAdmin.auth().verifyIdToken(token);
+
+    const email = decoded.email;
+    const firebaseUid = decoded.uid;
+    const name = decoded.name;
+    const picture = decoded.picture;
+    const emailVerified = decoded.email_verified;
+    const googleUid = decoded.firebase?.identities?.["google.com"]?.[0];
+
+    let user = await userModel.findOne({ email });
+
+    if (!user) {
+      const newUser = await userModel.create({
+        firstName: name,
+        lastName: name,
+        email,
+        password: null,
+        isEmailConfirmed: true,
+        googleId: googleUid,
+      });
+
+      return createSendToken(newUser, 201, res);
+    }
+
+    if (user.googleId === null) {
+      user.googleId = googleUid;
+      await user.save();
+      return createSendToken(user, 200, res);
+    }
+
+    if (user.googleId != googleUid) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    createSendToken(user, 200, res);
+  } catch (error) {
+    console.error("Error verifying Firebase token:", error);
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
 
@@ -422,7 +410,6 @@ const updateName = async (req, res) => {
 };
 
 module.exports = {
-  dummyData,
   registerUser,
   confirmEmail,
   login,
@@ -433,4 +420,5 @@ module.exports = {
   updateName,
   updateEmail,
   verifyResetPasswordToken,
+  googleLogin,
 };
