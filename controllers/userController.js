@@ -11,6 +11,7 @@ const {
   validateEmail,
   validatePassword,
 } = require("../utils/validateEmailPassword");
+const { verifyCaptcha } = require("../utils/verifyCaptcha");
 const { generateTokens } = require("./jwtController");
 
 const createSendToken = (user, statusCode, res, responseMessage) => {
@@ -46,8 +47,8 @@ const registerUser = async (req, res) => {
       !firstName ||
       !lastName ||
       !email ||
-      !password
-      //!recaptchaResponseToken
+      !password ||
+      !recaptchaResponseToken
     ) {
       return res.status(400).json({ message: "all fields are required" });
     }
@@ -66,15 +67,21 @@ const registerUser = async (req, res) => {
       });
     }
 
-    //verify CAPTCHA
-    const captchaVerificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaResponseToken}`;
-    const captchaResponseData = await axios.post(captchaVerificationUrl);
-    if (!captchaResponseData.data.success) {
+    // //verify CAPTCHA
+
+  
+   const captchaResponse= await verifyCaptcha(recaptchaResponseToken);
+    
+    if (!captchaResponse) {
       return res.status(400).json({
         success: false,
-        message: "CAPCHA Verification failed",
+        errors: [{ msg: 'reCAPTCHA verification failed. Please try again.' }]
       });
     }
+
+
+
+
     //check if user already exists
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
