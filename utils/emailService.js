@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const createConfirmationEmail = async (email, token) => {
+const createConfirmationEmail = async (resetURL,email,token) => {
   const mailOptions = {
     from: process.env.LOCKEDIN_EMAIL,
     to: email,
@@ -19,7 +19,7 @@ const createConfirmationEmail = async (email, token) => {
     html: `
       <h2>Email Confirmation</h2>
       <p>Thank you for registering with our Lockedin. Please confirm your email by clicking the link below:</p>
-      <a href="http://localhost:3000/user/confirm-email/${token}"
+      <a href="${resetURL}"
    onclick="event.preventDefault(); fetch(this.href, {
      method: 'GET',
      headers: { 'Content-Type': 'application/json' },
@@ -51,8 +51,10 @@ exports.sendEmailConfirmation = async (userId) => {
       Date.now() + 24 * 60 * 60 * 1000
     );
     await user.save();
-    // const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
+    const resetURL = `${req.protocol}://${req.get("host")}/user/confirm-email/${user.emailVerificationToken}`;
     const emailSent = await createConfirmationEmail(
+      
+      resetURL,
       user.email,
       user.emailVerificationToken
     );
