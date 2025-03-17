@@ -23,7 +23,7 @@ const verifyToken = async (req, res, next) => {
     }
 }
 const mockUser = {
-    id: process.env.USER_ID, // Use an ID from your seeded users
+    id: "0b3169152ee6c171d25e6860", // Use an ID from your seeded users
     email: 'Reta_Watsica78@hotmail.com',
     // Add other user properties you need
 };
