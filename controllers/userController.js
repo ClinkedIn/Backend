@@ -1,13 +1,6 @@
 const userModel = require("../models/userModel");
-const postModel = require("../models/postModel");
-const commentModel = require("../models/commentModel");
-const repostModel = require("../models/repostModel");
-const reportModel = require("../models/reportModel");
 const crypto = require("crypto");
 const axios = require("axios");
-const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 const firebaseAdmin = require("./../utils/firebase");
 require("dotenv").config();
 const {
@@ -20,11 +13,12 @@ const {
 } = require("../utils/validateEmailPassword");
 const { generateTokens } = require("./jwtController");
 
-const createSendToken = (user, statusCode, res) => {
+const createSendToken = (user, statusCode, res, responseMessage) => {
   const { accessToken, refreshToken } = generateTokens(user, res);
 
   return res.status(statusCode).json({
     status: "success",
+    message: responseMessage,
     data: {
       accessToken,
       refreshToken,
@@ -98,27 +92,20 @@ const registerUser = async (req, res) => {
       isEmailConfirmed: false,
     });
 
-    // use generateTokens from jwt controller and fix it ✅
-    const jwtrefreshToken = generateTokens(newUser, res);
-
     // remove get confirm-email end point and directly send from here ✅
-    const isEmailSent = await sendEmailConfirmation(newUser._id);
-    console.log(isEmailSent);
-    if (!isEmailSent.success) {
-      return res.status(400).json({
-        success: false,
-        message: isEmailSent.error,
-      });
+
+    try {
+      await sendEmailConfirmation(newUser._id);
+    } catch (err) {
+      console.log("Mail sending failed", err);
     }
-    return res.status(201).json({
-      success: true,
-      message:
-        "User registered successfully. Please check your email to confirm your account.",
-      data: {
-        token: jwtrefreshToken,
-        user: newUser,
-      },
-    });
+
+    createSendToken(
+      newUser,
+      201,
+      res,
+      "User registered successfully. Please check your email to confirm your account."
+    );
   } catch (error) {
     return res.status(error.statusCode || 500).json({
       success: false,
@@ -199,7 +186,7 @@ const googleLogin = async (req, res) => {
         googleId: googleUid,
       });
 
-      return createSendToken(newUser, 201, res);
+      return createSendToken(newUser, 201, res, "Account created sucessfully");
     }
 
     if (user.googleId === null) {
@@ -212,7 +199,7 @@ const googleLogin = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    createSendToken(user, 200, res);
+    createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
     console.error("Error verifying Firebase token:", error);
     return res.status(401).json({ message: "Unauthorized" });
@@ -241,7 +228,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "wrong password" });
     }
 
-    createSendToken(user, 200, res);
+    createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
     console.log(error);
   }
@@ -308,12 +295,21 @@ const resetPassword = async (req, res) => {
         .json({ message: "Token is invalid or has expired" });
     }
     // update changedpasswordat
+    const password = req.body.password;
+    const isValidPassword = validatePassword(password);
+    if (!isValidPassword) {
+      return res.status(400).json({
+        message:
+          "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
+      });
+    }
+
     user.password = req.body.password;
     user.passwordResetToken = undefined;
     user.passwordResetExpiresAt = undefined;
     await user.save();
 
-    createSendToken(user, 200, res);
+    createSendToken(user, 200, res, "Password restted successfully");
   } catch (error) {
     console.log(error);
   }
@@ -362,10 +358,19 @@ const updatePassword = async (req, res) => {
         .json({ message: "your current password is wrong" });
     }
     // if so update password
-    user.password = req.body.password;
+    const password = req.body.password;
+    const isValidPassword = validatePassword(password);
+    if (!isValidPassword) {
+      return res.status(400).json({
+        message:
+          "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
+      });
+    }
+
+    user.password = password;
     await user.save();
     // log user in send jwt
-    createSendToken(user, 200, res);
+    createSendToken(user, 200, res, "Password updated successfully");
   } catch (error) {
     console.log(error);
   }
@@ -382,11 +387,24 @@ const updateEmail = async (req, res) => {
         .status(401)
         .json({ message: "please enter the correct password" });
     }
+    const isValidEmail = validateEmail(newEmail);
+    if (!isValidEmail) {
+      return res
+        .status(400)
+        .json({ message: "Email not valid, Write a valid email" });
+    }
     user.email = newEmail;
     user.isConfirmed = false;
     await user.save();
+
+    await sendEmailConfirmation(user.id);
     // log user in send jwt
-    createSendToken(user, 200, res);
+    createSendToken(
+      user,
+      200,
+      res,
+      "Email updated successfully. Please check your email to confirm your account."
+    );
   } catch (error) {
     console.log(error);
   }
@@ -395,7 +413,7 @@ const updateEmail = async (req, res) => {
 const updateName = async (req, res) => {
   try {
     const filteredBody = filterObj(req.body, "firstName", "lastName");
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await userModel.findByIdAndUpdate(
       req.user.id,
       filteredBody,
       {
@@ -403,7 +421,7 @@ const updateName = async (req, res) => {
         runValidators: true,
       }
     );
-    createSendToken(updatedUser, 200, res);
+    createSendToken(updatedUser, 200, res, "Name updated sucessfully");
   } catch (error) {
     console.log(error);
   }
