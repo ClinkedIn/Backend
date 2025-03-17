@@ -1,28 +1,97 @@
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const { promisify } = require("util");
-const isLoggedIn = async (req, res, next) => {
-  if (req.cookies.accessToken) {
-    return verifyToken(req, res, next);
-  }
-  return res.status(401).json({ message: "Unauthorized" });
+
+const userModel = require("./../models/userModel");
+
+const generateTokens = (userInfo, res) => {
+  // Generate Access Token (short-lived)
+  const accessToken = jwt.sign(
+    {
+      id: userInfo._id,
+      firstName: userInfo.firstName,
+      lastName: userInfo.lastName,
+      email: userInfo.email,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "10s" }
+  );
+
+  // Generate Refresh Token (long-lived)
+  const refreshToken = jwt.sign(
+    {
+      id: userInfo._id,
+      firstName: userInfo.firstName,
+      lastName: userInfo.lastName,
+      email: userInfo.email,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: "10m" }
+  );
+
+  // Store tokens in HTTP-only cookies
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    //path: process.env.REFRESH_TOKEN_PATH || '/'
+  });
+
+  return { accessToken, refreshToken };
 };
 
-const verifyToken = async (req, res, next) => {
+const decryptToken = async (req, res, decoded, next) => {
+  const currentUser = await userModel.findById(decoded.id);
+  if (!currentUser) {
+    return res
+      .status(401)
+      .json({ message: "Unauthorized, the user no longer exists" });
+  }
+  generateTokens(currentUser, res);
+
+  req.user = currentUser;
+  next();
+};
+
+const tryRefreshToken = async (req, res, refreshToken, next) => {
   try {
-    const token = req.cookies.accessToken;
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No Token Provided" });
-    }
-
-    const decoded = await promisify(jwt.verify)(
-      token,
-      process.env.ACCESS_TOKEN_SECRET
+    const refreshDecoded = await promisify(jwt.verify)(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET
     );
-    req.user = decoded;
+    return decryptToken(req, res, refreshDecoded, next);
+  } catch (refreshError) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+};
 
-    next();
-  } catch (err) {
+const protect = async (req, res, next) => {
+  const { refreshToken, accessToken } = req.cookies;
+
+  if (!refreshToken && !accessToken) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  try {
+    let decoded;
+    try {
+      decoded = await promisify(jwt.verify)(
+        accessToken,
+        process.env.ACCESS_TOKEN_SECRET
+      );
+      return decryptToken(req, res, decoded, next);
+    } catch (error) {
+      return tryRefreshToken(req, res, refreshToken, next);
+    }
+  } catch (error) {
+    console.log(error);
     return res.status(401).json({ error: "Invalid Token" });
   }
 };
@@ -51,52 +120,7 @@ const verifyGoogleToken = async (req, res, next) => {
   }
 };
 module.exports = {
-  isLoggedIn,
-  verifyToken,
   verifyGoogleToken,
   mockVerifyToken,
+  protect,
 };
-
-// *****************************************************************************
-// In middleware/authMiddleware.js
-// const jwt = require('jsonwebtoken');
-// const userModel = require('../models/userModel');
-
-// const authenticateUser = async (req, res, next) => {
-//     try {
-//         // Get token from header
-//         const authHeader = req.headers.authorization;
-//         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Unauthorized, please login'
-//             });
-//         }
-
-//         const token = authHeader.split(' ')[1];
-
-//         // Verify token
-//         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-//         // Check if user exists
-//         const user = await userModel.findById(decoded.userId);
-//         if (!user) {
-//             return res.status(401).json({
-//                 success: false,
-//                 message: 'Unauthorized, user not found'
-//             });
-//         }
-
-//         // Add user to request
-//         req.user = { userId: decoded.userId };
-//         next();
-//     } catch (error) {
-//         return res.status(401).json({
-//             success: false,
-//             message: 'Unauthorized, invalid token',
-//             error: error.message
-//         });
-//     }
-// };
-
-// module.exports = { authenticateUser };

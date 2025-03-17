@@ -9,7 +9,10 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-const { sendEmailConfirmation, sendForgotPasswordEmail } = require("../utils/emailService");
+const {
+  sendEmailConfirmation,
+  sendForgotPasswordEmail,
+} = require("../utils/emailService");
 const {
   validateEmail,
   validatePassword,
@@ -112,8 +115,8 @@ const registerUser = async (req, res) => {
       !firstName ||
       !lastName ||
       !email ||
-      !password ||
-      !recaptchaResponseToken
+      !password
+      //!recaptchaResponseToken
     ) {
       return res.status(400).json({ message: "all fields are required" });
     }
@@ -279,10 +282,11 @@ const forgotPassword = async (req, res) => {
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/user/reset-password/${resetToken} `;
+    const emailSent = await sendForgotPasswordEmail(resetURL, user.email);
 
-// const resetURL = `${req.protocol}://${req.get("host")}/user/reset-password/${resetToken} `;
-    const emailSent = await sendForgotPasswordEmail(resetToken, user.email);
-    
     if (emailSent.success) {
       return res.status(200).json({
         success: true,
@@ -294,8 +298,7 @@ const forgotPassword = async (req, res) => {
       success: false,
       message: emailSent.error,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
   }
 };
@@ -328,10 +331,39 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const verifyResetPasswordToken = async (req, res) => {
+  try {
+    //get user based on the token
+    const token = req.params.token;
+    //console.log(token);
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await userModel.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpiresAt: { $gt: Date.now() },
+    });
+    // if token is not expired
+    if (!user) {
+      return res
+        .status(400)
+        .json({ message: "Token is invalid or has expired" });
+    }
+    res.status(200).json({
+      status: "success",
+      data: {
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 const updatePassword = async (req, res) => {
   try {
     // get the user from the collection
-    const user = await userModel.findById(req.user.id);
+    const user = req.user;
+    console.log(user);
     // check if the password is correct
     if (
       !user ||
@@ -400,4 +432,5 @@ module.exports = {
   deleteUser,
   updateName,
   updateEmail,
+  verifyResetPasswordToken,
 };
