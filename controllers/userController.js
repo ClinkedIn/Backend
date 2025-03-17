@@ -1,6 +1,5 @@
 const userModel = require("../models/userModel");
 const crypto = require("crypto");
-const axios = require("axios");
 const firebaseAdmin = require("./../utils/firebase");
 require("dotenv").config();
 const {
@@ -12,7 +11,7 @@ const {
   validatePassword,
 } = require("../utils/validateEmailPassword");
 const { verifyCaptcha } = require("../utils/verifyCaptcha");
-const { generateTokens } = require("./jwtController");
+const { generateTokens } = require("./../middlewares/auth");
 
 const createSendToken = (user, statusCode, res, responseMessage) => {
   const { accessToken, refreshToken } = generateTokens(user, res);

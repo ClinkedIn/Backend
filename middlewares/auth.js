@@ -3,6 +3,7 @@ const axios = require("axios");
 const { promisify } = require("util");
 
 const userModel = require("./../models/userModel");
+const { refreshToken } = require("firebase-admin/app");
 
 const generateTokens = (userInfo, res) => {
   // Generate Access Token (short-lived)
@@ -120,6 +121,7 @@ const verifyGoogleToken = async (req, res, next) => {
   }
 };
 module.exports = {
+  generateTokens,
   verifyGoogleToken,
   mockVerifyToken,
   protect,
