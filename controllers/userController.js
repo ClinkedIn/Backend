@@ -69,18 +69,14 @@ const registerUser = async (req, res) => {
 
     // //verify CAPTCHA
 
-  
-   const captchaResponse= await verifyCaptcha(recaptchaResponseToken);
-    
+    const captchaResponse = await verifyCaptcha(recaptchaResponseToken);
+
     if (!captchaResponse) {
       return res.status(400).json({
         success: false,
-        errors: [{ msg: 'reCAPTCHA verification failed. Please try again.' }]
+        errors: [{ msg: "reCAPTCHA verification failed. Please try again." }],
       });
     }
-
-
-
 
     //check if user already exists
     const existingUser = await userModel.findOne({ email });
@@ -119,6 +115,23 @@ const registerUser = async (req, res) => {
       message: "Registration failed",
       error: `${error.message}`,
     });
+  }
+};
+
+const resendConfirmationEmail = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const isSent = await sendEmailConfirmation(id);
+    if (!isSent) {
+      return res.status(500).json({ message: "Internal server error" });
+    }
+    res.status(200).json({
+      success: true,
+      message:
+        "Email sent successfully.  Please check your email to confirm your account.",
+    });
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -446,4 +459,5 @@ module.exports = {
   updateEmail,
   verifyResetPasswordToken,
   googleLogin,
+  resendConfirmationEmail,
 };

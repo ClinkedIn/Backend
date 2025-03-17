@@ -15,6 +15,10 @@ router
   .post(userController.registerUser)
   .delete(protect, userController.deleteUser);
 
+router
+  .route("/resend-confirmation-email")
+  .get(protect, userController.resendConfirmationEmail);
+
 // router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
 router
   .route("/confirm-email/:emailVerificationToken")
