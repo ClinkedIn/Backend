@@ -2453,56 +2453,65 @@
  *                   example: Internal server error details
  */
 
+
 /**
  * @swagger
- * /user/profile:
- *   post:
- *     summary: Create a user profile
+ * /user/profile-picture:
+ *   get:
+ *     summary: Get profile picture
  *     tags: [Users]
- *     description: Create a new user profile with basic information.
- *     operationId: createUserProfile
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UserProfile"
- *     responses:
- *       201:
- *         description: User profile created successfully
- *         content:
- *           application/json:
- *             example:
- *               message: User profile created successfully
- *               userId: "64f8a1b2c3d4e5f6a7b8c9d0"
- *       400:
- *         description: Bad request, invalid input
- *       500:
- *         description: Internal server error
- *   patch:
- *     summary: Update user profile
- *     tags: [Users]
- *     description: Update user profile details such as name, bio, location, work experience, education, and skills.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/UpdateUserIntro"
+ *     description: Retrieve the user's profile picture
  *     responses:
  *       200:
- *         description: User profile updated successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Profile updated successfully"
+ *         description: Profile picture retrieved successfully
  *       400:
- *         description: Invalid input data
+ *         description: Profile picture not set
  *       401:
- *         description: Unauthorized, user must be logged in
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   post:
+ *     summary: Upload a profile picture
+ *     tags: [Users]
+ *     description: Upload or update a user's profile picture
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture uploaded successfully
+ *       400:
+ *         description: Invalid file format
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ *
+ *   delete:
+ *     summary: Delete profile picture
+ *     tags: [Users]
+ *     description: Remove a user's profile picture
+ *     responses:
+ *       200:
+ *         description: Profile picture deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Profile picture not found
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -2548,7 +2557,23 @@
 
 /**
  * @swagger
- * /user/cover-photo:
+ * /user/cover-picture:
+ *   get:
+ *     summary: Get cover photo
+ *     tags: [Users]
+ *     description: Retrieve the user's cover photo
+ *     responses:
+ *       200:
+ *         description: Cover photo retrieved successfully
+ *       400:
+ *         description: Cover photo not set
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *
  *   post:
  *     summary: Upload a cover photo
  *     tags: [Users]
@@ -2587,6 +2612,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -2726,9 +2752,14 @@
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - jobTitle
+ *               - companyName
+ *               - fromDate
+ *               - employmentType
  *             properties:
  *               jobTitle:
  *                 type: string
@@ -2746,171 +2777,94 @@
  *                 example: "2023-06-01"
  *               currentlyWorking:
  *                 type: boolean
- *                 example: false
+ *                 default: false
  *               employmentType:
  *                 type: string
- *                 example: "Full-time"
+ *                 enum: ["Full Time", "Part Time", "Freelance", "Self Employed", "Contract", "Internship", "Apprenticeship", "Seasonal"]
  *               location:
  *                 type: string
  *                 example: "New York, USA"
  *               locationType:
  *                 type: string
- *                 example: "Remote"
+ *                 enum: ["Onsite", "Hybrid", "Remote"]
  *               description:
  *                 type: string
- *                 example: "Worked on backend development."
+ *                 example: "Developed web applications using React and Node.js."
+ *               foundVia:
+ *                 type: string
+ *                 example: "LinkedIn"
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["JavaScript", "React", "Node.js"]
+ *               media:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Experience added successfully
  *       400:
- *         description: Invalid input
- *       500:
- *         description: Internal server error
- */
-
-/**
- * @swagger
- * /user/experience:
- *   get:
- *     summary: Get user's work experiences
- *     tags: [Users]
- *     security:
- *       - BearerAuth: []
- *     description: Retrieves all work experiences of the authenticated user.
- *     responses:
- *       200:
- *         description: A list of experiences
+ *         description: Bad request
  *       404:
  *         description: User not found
  *       500:
  *         description: Internal server error
- */
-
-/**
- * @swagger
- * /user/experience/{index}:
+ *
  *   get:
- *     summary: Get a specific experience by index
- *     description: Retrieves a specific work experience entry from the user's profile based on the given index.
+ *     summary: Get all work experiences
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - name: index
- *         in: path
- *         required: true
- *         description: The index of the experience to retrieve.
- *         schema:
- *           type: integer
- *           example: 1
+ *     description: Retrieves all work experiences of the user.
  *     responses:
  *       200:
- *         description: Successfully retrieved the experience.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 experience:
- *                   type: object
- *                   properties:
- *                     jobTitle:
- *                       type: string
- *                       example: "Software Engineer"
- *                     companyName:
- *                       type: string
- *                       example: "Google"
- *                     fromDate:
- *                       type: string
- *                       format: date
- *                       example: "2022-06-01"
- *                     toDate:
- *                       type: string
- *                       format: date
- *                       example: "2023-08-30"
- *                     currentlyWorking:
- *                       type: boolean
- *                       example: false
- *                     employmentType:
- *                       type: string
- *                       example: "Full-time"
- *                     location:
- *                       type: string
- *                       example: "New York, USA"
- *                     locationType:
- *                       type: string
- *                       example: "On-site"
- *                     description:
- *                       type: string
- *                       example: "Developed and maintained scalable applications."
- *                     foundVia:
- *                       type: string
- *                       example: "LinkedIn"
- *                     skills:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["JavaScript", "React", "Node.js"]
- *                     media:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["https://example.com/project.pdf"]
- *       400:
- *         description: Invalid experience index or out of range.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Invalid experience index"
+ *         description: Experiences retrieved successfully
  *       404:
- *         description: User not found.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "User not found"
+ *         description: User not found
  *       500:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal server error"
- *                 details:
- *                   type: string
- *                   example: "Error message here"
- */
-
-/**
- * @swagger
+ *         description: Internal server error
+ *
+ *
  * /user/experience/{index}:
- *   put:
- *     summary: Update an experience by index
+ *   get:
+ *     summary: Get a specific work experience
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Updates an existing work experience entry of a user.
+ *     description: Retrieves a specific work experience entry by index.
  *     parameters:
  *       - in: path
  *         name: index
  *         required: true
  *         schema:
  *           type: integer
- *         description: Index of the experience to update
+ *     responses:
+ *       200:
+ *         description: Experience retrieved successfully
+ *       400:
+ *         description: Invalid index
+ *       404:
+ *         description: User or experience not found
+ *       500:
+ *         description: Internal server error
+ * 
+ *   patch:
+ *     summary: Update a work experience
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Updates a work experience entry at the specified index.
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -2934,40 +2888,44 @@
  *                 type: string
  *               description:
  *                 type: string
+ *               foundVia:
+ *                 type: string
+ *               skills:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               media:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Experience updated successfully
  *       400:
- *         description: Invalid input
+ *         description: Bad request
  *       404:
- *         description: Experience not found
+ *         description: User or experience not found
  *       500:
  *         description: Internal server error
- */
-
-/**
- * @swagger
- * /user/experience/{index}:
+ *
  *   delete:
- *     summary: Delete a work experience by index
+ *     summary: Delete a work experience
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Removes a specific work experience entry from the user's profile.
+ *     description: Deletes a work experience entry at the specified index.
  *     parameters:
  *       - in: path
  *         name: index
  *         required: true
  *         schema:
  *           type: integer
- *         description: Index of the experience to delete
  *     responses:
  *       200:
- *         description: Work experience deleted successfully
+ *         description: Experience deleted successfully
  *       400:
- *         description: Invalid experience index
+ *         description: Invalid index
  *       404:
- *         description: Experience not found
+ *         description: User or experience not found
  *       500:
  *         description: Internal server error
  */
@@ -3344,31 +3302,42 @@
  *         description: Internal Server Error
  */
 
+
+
 /**
  * @swagger
  * /user/skills:
  *   post:
- *     summary: Add a skill to user's profile
+ *     summary: Add a new skill to the user's profile
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Add a skill with optional endorsements to a user's profile. 
- *                  Ensures skill name is valid, checks for duplicates, and validates endorsements.
+ *     description: Adds a skill to the authenticated user's profile and associates it with their education and work experience records. The skill must be unique for the user and linked to at least one education or work experience entry.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - skillName
  *             properties:
  *               skillName:
  *                 type: string
  *                 example: "JavaScript"
- *               endorsements:
+ *                 description: "The name of the skill to be added. It is case-insensitive and must not already exist in the user's skills."
+ *               educationIndexes:
  *                 type: array
  *                 items:
- *                   type: string
- *                 example: ["userId1", "userId2"]
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: "Array of indexes referring to the user's education records. Must be valid indexes within the user's education list."
+ *               experienceIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [0]
+ *                 description: "Array of indexes referring to the user's work experience records. Must be valid indexes within the user's work experience list."
  *     responses:
  *       200:
  *         description: Skill added successfully
@@ -3390,9 +3359,19 @@
  *                       type: array
  *                       items:
  *                         type: string
- *                       example: ["userId1", "userId2"]
+ *                       example: []
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     experience:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0]
  *       400:
- *         description: Invalid input data, endorsements, or skill already exists
+ *         description: Bad request - Invalid input data
  *         content:
  *           application/json:
  *             schema:
@@ -3400,12 +3379,7 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill already exists"
- *                 invalidUserIds:
- *                   type: array
- *                   items:
- *                     type: string
- *                   example: ["invalidUserId1"]
+ *                   example: "Skill already exists or invalid indexes provided"
  *       404:
  *         description: User not found
  *         content:
@@ -3429,7 +3403,11 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- * 
+ */
+
+/**
+ * @swagger
+ * /user/skills:
  *   get:
  *     summary: Get all user skills
  *     tags: [Users]
@@ -3457,6 +3435,16 @@
  *                         items:
  *                           type: string
  *                         example: ["userId1", "userId2"]
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
+ *                       experience:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0]
  *       404:
  *         description: User not found
  *         content:
@@ -3486,24 +3474,22 @@
 /**
  * @swagger
  * /user/skills/{skillName}:
- * 
  *   get:
- *     summary: Get a specific skill by name
+ *     summary: Get a specific user skill
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Retrieve a specific skill from a user's profile by skill name.
+ *     description: Retrieve a specific skill associated with the authenticated user.
  *     parameters:
  *       - in: path
  *         name: skillName
  *         required: true
  *         schema:
  *           type: string
- *           example: "JavaScript"
- *         description: The name of the skill to retrieve.
+ *         description: The name of the skill to retrieve (case-insensitive match).
  *     responses:
  *       200:
- *         description: Skill retrieved successfully
+ *         description: Successfully retrieved the user skill
  *         content:
  *           application/json:
  *             schema:
@@ -3520,8 +3506,18 @@
  *                       items:
  *                         type: string
  *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     experience:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0]
  *       404:
- *         description: User not found or skill not found
+ *         description: User or skill not found
  *         content:
  *           application/json:
  *             schema:
@@ -3529,7 +3525,7 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill not found"
+ *                   example: "User not found or skill not found"
  *       500:
  *         description: Internal Server Error
  *         content:
@@ -3543,13 +3539,17 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
- * 
- *   put:
- *     summary: Update a user's skill by name
+ */
+
+/**
+ * @swagger
+ * /user/skills/{skillName}:
+ *   patch:
+ *     summary: Update a user's skill
  *     tags: [Users]
  *     security:
  *       - BearerAuth: []
- *     description: Update the skill name or endorsements for a specific skill in the user's profile.
+ *     description: Update the skill name, associated education indexes, or experience indexes for a given skill.
  *     parameters:
  *       - in: path
  *         name: skillName
@@ -3557,7 +3557,7 @@
  *         schema:
  *           type: string
  *           example: "JavaScript"
- *         description: The name of the skill to update.
+ *         description: The current name of the skill to be updated.
  *     requestBody:
  *       required: true
  *       content:
@@ -3567,12 +3567,20 @@
  *             properties:
  *               newSkillName:
  *                 type: string
- *                 example: "ReactJS"
- *               endorsements:
+ *                 example: "Node.js"
+ *                 description: The new name for the skill (optional).
+ *               educationIndexes:
  *                 type: array
  *                 items:
- *                   type: string
- *                 example: ["userId1", "userId2"]
+ *                   type: integer
+ *                 example: [0, 1]
+ *                 description: List of education indexes to associate with the skill (optional).
+ *               experienceIndexes:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [2, 3]
+ *                 description: List of experience indexes to associate with the skill (optional).
  *     responses:
  *       200:
  *         description: Skill updated successfully
@@ -3584,19 +3592,31 @@
  *                 message:
  *                   type: string
  *                   example: "Skill updated successfully"
- *                 skill:
- *                   type: object
- *                   properties:
- *                     skillName:
- *                       type: string
- *                       example: "ReactJS"
- *                     endorsements:
- *                       type: array
- *                       items:
+ *                 skills:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
  *                         type: string
- *                       example: ["userId1", "userId2"]
+ *                         example: "Node.js"
+ *                       endorsements:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["userId1", "userId2"]
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
+ *                       experience:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [2, 3]
  *       400:
- *         description: Invalid request data (e.g., duplicate skill name or validation errors)
+ *         description: Invalid request or duplicate skill
  *         content:
  *           application/json:
  *             schema:
@@ -3604,69 +3624,9 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill already exists"
+ *                   example: "Skill name is the same"
  *       404:
- *         description: User not found or skill not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Skill not found"
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal server error"
- *                 details:
- *                   type: string
- *                   example: "Error message details"
- * 
- *   delete:
- *     summary: Delete a skill by name
- *     tags: [Users]
- *     security:
- *       - BearerAuth: []
- *     description: Remove a skill from a user's profile by specifying its name.
- *     parameters:
- *       - in: path
- *         name: skillName
- *         required: true
- *         schema:
- *           type: string
- *           example: "JavaScript"
- *         description: The name of the skill to delete.
- *     responses:
- *       200:
- *         description: Skill deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Skill deleted successfully"
- *                 deletedSkill:
- *                   type: object
- *                   properties:
- *                     skillName:
- *                       type: string
- *                       example: "JavaScript"
- *                     endorsements:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["userId1", "userId2"]
- *       404:
- *         description: User not found or skill not found
+ *         description: User or skill not found
  *         content:
  *           application/json:
  *             schema:
@@ -3692,11 +3652,87 @@
 
 /**
  * @swagger
- * /user/skills/endorse:
+ * /user/skills/{skillName}:
+*   delete:
+*     summary: Delete a user's skill
+*     tags: [Users]
+*     security:
+*       - BearerAuth: []
+*     description: Remove a skill from the authenticated user's profile.
+*     parameters:
+*       - in: path
+*         name: skillName
+*         required: true
+*         schema:
+*           type: string
+*           example: "JavaScript"
+*         description: The name of the skill to delete.
+*     responses:
+*       200:
+*         description: Skill deleted successfully
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 message:
+*                   type: string
+*                   example: "Skill deleted successfully"
+*                 deletedSkill:
+*                   type: object
+*                   properties:
+*                     skillName:
+*                       type: string
+*                       example: "JavaScript"
+*                     endorsements:
+*                       type: array
+*                       items:
+*                         type: string
+*                       example: ["userId1", "userId2"]
+*                     education:
+*                       type: array
+*                       items:
+*                         type: integer
+*                       example: [0, 1]
+*                     experience:
+*                       type: array
+*                       items:
+*                         type: integer
+*                       example: [2, 3]
+*       404:
+*         description: Skill not found
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 error:
+*                   type: string
+*                   example: "Skill not found"
+*       500:
+*         description: Internal Server Error
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 error:
+*                   type: string
+*                   example: "Internal server error"
+*                 details:
+*                   type: string
+*                   example: "Error message details"
+*/
+
+/**
+ * @swagger
+ * /user/skills/add-endorsement:
  *   post:
- *     summary: Endorse a skill
+ *     summary: Endorse a user's skill
  *     tags: [Users]
- *     description: Endorse a user's skill
+ *     description: Adds an endorsement to a user's skill.
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -3704,17 +3740,107 @@
  *           schema:
  *             type: object
  *             properties:
- *               userId:
+ *               skillOwnerId:
  *                 type: string
  *                 example: "64f8a1b2c3d4e5f6a7b8c9d0"
- *               skill:
+ *               skillName:
  *                 type: string
  *                 example: "JavaScript"
  *     responses:
  *       200:
- *         description: Skill endorsed successfully
+ *         description: Skill endorsement created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill endorsement created successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["USER_ID_1", "USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
  *       400:
- *         description: Invalid input data
+ *         description: Bad request (e.g., User cannot endorse themselves, already endorsed)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User or skill not found
+ *       500:
+ *         description: Internal Server Error
+ *
+ * /user/skills/remove-endorsement/{skillName}:
+ *   delete:
+ *     summary: Remove endorsement from a skill
+ *     tags: [Users]
+ *     description: Removes an endorsement from a user's skill.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The skill name to remove endorsement from
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               skillOwnerId:
+ *                 type: string
+ *                 example: "64f8a1b2c3d4e5f6a7b8c9d0"
+ *     responses:
+ *       200:
+ *         description: Skill endorsement deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill endorsement deleted successfully"
+ *                 skill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["USER_ID_2"]
+ *                     _id:
+ *                       type: string
+ *                       example: "67cddb9b958aec899dec0116"
+ *       400:
+ *         description: Bad request (e.g., missing fields)
  *       401:
  *         description: Unauthorized
  *       404:
@@ -3722,6 +3848,7 @@
  *       500:
  *         description: Internal Server Error
  */
+
 
 /**
  * @swagger
@@ -4729,4 +4856,364 @@
  *         description: Invalid search query
  *       401:
  *         description: Unauthorized, user must be logged in
+ */
+
+/**
+ * @swagger
+ * /user/profile:
+ *   patch:
+ *     summary: Update user profile intro information
+ *     tags: [Users]
+ *     description: Updates basic profile information for the authenticated user
+ *     operationId: editIntro
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - location
+ *               - industry
+ *               - mainEducation
+ *               - headLine
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: "John"
+ *               lastName:
+ *                 type: string
+ *                 example: "Doe"
+ *               additinalName:
+ *                 type: string
+ *                 example: "Robert"
+ *               headLine:
+ *                 type: string
+ *                 example: "Senior Software Engineer at Tech Corp"
+ *               website:
+ *                 type: string
+ *                 example: "https://johndoe.com"
+ *               location:
+ *                 type: string
+ *                 example: "San Francisco, CA"
+ *               mainEducation:
+ *                 type: string
+ *                 example: "Stanford University"
+ *               industry:
+ *                 type: string
+ *                 example: "Software Development"
+ *     responses:
+ *       200:
+ *         description: Profile information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Intro updated successfully"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headLine:
+ *                       type: string
+ *                       example: "Senior Software Engineer at Tech Corp"
+ *                     additionalName:
+ *                       type: string
+ *                       example: "Robert"
+ *                     website:
+ *                       type: string
+ *                       example: "https://johndoe.com"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     industry:
+ *                       type: string
+ *                       example: "Software Development"
+ *       400:
+ *         description: Bad request - missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Missing required fields"
+ *                 missingFields:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["firstName", "industry"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update profile"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /user/contact-info:
+ *   patch:
+ *     summary: Update user contact information
+ *     tags: [Users]
+ *     description: Update a user's contact information including phone, address, birthday, and website
+ *     operationId: editContactInfo
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "+1 555-123-4567"
+ *               phoneType:
+ *                 type: string
+ *                 enum: [Home, Work, Mobile, null]
+ *                 nullable: true
+ *                 example: "Mobile"
+ *               address:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "123 Main Street, San Francisco, CA 94105"
+ *               birthDay:
+ *                 type: object
+ *                 properties:
+ *                   day:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 31
+ *                     nullable: true
+ *                     example: 15
+ *                   month:
+ *                     type: string
+ *                     enum: [January, February, March, April, May, June, July, August, September, October, November, December, null]
+ *                     nullable: true
+ *                     example: "June"
+ *               website:
+ *                 type: object
+ *                 properties:
+ *                   url:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "https://johndoe.com"
+ *                   type:
+ *                     type: string
+ *                     enum: [Personal, Company, Blog, RSS Feed, Portfolio, Other, null]
+ *                     nullable: true
+ *                     example: "Personal"
+ *     responses:
+ *       200:
+ *         description: Contact information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Contact information updated successfully"
+ *                 contactInfo:
+ *                   type: object
+ *                   properties:
+ *                     phone:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "+1 555-123-4567"
+ *                     phoneType:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Mobile"
+ *                     address:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "123 Main Street, San Francisco, CA 94105"
+ *                     birthDay:
+ *                       type: object
+ *                       properties:
+ *                         day:
+ *                           type: integer
+ *                           nullable: true
+ *                           example: 15
+ *                         month:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "June"
+ *                     website:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "https://johndoe.com"
+ *                         type:
+ *                           type: string
+ *                           nullable: true
+ *                           example: "Personal"
+ *       400:
+ *         description: Validation error or no fields provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid phoneType"
+ *                 validValues:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Home", "Work", "Mobile"]
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/about:
+ *   patch:
+ *     summary: Update user about section
+ *     tags: [Users]
+ *     description: Update a user's about section including description and skills (limited to 5 skills)
+ *     operationId: editAbout
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - about
+ *             properties:
+ *               about:
+ *                 type: object
+ *                 properties:
+ *                   description:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "Full-stack developer with 5+ years experience building scalable web applications."
+ *                   skills:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     maxItems: 5
+ *                     example: ["React", "Node.js", "MongoDB", "Express", "TypeScript"]
+ *     responses:
+ *       200:
+ *         description: About section updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "About section updated successfully"
+ *                 about:
+ *                   type: object
+ *                   properties:
+ *                     description:
+ *                       type: string
+ *                       example: "Full-stack developer with 5+ years experience building scalable web applications."
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["React", "Node.js", "MongoDB", "Express", "TypeScript"]
+ *                 skillsAdded:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
+ *                         type: string
+ *                         example: "React"
+ *                       endorsements:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: []
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: []
+ *       400:
+ *         description: Validation error or missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skills array cannot contain more than 5 items"
+ *       401:
+ *         description: Unauthorized, user must be logged in
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update about section"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
  */

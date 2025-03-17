@@ -9,38 +9,47 @@ router.route('/:userId')
 router.route('/')
     .get(mockVerifyToken, user.getAllUsers);
 router.route('/education')
-    .post(mockVerifyToken,user.addEducation)
+    .post(mockVerifyToken, upload.single('file'), user.addEducation)
     .get(mockVerifyToken,user.getEducations);
+
 router.route('/education/:index')
     .get(mockVerifyToken,user.getEducation)
-    .patch(mockVerifyToken,user.editEducation)
+    .patch(mockVerifyToken, upload.single('file'), user.editEducation)
     .delete(mockVerifyToken,user.deleteEducation);
+
 router.route('/profile')
     .patch(mockVerifyToken,user.editIntro);
 
 router.route('/experience')
-    .post(mockVerifyToken, user.addExperience)
+    .post(mockVerifyToken, upload.single('file'), user.addExperience)
     .get(mockVerifyToken, user.getAllExperiences);
 
 router.route('/experience/:index')
     .get(mockVerifyToken, user.getExperience)
-    .put(mockVerifyToken,  user.updateExperience)
+    .patch(mockVerifyToken,  upload.single('file'), user.updateExperience)
     .delete(mockVerifyToken, user.deleteExperience);
+    
 router.route('/skills')
     .get(mockVerifyToken, user.getAllSkills)
     .post(mockVerifyToken, user.addSkill);
 
 router.route('/skills/:skillName')
     .get(mockVerifyToken, user.getSkill)
-    .put(mockVerifyToken, user.updateSkill)
+    .patch(mockVerifyToken, user.updateSkill)
     .delete(mockVerifyToken, user.deleteSkill);
 
-router.route('/add-profile-picture')
-    .get(mockVerifyToken, user.getProfilePicture)
+router.route('/skills/add-endorsement')
+    .post(mockVerifyToken, user.addEndorsement);
+
+router.route('/skills/remove-endorsement/:skillName')
+    .delete(mockVerifyToken, user.deleteEndorsement);
+
+router.route('/pictures/profile-picture')
     .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
+    .get(mockVerifyToken, user.getProfilePicture)
     .delete(mockVerifyToken, user.deleteProfilePicture);
 
-router.route('/add-cover-picture')
+router.route('/cover-picture')
     .get(mockVerifyToken, user.getCoverPicture)
     .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
     .delete(mockVerifyToken, user.deleteCoverPicture);
@@ -54,7 +63,10 @@ router.route('/privacy-settings')
 router.route('/follow/:userId')
     .post(mockVerifyToken, user.followEntity)
     .delete(mockVerifyToken, user.unfollowEntity);
+router.route('/contact-info')
+    .patch(mockVerifyToken, user.editContactInfo);
 //router.route('/skills/endorse')
 //    .post(mockVerifyToken, user.endorseSkill);
-
+router.route('/about')
+    .patch(mockVerifyToken, user.editAbout);
 module.exports = router;
