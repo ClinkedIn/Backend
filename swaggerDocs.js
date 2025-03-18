@@ -1,13 +1,13 @@
 /**
  * @swagger
  * components:
- * 
+ *
  *   securitySchemes:
  *     BearerAuth:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
- * 
+ *
  *   schemas:
  *     ImpressionBase:
  *       type: object
@@ -23,7 +23,7 @@
  *           type: string
  *           enum: ["Like", "Celebrate", "Support", "Insightful", "Funny"]
  *           description: Type of the impression
- * 
+ *
  *     Impression:
  *       allOf:
  *         - $ref: '#/components/schemas/ImpressionBase'
@@ -44,9 +44,9 @@
  *             updatedAt:
  *               type: string
  *               format: date-time
- *               description: Timestamp when the impression was last updated   
- *          
- * 
+ *               description: Timestamp when the impression was last updated
+ *
+ *
  *     PostBase:
  *       type: object
  *       properties:
@@ -183,7 +183,7 @@
  *           description: References another message if it's a reply
  *           nullable: true
  *           default: null
- * 
+ *
  *     Message:
  *       allOf:
  *         - $ref: '#/components/schemas/MessageBase'
@@ -195,7 +195,7 @@
  *               format: objectId
  *             readBy:
  *               type: array
- *               items: 
+ *               items:
  *                 type: string
  *                 format: objectId
  *               description: List of user IDs who have read the message
@@ -207,8 +207,8 @@
  *               type: boolean
  *               description: Indicates if the message was deleted
  *               default: false
- * 
- * 
+ *
+ *
  *     DirectChatBase:
  *       type: object
  *       properties:
@@ -216,7 +216,7 @@
  *           type: string
  *           description: Id of the other user (other than the user with the tokne)
  *           format: objectId
- *     
+ *
  *     DirectChat:
  *       allOf:
  *         - $ref: '#/components/schemas/DirectChatBase'
@@ -243,7 +243,7 @@
  *           items:
  *             type: string
  *             format: ObjectId
- *     
+ *
  *     GroupChat:
  *       allOf:
  *         - $ref: '#/components/schemas/DirectChatBase'
@@ -260,7 +260,7 @@
  *                 type: string
  *                 format: ObjectId
  *               default: []
- * 
+ *
  *     JobBase:
  *       type: object
  *       properties:
@@ -395,17 +395,17 @@
  *               format: date-time
  *               description: Timestamp when the company was last updated
  *
- * 
+ *
  *   requestBodies:
- * 
+ *
  *     CreateImpressionRequest:
  *       description: Request body for adding an impression
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ImpressionBase' 
- * 
+ *             $ref: '#/components/schemas/ImpressionBase'
+ *
  *     CreatePostRequest:
  *       description: Request body for creating a new post
  *       required: true
@@ -413,7 +413,7 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/PostBase'
- * 
+ *
  *
  *     CreateCommentRequest:
  *       description: Request body for creating a new comment or reply
@@ -422,8 +422,8 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CommentBase'
- * 
- *   
+ *
+ *
  *     CreateMessageRequest:
  *       description: Request body for sending a new message
  *       required: true
@@ -431,8 +431,8 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/MessageBase'
- *  
- *  
+ *
+ *
  *     CreateDirectChatRequest:
  *       description: Request body for creating a new direct chat
  *       required: true
@@ -440,8 +440,8 @@
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/DirectChatBase'
- * 
- * 
+ *
+ *
  *     CreateGroupChatRequest:
  *       description: Request body for creating a new chat group
  *       required: true
@@ -498,7 +498,7 @@
  *         description: Unauthorized, invalid or missing token
  *       500:
  *         description: Internal server error
- *       
+ *
  */
 
 /**
@@ -532,7 +532,7 @@
  *        description: No Impressions found
  *       500:
  *        description: Internal server error
- * 
+ *
  *   delete:
  *     summary: Delete an impression
  *     tags: [Impressions]
@@ -555,9 +555,7 @@
  *         description: Impression not found
  */
 
-
 // ******************************************* Posts APIs ************************************* //
-
 
 /**
  * @swagger
@@ -590,7 +588,7 @@
  *         description: Unauthorized, invalid or missing token
  *       500:
  *         description: Internal server error
- * 
+ *
  *   get:
  *     summary: Get all posts
  *     tags: [Posts]
@@ -743,13 +741,13 @@
  *           type: string
  *         description: The post ID
  *     requestBody:
- *       
+ *
  *     responses:
  *       200:
  *         description: Post liked successfully
  *       401:
  *         description: Unauthorized, invalid or missing token
- * 
+ *
  *   delete:
  *     summary: Unlike a post
  *     tags: [Posts]
@@ -769,8 +767,6 @@
  *       401:
  *         description: Unauthorized, invalid or missing token
  */
-
-
 
 /**
  * @swagger
@@ -846,7 +842,6 @@
  *       401:
  *         description: Unauthorized, invalid or missing token
  */
-
 
 /**
  * @swagger
@@ -926,7 +921,7 @@
  *         description: Unauthorized, invalid or missing token
  *       404:
  *         description: Comment not found
- * 
+ *
  *  get:
  *     summary: Get a specific comment
  *     tags: [Comments]
@@ -1017,7 +1012,7 @@
  *         description: Message not found
  *       500:
  *         description: Internal server error
- * 
+ *
  *   put:
  *     summary: Update a message
  *     tags: [Messages]
@@ -1051,7 +1046,7 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Message'         
+ *               $ref: '#/components/schemas/Message'
  *       400:
  *         description: Bad request, invalid input
  *       401:
@@ -1060,7 +1055,7 @@
  *         description: Message not found
  *       500:
  *         description: Internal server error
- * 
+ *
  *
  *   delete:
  *     summary: Delete a message
@@ -1074,7 +1069,7 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The MongoDB ObjectId of the message 
+ *         description: The MongoDB ObjectId of the message
  *     responses:
  *       200:
  *         description: Message deleted successfully
@@ -1083,8 +1078,6 @@
  *       404:
  *         description: Message not found
  */
-
-
 
 // *********************************** Chat APIs ***************************************//
 
@@ -1150,7 +1143,7 @@
  *     description: Chat not found
  *    500:
  *     description: Internal server error
- * 
+ *
  *   put:
  *     summary: Edit a direct chat
  *     tags: [Chats]
@@ -1177,7 +1170,6 @@
  *       404:
  *         description: Chat not found
  */
-
 
 /**
  * @swagger
@@ -1234,7 +1226,7 @@
  *     description: Chat not found
  *    500:
  *     description: Internal server error
- * 
+ *
  *   put:
  *     summary: Edit a chat group
  *     tags: [Chats]
@@ -1261,7 +1253,6 @@
  *       404:
  *         description: Chat not found
  */
-
 
 /**
  * @swagger
@@ -1854,95 +1845,206 @@
  *     description: API endpoints for managing users
  */
 
-/** 
+/**
  * @swagger
  * /user/:
- *     post:
- *         summary: Create a new user
- *         tags: [Users] 
- *         description: Registeration a new user 
- *         operationId: createUser
- *         requestBody:
- *             description: Create User object 
- *             required: true
- *             content:
- *                 application/json: 
- *                     schema:
- *                         $ref: '#/components/schemas/RegisterUser'
- *         responses:
- *             201:
- *                 description: User created successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: User created successfully
- *             500:
- *                 description: Internal server error
- *     delete:
- *         summary: Delete a user
- *         tags: [Users]
- *         description: Delete a user 
- *         operationId: deleteUser
- *         responses:
- *             200:
- *                 description: User deleted successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: User deleted successfully
- *             400:
- *                 description: Bad request, invalid input
- *             401:
- *                 description: Unauthorized, user must be logged in
- *             500:
- *                 description: Internal server error 
- * */
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Users]
+ *     description: Creates a new user account, sends an email confirmation link, and returns authentication tokens in cookies.
+ *     operationId: createUser
+ *     requestBody:
+ *       description: User registration data including email, password, and reCAPTCHA response.
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *               - recaptchaResponseToken
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: John
+ *               lastName:
+ *                 type: string
+ *                 example: Doe
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: johndoe@email.com
+ *               password:
+ *                 type: string
+ *                 example: "P@ssword123"
+ *                 description: "Must be at least 8 characters, include 1 digit, 1 lowercase, and 1 uppercase letter."
+ *               recaptchaResponseToken:
+ *                 type: string
+ *                 example: "03AGdBq24A...captcha-response-token"
+ *     responses:
+ *       201:
+ *         description: User registered successfully. Access and refresh tokens are set in cookies.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User registered successfully. Please check your email to confirm your account."
+ *       400:
+ *         description: Bad request due to missing fields, invalid email, weak password, or failed reCAPTCHA verification.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               MissingFields:
+ *                 value:
+ *                   message: "All fields are required."
+ *               InvalidEmail:
+ *                 value:
+ *                   message: "Email not valid, Write a valid email."
+ *               WeakPassword:
+ *                 value:
+ *                   message: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
+ *               CaptchaFailed:
+ *                 value:
+ *                   message: "reCAPTCHA verification failed. Please try again."
+ *       409:
+ *         description: Conflict - User with the given email already exists.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "The user already exists. Use another email."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Registration failed."
+ *
+ *   delete:
+ *     summary: Deactivate a user account
+ *     tags: [Users]
+ *     description: Marks the authenticated user's account as inactive instead of permanently deleting it.
+ *     operationId: deleteUser
+ *     responses:
+ *       204:
+ *         description: User account successfully deactivated. No content returned.
+ *       400:
+ *         description: Bad request, invalid input.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Invalid request parameters."
+ *       401:
+ *         description: Unauthorized, user must be logged in.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Unauthorized. Please log in."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Internal server error."
+ */
 
 /**
  * @swagger
  * /user/login:
- *     post:
- *         summary: Login user
- *         tags: [Users]
- *         description: Login a user with email and password
- *         requestBody:
- *             content:
- *                 application/json:
- *                     schema:
- *                         $ref: '#/components/schemas/UserLogin'   
- *             required: true
- *         responses:
- *             200:
- *                 description: User logged in successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             token: <JWT_TOKEN>
- *
- *             401:
- *                 description: Unauthorized, invalid credentials 
- *             500:
- *                 description: Internal server error
+ *   post:
+ *     summary: Login user
+ *     tags: [Users]
+ *     description: Authenticate a user using email and password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: johndoe@eamil.com
+ *               password:
+ *                 type: string
+ *                 example: "P@ssword123"
+ *                 description: "User's password."
+ *     responses:
+ *       200:
+ *         description: User logged in successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Logged in successfully."
+ *       401:
+ *         description: Unauthorized - Invalid email or password.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               MissingFields:
+ *                 value:
+ *                   message: "Please provide email and password."
+ *               InvalidEmail:
+ *                 value:
+ *                   message: "Wrong email."
+ *               InvalidPassword:
+ *                 value:
+ *                   message: "Wrong password."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "An error occurred during login."
  */
 
 /**
- * @swasgger
- * user/auth/google:    
- *    get:
- *      summary: Login with google
- *      tags: [Users]
- *      description: Login with google
- *      responses:
+ * @swagger
+ * /user/auth/google:
+ *   post:
+ *     summary: Login with Google
+ *     tags: [Users]
+ *     description: Authenticate a user using a Google ID token.
+ *     security:
+ *       - bearerAuth: []  # Indicates that the request requires a Bearer token
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "Bearer <GOOGLE_ID_TOKEN>"
+ *         description: "Google ID token obtained from Firebase Authentication."
+ *     responses:
  *       200:
- *        description: User logged in successfully
- *        content:
- *          application/json:
- *            example:
- *            token: <JWT_TOKEN>
+ *         description: User logged in successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Logged in successfully."
+ *       201:
+ *         description: New user created successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Account created successfully."
  *       401:
- *         description: Unauthorized, invalid credentials
+ *         description: Unauthorized - Invalid or missing token.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Unauthorized."
  *       500:
- *         description: Internal server error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "An error occurred during Google authentication."
  */
 
 /**
@@ -1966,59 +2068,86 @@
 /**
  * @swagger
  * /user/forgot-password:
- *     post:
- *         summary: Send an email to the user to reset password
- *         tags: [Users]
- *         description: Send reset link
- *         operationId: forgotPassword
- *         requestBody:
- *             description: Send reset link
- *             required: true
- *             content:
- *                 application/json:
- *                     schema:
- *                         $ref: "#/components/schemas/ForgotPassword"
- *         responses:
- *             200:
- *                 description: Password reset email sent successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: Password reset email sent successfully
- *             404:
- *                 description: email does not exist
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: email does not exist
- *             500:
- *                 description: Internal server error
+ *   post:
+ *     summary: Request a password reset link
+ *     tags: [Users]
+ *     description: Sends a password reset link to the user's email.
+ *     operationId: forgotPassword
+ *     requestBody:
+ *       description: Email address to receive the password reset link.
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/ForgotPassword"
+ *     responses:
+ *       200:
+ *         description: Password reset email sent successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: "Forgot password email sent successfully."
+ *               email: "user@email.com"
+ *       404:
+ *         description: Email does not exist.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "There is no such email address."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "An error occurred while sending the email."
  */
 
 /**
  * @swagger
  * /user/update-password:
- *     patch:
- *         summary: update password (for when user doesn't remember password and follows link in email)
- *         tags: [Users]
- *         description: update password using reset link
- *         requestBody:
- *             required: true
- *             content:
- *                 application/json:
- *                     schema:
- *                         $ref: "#/components/schemas/UpdatePassword"
- *         responses:
- *             200:
- *                 description: Password update successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: Password updated successfully
- *             401:
- *                 description: Unauthorized, user must be logged in
- *             500:
- *                 description: Internal server error
+ *   patch:
+ *     summary: Update password (when user remembers the current password)
+ *     tags: [Users]
+ *     description: Allows a logged-in user to update their password after verifying their current password.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/UpdatePassword"
+ *     responses:
+ *       200:
+ *         description: Password updated successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Password updated successfully"
+ *       400:
+ *         description: Invalid password format.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
+ *       401:
+ *         description: Unauthorized, user must be logged in.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "You need to log in to update your password."
+ *       403:
+ *         description: Forbidden, incorrect current password.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Your current password is wrong."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "An error occurred while updating the password."
  */
 
 /**
@@ -2453,7 +2582,6 @@
  *                   example: Internal server error details
  */
 
-
 /**
  * @swagger
  * /user/profile-picture:
@@ -2511,7 +2639,6 @@
  *       500:
  *         description: Internal Server Error
  */
-
 
 /**
  * @swagger
@@ -2612,7 +2739,6 @@
  *       500:
  *         description: Internal Server Error
  */
-
 
 /**
  * @swagger
@@ -2848,7 +2974,7 @@
  *         description: User or experience not found
  *       500:
  *         description: Internal server error
- * 
+ *
  *   patch:
  *     summary: Update a work experience
  *     tags: [Users]
@@ -2929,7 +3055,6 @@
  *       500:
  *         description: Internal server error
  */
-
 
 /**
  * @swagger
@@ -3302,8 +3427,6 @@
  *         description: Internal Server Error
  */
 
-
-
 /**
  * @swagger
  * /user/skills:
@@ -3469,7 +3592,6 @@
  *                   type: string
  *                   example: "Error message details"
  */
-
 
 /**
  * @swagger
@@ -3653,76 +3775,76 @@
 /**
  * @swagger
  * /user/skills/{skillName}:
-*   delete:
-*     summary: Delete a user's skill
-*     tags: [Users]
-*     security:
-*       - BearerAuth: []
-*     description: Remove a skill from the authenticated user's profile.
-*     parameters:
-*       - in: path
-*         name: skillName
-*         required: true
-*         schema:
-*           type: string
-*           example: "JavaScript"
-*         description: The name of the skill to delete.
-*     responses:
-*       200:
-*         description: Skill deleted successfully
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   example: "Skill deleted successfully"
-*                 deletedSkill:
-*                   type: object
-*                   properties:
-*                     skillName:
-*                       type: string
-*                       example: "JavaScript"
-*                     endorsements:
-*                       type: array
-*                       items:
-*                         type: string
-*                       example: ["userId1", "userId2"]
-*                     education:
-*                       type: array
-*                       items:
-*                         type: integer
-*                       example: [0, 1]
-*                     experience:
-*                       type: array
-*                       items:
-*                         type: integer
-*                       example: [2, 3]
-*       404:
-*         description: Skill not found
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 error:
-*                   type: string
-*                   example: "Skill not found"
-*       500:
-*         description: Internal Server Error
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 error:
-*                   type: string
-*                   example: "Internal server error"
-*                 details:
-*                   type: string
-*                   example: "Error message details"
-*/
+ *   delete:
+ *     summary: Delete a user's skill
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Remove a skill from the authenticated user's profile.
+ *     parameters:
+ *       - in: path
+ *         name: skillName
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "JavaScript"
+ *         description: The name of the skill to delete.
+ *     responses:
+ *       200:
+ *         description: Skill deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Skill deleted successfully"
+ *                 deletedSkill:
+ *                   type: object
+ *                   properties:
+ *                     skillName:
+ *                       type: string
+ *                       example: "JavaScript"
+ *                     endorsements:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["userId1", "userId2"]
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [0, 1]
+ *                     experience:
+ *                       type: array
+ *                       items:
+ *                         type: integer
+ *                       example: [2, 3]
+ *       404:
+ *         description: Skill not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Skill not found"
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Error message details"
+ */
 
 /**
  * @swagger
@@ -3849,7 +3971,6 @@
  *         description: Internal Server Error
  */
 
-
 /**
  * @swagger
  * /user/privacy-settings:
@@ -3921,7 +4042,7 @@
  *         description: Entity not found
  *       500:
  *         description: Internal server error
- * 
+ *
  *   delete:
  *     summary: Unfollow an entity (user or company)
  *     tags: [Users]
@@ -4082,7 +4203,7 @@
  *         content:
  *           application/json:
  *             example:
- *               messageRequests: 
+ *               messageRequests:
  *                 - senderId: "user456"
  *                   senderName: "Jane Doe"
  *                   messagePreview: "Hello, I wanted to..."
@@ -4127,7 +4248,6 @@
  *         description: Internal server error.
  */
 
-
 /**
  * @swagger
  * components:
@@ -4136,7 +4256,7 @@
  *       type: object
  *       properties:
  *         firstName:
- *           type: string 
+ *           type: string
  *           example: John
  *         lastName:
  *           type: string
@@ -4168,6 +4288,9 @@
  *         newPassword:
  *           type: string
  *           example: newpassword
+ *         currentPassword:
+ *           type: string
+ *           example: currentpassword
  *     UpdateEmail:
  *       type: object
  *       properties:
@@ -4177,7 +4300,7 @@
  *         password:
  *           type: string
  *           example: password
- * 
+ *
  *     WorkExperience:
  *       type: object
  *       properties:
@@ -4221,7 +4344,7 @@
  *         media:
  *           type: string
  *           example: "https://example.com/certificate.pdf"
- * 
+ *
  *     Education:
  *       type: object
  *       properties:
@@ -4259,7 +4382,7 @@
  *         media:
  *           type: string
  *           example: "https://example.com/transcript.pdf"
- * 
+ *
  *     Skill:
  *       type: object
  *       properties:
@@ -4458,7 +4581,7 @@
  *           type: string
  *           format: uri
  *           example: "https://www.credly.com/badges/123456"
- * 
+ *
  *     UpdateUserIntro:
  *       type: object
  *       properties:
@@ -4479,7 +4602,7 @@
  *         industry:
  *           type: string
  *           example: "Software Development"
- * 
+ *
  *     UserProfile:
  *       type: object
  *       required:
@@ -4531,7 +4654,7 @@
  *         emailVerificationToken:
  *           type: string
  *           example: "123456789abcdef"
- * 
+ *
  *     ProfilePrivacySettings:
  *       type: object
  *       required:
@@ -4542,7 +4665,6 @@
  *           enum: [public, private, connections-only]
  *           example: public
  */
-
 
 // *********************************** Connections APIs ******************************************//
 /**
@@ -4574,7 +4696,7 @@
  *             example:
  *               message: "Connection request sent successfully"
  *       400:
- *         description: Invalid user ID 
+ *         description: Invalid user ID
  *       401:
  *         description: Unauthorized, user must be logged in
  *       409:
@@ -4693,11 +4815,6 @@
  *         description: Unauthorized, user must be logged in
  */
 
-
-
-
-
-
 // *********************************** Notifications APIs ******************************************//
 
 /**
@@ -4805,8 +4922,6 @@
  *       400:
  *         description: Invalid request body
  */
-
-
 
 // *********************************** Search APIs ******************************************//
 /**

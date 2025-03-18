@@ -58,7 +58,7 @@ const decryptToken = async (req, res, decoded, next) => {
   }
   generateTokens(currentUser, res);
 
-  req.user = currentUser;
+  req.user = decoded;
   next();
 };
 

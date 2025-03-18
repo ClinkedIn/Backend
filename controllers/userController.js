@@ -123,11 +123,11 @@ const registerUser = async (req, res) => {
 
 const resendConfirmationEmail = async (req, res) => {
   try {
-    const id = req.user.id;
-    if (req.user.isConfirmed) {
+    const user = await userModel.findById(req.user.id);
+    if (user.isConfirmed) {
       return res.status(400).json({ message: "User is already confirmed!!" });
     }
-    const isSent = await sendEmailConfirmation(id);
+    const isSent = await sendEmailConfirmation(user._id);
     if (!isSent) {
       return res.status(500).json({ message: "Internal server error" });
     }
@@ -277,9 +277,10 @@ const forgotPassword = async (req, res) => {
       isActive: true,
     });
     if (!user) {
-      const error = new Error("There is no such email address");
-      error.statusCode = 404;
-      throw error;
+      return res.status(400).json({
+        success: false,
+        message: "This email is not registerd",
+      });
     }
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
@@ -375,19 +376,18 @@ const verifyResetPasswordToken = async (req, res) => {
 const updatePassword = async (req, res) => {
   try {
     // get the user from the collection
-    const user = req.user;
-    console.log(user);
+    const user = await userModel.findById(req.user.id);
     // check if the password is correct
     if (
       !user ||
-      !(await user.correctPassword(req.body.passwordCurrent, user.password))
+      !(await user.correctPassword(req.body.currentPassword, user.password))
     ) {
       return res
         .status(401)
         .json({ message: "your current password is wrong" });
     }
     // if so update password
-    const password = req.body.password;
+    const password = req.body.newPassword;
     const isValidPassword = validatePassword(password);
     if (!isValidPassword) {
       return res.status(400).json({
