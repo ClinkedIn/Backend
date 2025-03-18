@@ -1,72 +1,72 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken, isLoggedIn, verifyGoogleToken, mockVerifyToken } = require('../middlewares/auth');
+const { protect, mockVerifyToken } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
 router.route('/:userId')
-    .get(mockVerifyToken, user.getUserProfile);
+    .get(protect, user.getUserProfile);
 router.route('/')
-    .get(mockVerifyToken, user.getAllUsers);
+    .get(protect, user.getAllUsers);
 router.route('/education')
-    .post(mockVerifyToken, upload.single('file'), user.addEducation)
-    .get(mockVerifyToken,user.getEducations);
+    .post(protect, upload.single('file'), user.addEducation)
+    .get(protect,user.getEducations);
 
 router.route('/education/:index')
-    .get(mockVerifyToken,user.getEducation)
-    .patch(mockVerifyToken, upload.single('file'), user.editEducation)
-    .delete(mockVerifyToken,user.deleteEducation);
+    .get(protect,user.getEducation)
+    .patch(protect, upload.single('file'), user.editEducation)
+    .delete(protect,user.deleteEducation);
 
 router.route('/profile')
-    .patch(mockVerifyToken,user.editIntro);
+    .patch(protect,user.editIntro);
 
 router.route('/experience')
-    .post(mockVerifyToken, upload.single('file'), user.addExperience)
-    .get(mockVerifyToken, user.getAllExperiences);
+    .post(protect, upload.single('file'), user.addExperience)
+    .get(protect, user.getAllExperiences);
 
 router.route('/experience/:index')
-    .get(mockVerifyToken, user.getExperience)
-    .patch(mockVerifyToken,  upload.single('file'), user.updateExperience)
-    .delete(mockVerifyToken, user.deleteExperience);
+    .get(protect, user.getExperience)
+    .patch(protect,  upload.single('file'), user.updateExperience)
+    .delete(protect, user.deleteExperience);
     
 router.route('/skills')
-    .get(mockVerifyToken, user.getAllSkills)
-    .post(mockVerifyToken, user.addSkill);
+    .get(protect, user.getAllSkills)
+    .post(protect, user.addSkill);
 
 router.route('/skills/:skillName')
-    .get(mockVerifyToken, user.getSkill)
-    .patch(mockVerifyToken, user.updateSkill)
-    .delete(mockVerifyToken, user.deleteSkill);
+    .get(protect, user.getSkill)
+    .patch(protect, user.updateSkill)
+    .delete(protect, user.deleteSkill);
 
 router.route('/skills/add-endorsement')
-    .post(mockVerifyToken, user.addEndorsement);
+    .post(protect, user.addEndorsement);
 
 router.route('/skills/remove-endorsement/:skillName')
-    .delete(mockVerifyToken, user.deleteEndorsement);
+    .delete(protect, user.deleteEndorsement);
 
 router.route('/pictures/profile-picture')
-    .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
-    .get(mockVerifyToken, user.getProfilePicture)
-    .delete(mockVerifyToken, user.deleteProfilePicture);
+    .post(protect, upload.single('file'), user.uploadProfilePicture)
+    .get(protect, user.getProfilePicture)
+    .delete(protect, user.deleteProfilePicture);
 
 router.route('/cover-picture')
-    .get(mockVerifyToken, user.getCoverPicture)
-    .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
-    .delete(mockVerifyToken, user.deleteCoverPicture);
+    .get(protect, user.getCoverPicture)
+    .post(protect, upload.single('file'), user.uploadCoverPicture)
+    .delete(protect, user.deleteCoverPicture);
 
 router.route('/resume')
-    .get(mockVerifyToken, user.getResume)
-    .post(mockVerifyToken, upload.single('resume'), user.uploadResume)
-    .delete(mockVerifyToken, user.deleteResume);
+    .get(protect, user.getResume)
+    .post(protect, upload.single('resume'), user.uploadResume)
+    .delete(protect, user.deleteResume);
 router.route('/privacy-settings')
-    .patch(mockVerifyToken, user.updatePrivacySettings);
+    .patch(protect, user.updatePrivacySettings);
 router.route('/follow/:userId')
-    .post(mockVerifyToken, user.followEntity)
-    .delete(mockVerifyToken, user.unfollowEntity);
+    .post(protect, user.followEntity)
+    .delete(protect, user.unfollowEntity);
 router.route('/contact-info')
-    .patch(mockVerifyToken, user.editContactInfo);
+    .patch(protect, user.editContactInfo);
 //router.route('/skills/endorse')
-//    .post(mockVerifyToken, user.endorseSkill);
+//    .post(protect, user.endorseSkill);
 router.route('/about')
-    .patch(mockVerifyToken, user.editAbout);
+    .patch(protect, user.editAbout);
 module.exports = router;

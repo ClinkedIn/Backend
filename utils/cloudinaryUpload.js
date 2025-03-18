@@ -61,7 +61,7 @@ const uploadFile = (fileBuffer, type = 'auto') => {
  * @returns {Promise<Array<{ url: string }>>} - Upload results.
  */
 const uploadMultipleImages = async (files) => {
-  const uploadPromises = files.map(file => uploadFile(file.buffer, 'image'));
+  const uploadPromises = files.map(file => uploadFile(file.buffer, file.mimetype || 'auto'));
   return Promise.all(uploadPromises);
 };
 

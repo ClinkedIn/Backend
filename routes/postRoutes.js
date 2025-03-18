@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
-
+const { protect } = require('../middlewares/auth');
+const upload = require('../middlewares/multer');
 router.route('/')
-    .post(postController.createPost)
-    .get(postController.getAllPosts);
+    .post(protect,upload.array('files'),postController.createPost)
+    .get(protect,postController.getAllPosts);
 
 
 router.route('/:postId')

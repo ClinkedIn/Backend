@@ -570,46 +570,190 @@
  *   post:
  *     summary: Create a new post
  *     tags: [Posts]
- *     description: Add a new post to the platform
+ *     description: Create a post with optional attachments and tagged users. Supports text content, image/video uploads, and user tagging.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreatePostRequest'
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - description
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 example: "Excited to share my latest project! #coding #nodejs"
+ *                 description: The text content of the post (required)
+ *               attachments:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Files to attach to the post (max 10 files total, videos must be uploaded alone)
+ *               taggedUsers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Acme Inc"
+ *                 description: Array of users tagged in the post
+ *               whoCanSee:
+ *                 type: string
+ *                 enum: [anyone, connections]
+ *                 default: anyone
+ *                 example: "anyone"
+ *                 description: Privacy setting for post visibility
+ *               whoCanComment:
+ *                 type: string
+ *                 enum: [anyone, connections, noOne]
+ *                 default: anyone
+ *                 example: "anyone"
+ *                 description: Privacy setting for who can comment on the post
  *     responses:
  *       201:
  *         description: Post created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post created successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Excited to share my latest project! #coding #nodejs"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     impressionTypes:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 0
+ *                         support:
+ *                           type: number
+ *                           example: 0
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 0
+ *                         insightful:
+ *                           type: number
+ *                           example: 0
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 0
+ *                     commentCount:
+ *                       type: number
+ *                       example: 0
+ *                     repostCount:
+ *                       type: number
+ *                       example: 0
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
  *       400:
- *         description: Bad request, invalid input
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       500:
- *         description: Internal server error
- *
- *   get:
- *     summary: Get all posts
- *     tags: [Posts]
- *     description: Retrieve all posts for a specific user
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: List of posts retrieved successfully
+ *         description: Bad request - validation error
  *         content:
  *           application/json:
- *            schema:
- *             type: array
- *             items:
- *              $ref: '#/components/schemas/Post'
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post description is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *        description: No posts found
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
  *       500:
- *        description: Internal server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create post"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
 
 /**
