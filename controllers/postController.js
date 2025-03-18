@@ -1,5 +1,6 @@
 const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
+const repostModel = require('../models/repostModel');
 const cloudinary = require('../utils/cloudinary');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
@@ -112,78 +113,127 @@ const getAllPosts = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        // Extract IDs of connections
+        // Extract IDs with proper null checks
         const connectionIds = (currentUser.connections || []).map(conn => conn.toString());
-        
-        // Extract IDs of followed users
-        const followedUserIds = (currentUser.following||[])
+        const followedUserIds = (currentUser.following || [])
             .filter(follow => follow.entityType === 'User')
             .map(follow => follow.entity.toString());
-        
-        // Extract IDs of followed companies
-        const followedCompanyIds = (currentUser.following||[])
+        const followedCompanyIds = (currentUser.following || [])
             .filter(follow => follow.entityType === 'Company')
             .map(follow => follow.entity.toString());
         
-        // Combine all relevant user IDs (connections + followed users)
+        // Combine all relevant user IDs (connections + followed users + self)
         const relevantUserIds = [...new Set([...connectionIds, ...followedUserIds, userId])];
         
-        // Query posts from these users and companies
+        // Get post IDs that were reposted by connections and followed users
+        const repostInfo = await repostModel.find({
+            userId: { $in: relevantUserIds },
+            isActive: true
+        })
+        .populate('userId', 'firstName lastName profilePicture headline')
+        .lean();
+        
+        // Extract just the post IDs from reposts
+        const repostedPostIds = repostInfo.map(repost => repost.postId);
+        
+        // Create a map of postId -> repost info for quick lookup later
+        const repostMap = {};
+        repostInfo.forEach(repost => {
+            if (!repostMap[repost.postId]) {
+                repostMap[repost.postId] = [];
+            }
+            repostMap[repost.postId].push({
+                isRepost: true,
+                repostId: repost._id,
+                reposterId: repost.userId._id,
+                reposterFirstName: repost.userId.firstName,
+                reposterLastName: repost.userId.lastName,
+                reposterProfilePicture: repost.userId.profilePicture,
+                reposterHeadline: repost.userId.headline || "",
+                repostDescription: repost.description,
+                repostDate: repost.createdAt
+            });
+        });
+        
+        // Query posts that are either created by relevant users or reposted by them
         const posts = await postModel.find({
             $and: [
+                { isActive: true },
                 {
                     $or: [
-                        // Posts from connections and followed users
-                        { userId: { $in: relevantUserIds } },
+                        // Original posts from connections and followed users
+                        { userId: { $in: relevantUserIds.length ? relevantUserIds : [userId] } },
                         
                         // Posts from followed companies
                         { 
-                            userId: { $in: followedCompanyIds },
+                            userId: { $in: followedCompanyIds.length ? followedCompanyIds : ['000000000000000000000000'] },
                             entityType: 'Company'
-                        }
+                        },
+                        
+                        // Posts that were reposted by connections or followed users
+                        { _id: { $in: repostedPostIds } }
                     ]
-                },
-                { isActive: true } // Only active posts
+                }
             ]
         })
-        .sort({ createdAt: -1 }) // Chronological order (newest first)
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .populate('userId', 'firstName lastName headline profilePicture')
         .lean();
         
-        // Count total posts for pagination info
+        // Count total posts for pagination
         const total = await postModel.countDocuments({
             $and: [
+                { isActive: true },
                 {
                     $or: [
                         { userId: { $in: relevantUserIds } },
-                        { 
-                            userId: { $in: followedCompanyIds },
-                            entityType: 'Company'
-                        }
+                        { userId: { $in: followedCompanyIds }, entityType: 'Company' },
+                        { _id: { $in: repostedPostIds } }
                     ]
-                },
-                { isActive: true }
+                }
             ]
         });
         
-        // Format posts to match your response structure
-        const formattedPosts = posts.map(post => ({
-            postId: post._id,
-            userId: post.userId._id,
-            firstName: post.userId.firstName,
-            lastName: post.userId.lastName,
-            headline: post.userId.headline || "",
-            profilePicture: post.userId.profilePicture,
-            postDescription: post.description,
-            attachments: post.attachments,
-            impressionCounts: post.impressionCounts,
-            commentCount: post.commentCount || 0,
-            repostCount: post.repostCount || 0,
-            createdAt: post.createdAt,
-            taggedUsers: post.taggedUsers
-        }));
+        // Format posts and add repost information
+        const formattedPosts = posts.map(post => {
+            // Check if this post was reposted by a connection
+            const repostInfo = repostMap[post._id.toString()];
+            const isRepost = !!repostInfo;
+            
+            // For posts that have multiple reposters, use the most relevant one 
+            // (e.g., first one in the array, which could be sorted by date if needed)
+            const repostDetails = repostInfo ? repostInfo[0] : null;
+            
+            return {
+                postId: post._id,
+                userId: post.userId._id,
+                firstName: post.userId.firstName,
+                lastName: post.userId.lastName,
+                headline: post.userId.headline || "",
+                profilePicture: post.userId.profilePicture,
+                postDescription: post.description,
+                attachments: post.attachments,
+                impressionCounts: post.impressionCounts,
+                commentCount: post.commentCount || 0,
+                repostCount: post.repostCount || 0,
+                createdAt: post.createdAt,
+                taggedUsers: post.taggedUsers,
+                isRepost: isRepost,
+                // Only include repost details if this is a repost
+                ...(isRepost && {
+                    repostId: repostDetails.repostId,
+                    reposterId: repostDetails.reposterId,
+                    reposterFirstName: repostDetails.reposterFirstName,
+                    reposterLastName: repostDetails.reposterLastName,
+                    reposterProfilePicture: repostDetails.reposterProfilePicture,
+                    reposterHeadline: repostDetails.reposterHeadline,
+                    repostDescription: repostDetails.repostDescription,
+                    repostDate: repostDetails.repostDate
+                })
+            };
+        });
         
         res.status(200).json({
             posts: formattedPosts,

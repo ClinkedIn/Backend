@@ -760,9 +760,9 @@
  * @swagger
  * /posts:
  *   get:
- *     summary: Get feed posts
+ *     summary: Get feed posts including reposts
  *     tags: [Posts]
- *     description: Retrieve posts from user's connections, followed users, and followed companies in chronological order with pagination.
+ *     description: Retrieve posts from connections, followed users, followed companies, and reposts from these users in chronological order.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -871,6 +871,34 @@
  *                             lastName:
  *                               type: string
  *                               example: "Smith"
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: true
+ *                       repostId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c87"
+ *                       reposterId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c88"
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "Robert"
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Johnson"
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile2.jpg"
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Marketing Manager at Company XYZ"
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great insights in this post!"
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-19T10:15:30.123Z"
  *                 pagination:
  *                   type: object
  *                   properties:
