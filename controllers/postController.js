@@ -99,7 +99,109 @@ const updatePost = async (req, res) => {
 
 // Get all posts
 const getAllPosts = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const userId = req.user.id;
+        const { pageNumber = 1, limit = 10 } = req.query;
+        const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+        
+        // Get current user's connections and following
+        const currentUser = await userModel.findById(userId)
+            .select('connections following');
+        
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Extract IDs of connections
+        const connectionIds = (currentUser.connections || []).map(conn => conn.toString());
+        
+        // Extract IDs of followed users
+        const followedUserIds = (currentUser.following||[])
+            .filter(follow => follow.entityType === 'User')
+            .map(follow => follow.entity.toString());
+        
+        // Extract IDs of followed companies
+        const followedCompanyIds = (currentUser.following||[])
+            .filter(follow => follow.entityType === 'Company')
+            .map(follow => follow.entity.toString());
+        
+        // Combine all relevant user IDs (connections + followed users)
+        const relevantUserIds = [...new Set([...connectionIds, ...followedUserIds, userId])];
+        
+        // Query posts from these users and companies
+        const posts = await postModel.find({
+            $and: [
+                {
+                    $or: [
+                        // Posts from connections and followed users
+                        { userId: { $in: relevantUserIds } },
+                        
+                        // Posts from followed companies
+                        { 
+                            userId: { $in: followedCompanyIds },
+                            entityType: 'Company'
+                        }
+                    ]
+                },
+                { isActive: true } // Only active posts
+            ]
+        })
+        .sort({ createdAt: -1 }) // Chronological order (newest first)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .populate('userId', 'firstName lastName headline profilePicture')
+        .lean();
+        
+        // Count total posts for pagination info
+        const total = await postModel.countDocuments({
+            $and: [
+                {
+                    $or: [
+                        { userId: { $in: relevantUserIds } },
+                        { 
+                            userId: { $in: followedCompanyIds },
+                            entityType: 'Company'
+                        }
+                    ]
+                },
+                { isActive: true }
+            ]
+        });
+        
+        // Format posts to match your response structure
+        const formattedPosts = posts.map(post => ({
+            postId: post._id,
+            userId: post.userId._id,
+            firstName: post.userId.firstName,
+            lastName: post.userId.lastName,
+            headline: post.userId.headline || "",
+            profilePicture: post.userId.profilePicture,
+            postDescription: post.description,
+            attachments: post.attachments,
+            impressionCounts: post.impressionCounts,
+            commentCount: post.commentCount || 0,
+            repostCount: post.repostCount || 0,
+            createdAt: post.createdAt,
+            taggedUsers: post.taggedUsers
+        }));
+        
+        res.status(200).json({
+            posts: formattedPosts,
+            pagination: {
+                total,
+                page: parseInt(pageNumber),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+        res.status(500).json({
+            message: 'Failed to fetch posts',
+            error: error.message
+        });
+    }
 };
 
 

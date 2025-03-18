@@ -758,6 +758,175 @@
 
 /**
  * @swagger
+ * /posts:
+ *   get:
+ *     summary: Get feed posts
+ *     tags: [Posts]
+ *     description: Retrieve posts from user's connections, followed users, and followed companies in chronological order with pagination.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: pageNumber
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of posts per page
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       userId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c84"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Excited to share my latest project!"
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/image.jpg"]
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 5
+ *                           support:
+ *                             type: number
+ *                             example: 2
+ *                           celebrate:
+ *                             type: number
+ *                             example: 3
+ *                           love:
+ *                             type: number
+ *                             example: 1
+ *                           insightful:
+ *                             type: number
+ *                             example: 4
+ *                           funny:
+ *                             type: number
+ *                             example: 0
+ *                           total:
+ *                             type: number
+ *                             example: 15
+ *                       commentCount:
+ *                         type: number
+ *                         example: 3
+ *                       repostCount:
+ *                         type: number
+ *                         example: 1
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-18T12:30:45.123Z"
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "60d21b4667d0d8992e610c86"
+ *                             userType:
+ *                               type: string
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Jane"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Smith"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of posts matching the criteria
+ *                       example: 45
+ *                     page:
+ *                       type: number
+ *                       description: Current page number
+ *                       example: 1
+ *                     limit:
+ *                       type: number
+ *                       description: Number of posts per page
+ *                       example: 10
+ *                     pages:
+ *                       type: number
+ *                       description: Total number of pages
+ *                       example: 5
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to fetch posts"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
  * /posts/{postId}:
  *   get:
  *     summary: Get a single post
