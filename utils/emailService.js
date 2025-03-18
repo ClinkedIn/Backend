@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const createConfirmationEmail = async (resetURL,email,token) => {
+const createConfirmationEmail = async (resetURL, email, token) => {
   const mailOptions = {
     from: process.env.LOCKEDIN_EMAIL,
     to: email,
@@ -36,7 +36,7 @@ const createConfirmationEmail = async (resetURL,email,token) => {
   return transporter.sendMail(mailOptions);
 };
 
-exports.sendEmailConfirmation = async (userId) => {
+exports.sendEmailConfirmation = async (userId, req) => {
   try {
     const user = await userModel.findById(userId);
 
@@ -51,14 +51,14 @@ exports.sendEmailConfirmation = async (userId) => {
       Date.now() + 24 * 60 * 60 * 1000
     );
     await user.save();
-    const resetURL = `${req.protocol}://${req.get("host")}/user/confirm-email/${user.emailVerificationToken}`;
+    const resetURL = `${req.protocol}://${req.get("host")}/user/confirm-email/${
+      user.emailVerificationToken
+    }`;
     const emailSent = await createConfirmationEmail(
-      
       resetURL,
       user.email,
       user.emailVerificationToken
     );
-    // console.log('Email sent:', emailSent);
     if (emailSent.messageId) {
       return {
         success: true,

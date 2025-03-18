@@ -101,7 +101,7 @@ const registerUser = async (req, res) => {
     // remove get confirm-email end point and directly send from here ✅
 
     try {
-      await sendEmailConfirmation(newUser._id);
+      await sendEmailConfirmation(newUser.id, req);
     } catch (err) {
       console.log("Mail sending failed", err);
     }
@@ -127,7 +127,7 @@ const resendConfirmationEmail = async (req, res) => {
     if (user.isConfirmed) {
       return res.status(400).json({ message: "User is already confirmed!!" });
     }
-    const isSent = await sendEmailConfirmation(user._id);
+    const isSent = await sendEmailConfirmation(user.id, req);
     if (!isSent) {
       return res.status(500).json({ message: "Internal server error" });
     }
