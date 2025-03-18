@@ -1854,7 +1854,6 @@
  *     description: Creates a new user account, sends an email confirmation link, and returns authentication tokens in cookies.
  *     operationId: createUser
  *     requestBody:
- *       description: User registration data including email, password, and reCAPTCHA response.
  *       required: true
  *       content:
  *         application/json:
@@ -1869,57 +1868,83 @@
  *             properties:
  *               firstName:
  *                 type: string
- *                 example: John
+ *                 example: "John"
  *               lastName:
  *                 type: string
- *                 example: Doe
+ *                 example: "Doe"
  *               email:
  *                 type: string
  *                 format: email
- *                 example: johndoe@email.com
+ *                 example: "john.doe@example.com"
  *               password:
  *                 type: string
- *                 example: "P@ssword123"
- *                 description: "Must be at least 8 characters, include 1 digit, 1 lowercase, and 1 uppercase letter."
+ *                 format: password
+ *                 example: "Password123!"
+ *                 description: "Must contain at least 1 digit, 1 lowercase, 1 uppercase letter, and be at least 8 characters long."
  *               recaptchaResponseToken:
  *                 type: string
- *                 example: "03AGdBq24A...captcha-response-token"
+ *                 description: "Google reCAPTCHA response token"
+ *                 example: "03AFcWeA5..."
  *     responses:
  *       201:
- *         description: User registered successfully. Access and refresh tokens are set in cookies.
+ *         description: User registered successfully, email confirmation sent.
  *         content:
  *           application/json:
- *             example:
- *               message: "User registered successfully. Please check your email to confirm your account."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User registered successfully. Please check your email to confirm your account."
  *       400:
- *         description: Bad request due to missing fields, invalid email, weak password, or failed reCAPTCHA verification.
+ *         description: Bad Request - Missing required fields.
  *         content:
  *           application/json:
- *             examples:
- *               MissingFields:
- *                 value:
- *                   message: "All fields are required."
- *               InvalidEmail:
- *                 value:
- *                   message: "Email not valid, Write a valid email."
- *               WeakPassword:
- *                 value:
- *                   message: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
- *               CaptchaFailed:
- *                 value:
- *                   message: "reCAPTCHA verification failed. Please try again."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "All fields are required."
  *       409:
- *         description: Conflict - User with the given email already exists.
+ *         description: Conflict - User already exists.
  *         content:
  *           application/json:
- *             example:
- *               message: "The user already exists. Use another email."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "The User already exists, use another email."
+ *       422:
+ *         description: Unprocessable Entity - Invalid email, weak password, or CAPTCHA failure.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
  *       500:
- *         description: Internal server error.
+ *         description: Internal Server Error - Registration failed.
  *         content:
  *           application/json:
- *             example:
- *               message: "Registration failed."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Registration failed"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error message."
  *
  *   delete:
  *     summary: Deactivate a user account
@@ -1969,38 +1994,70 @@
  *               email:
  *                 type: string
  *                 format: email
- *                 example: johndoe@eamil.com
+ *                 example: user@example.com
+ *                 description: The registered email of the user.
  *               password:
  *                 type: string
- *                 example: "P@ssword123"
- *                 description: "User's password."
+ *                 format: password
+ *                 example: StrongPass123!
+ *                 description: The password associated with the email.
  *     responses:
  *       200:
- *         description: User logged in successfully.
+ *         description: Successfully logged in, returns JWT token in cookies.
  *         content:
  *           application/json:
- *             example:
- *               message: "Logged in successfully."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Logged in successfully"
+ *       400:
+ *         description: Missing required fields.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Please fill all required fields"
+ *       404:
+ *         description: Email not found (not registered).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Please enter a registered email"
  *       401:
- *         description: Unauthorized - Invalid email or password.
+ *         description: Incorrect password.
  *         content:
  *           application/json:
- *             examples:
- *               MissingFields:
- *                 value:
- *                   message: "Please provide email and password."
- *               InvalidEmail:
- *                 value:
- *                   message: "Wrong email."
- *               InvalidPassword:
- *                 value:
- *                   message: "Wrong password."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "wrong password"
  *       500:
  *         description: Internal server error.
  *         content:
  *           application/json:
- *             example:
- *               message: "An error occurred during login."
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 
 /**
@@ -2074,154 +2131,371 @@
  *     description: Sends a password reset link to the user's email.
  *     operationId: forgotPassword
  *     requestBody:
- *       description: Email address to receive the password reset link.
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: "#/components/schemas/ForgotPassword"
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@email.com"
  *     responses:
  *       200:
- *         description: Password reset email sent successfully.
+ *         description: Password reset email sent successfully
  *         content:
  *           application/json:
  *             example:
  *               success: true
- *               message: "Forgot password email sent successfully."
+ *               message: "Forgot password email sent successfully"
  *               email: "user@email.com"
- *       404:
- *         description: Email does not exist.
- *         content:
- *           application/json:
- *             example:
- *               message: "There is no such email address."
- *       500:
- *         description: Internal server error.
+ *       400:
+ *         description: Missing required fields
  *         content:
  *           application/json:
  *             example:
  *               success: false
- *               message: "An error occurred while sending the email."
+ *               message: "Please fill all required fields"
+ *       422:
+ *         description: Invalid email format
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Please enter a valid email"
+ *       404:
+ *         description: Email is not registered
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "This email is not registered"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Internal server error"
  */
 
 /**
  * @swagger
  * /user/update-password:
  *   patch:
- *     summary: Update password (when user remembers the current password)
+ *     summary: Update user password
  *     tags: [Users]
- *     description: Allows a logged-in user to update their password after verifying their current password.
+ *     description: Updates the user's password after verifying the current password. Requires authentication via middleware.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: "#/components/schemas/UpdatePassword"
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: The user's current password.
+ *                 example: "OldPassword123"
+ *               newPassword:
+ *                 type: string
+ *                 description: The new password that must meet security requirements.
+ *                 example: "NewStrongPass1!"
  *     responses:
  *       200:
- *         description: Password updated successfully.
+ *         description: Password updated successfully
  *         content:
  *           application/json:
  *             example:
- *               message: "Password updated successfully"
+ *               message: Password updated successfully
  *       400:
- *         description: Invalid password format.
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Please fill all required fields
+ *       401:
+ *         description: Incorrect current password
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Your current password is wrong
+ *       422:
+ *         description: Weak password that does not meet security requirements
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long.
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Internal server error
+ */
+
+/**
+ * @swagger
+ * /user/reset-password/{token}:
+ *   patch:
+ *     summary: Reset user password
+ *     tags: [Users]
+ *     description: Allows a user to reset their password using a valid reset token.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         description: The password reset token sent via email.
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: The new password for the user.
+ *                 example: "SecurePass123!"
+ *     responses:
+ *       200:
+ *         description: Password reset successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Password reset successfully"
+ *       400:
+ *         description: Bad request, password is missing.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Password is required"
+ *       401:
+ *         description: Unauthorized, token is invalid or has expired.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Token is invalid or has expired"
+ *       422:
+ *         description: Unprocessable entity, password does not meet security requirements.
  *         content:
  *           application/json:
  *             example:
  *               message: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
- *       401:
- *         description: Unauthorized, user must be logged in.
- *         content:
- *           application/json:
- *             example:
- *               message: "You need to log in to update your password."
- *       403:
- *         description: Forbidden, incorrect current password.
- *         content:
- *           application/json:
- *             example:
- *               message: "Your current password is wrong."
  *       500:
  *         description: Internal server error.
  *         content:
  *           application/json:
  *             example:
- *               message: "An error occurred while updating the password."
+ *               message: "Internal server error"
+ *
+ *   get:
+ *     summary: Verify the password reset token
+ *     tags: [Users]
+ *     description: Check if the reset token is valid before allowing the user to proceed with resetting their password.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         description: The password reset token sent via email.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Token is valid.
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: "success"
+ *               data:
+ *                 email: "user@example.com"
+ *       400:
+ *         description: Token is invalid or has expired.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Token is invalid or has expired"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Internal server error"
  */
 
 /**
  * @swagger
  * /user/update-email:
- *     patch:
- *         summary: Allows user to update email
- *         tags: [Users]
- *         description: Update user email address.
- *         operationId: updateEmail
- *         requestBody:
- *             required: true
- *             content:
- *                 application/json:
- *                     schema:
- *                         $ref: "#/components/schemas/UpdateEmail"
- *         responses:
- *             200:
- *                 description: Email updated successfully
- *                 content:
- *                     application/json:
- *                         example:
- *                             message: Email updated successfully
- *             400:
- *                 description: Invalid Email
- *             401:
- *                 description: Unauthorized, user must be logged in
- *             500:
- *                 description: Internal server error
+ *   patch:
+ *     summary: Update user email
+ *     description: Allows authenticated users to update their email. Requires password confirmation. The new email must not be already registered.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newEmail
+ *               - password
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: "newemail@example.com"
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: "User@1234"
+ *     responses:
+ *       200:
+ *         description: Email updated successfully. User needs to confirm the new email.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: JWT token for authentication
+ *                 message:
+ *                   type: string
+ *                   example: "Email updated successfully. Please check your email to confirm your account."
+ *       400:
+ *         description: Bad request. Missing required fields.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Please fill all required fields"
+ *       401:
+ *         description: Unauthorized. Incorrect password.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "please enter the correct password"
+ *       409:
+ *         description: Conflict. Email is already registered.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Email is already registered, use another email"
+ *       422:
+ *         description: Unprocessable Entity. Invalid email format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Email not valid, Write a valid email"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 
 /**
  * @swagger
  * /user/confirm-email:
  *   get:
- *     summary: Send email confirmation link
+ *     summary: Resend confirmation email
+ *     description: Resends the confirmation email for a user who has not yet confirmed their account.
  *     tags: [Users]
- *     description: Sends a verification email containing a token for email confirmation.
- *     operationId: sendEmailConfirmation
  *     responses:
  *       200:
- *         description: Email verification token generated and email sent successfully
+ *         description: Email sent successfully.
  *         content:
  *           application/json:
  *             example:
- *               message: Email verification email sent successfully
- *               emailVerificationToken: "123456789abcdef"
- *       401:
- *         description: Unauthorized, user must be logged in
- *       500:
- *         description: Internal server error
- *   patch:
- *     summary: Confirm email address
- *     tags: [Users]
- *     description: Confirms the user's email by verifying the token.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/ConfirmEmail"
- *     responses:
- *       200:
- *         description: Email confirmed successfully
- *         content:
- *           application/json:
- *             example:
- *               message: Email confirmed successfully
+ *               success: true
+ *               message: "Email sent successfully.  Please check your email to confirm your account."
  *       400:
- *         description: Invalid or expired token
- *       401:
- *         description: Unauthorized, user must be logged in
+ *         description: User is already confirmed.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "User is already confirmed!!"
  *       500:
- *         description: Internal server error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /user/confirm-email/{emailVerificationToken}:
+ *   get:
+ *     summary: Confirm user email
+ *     description: Confirms a user's email address using the provided email verification token.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: emailVerificationToken
+ *         required: true
+ *         description: The email verification token sent to the user's email.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Email confirmed successfully.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: "Email is confirmed successfully"
+ *       400:
+ *         description: Bad request. Either the token is missing or invalid/expired.
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingToken:
+ *                 value:
+ *                   success: false
+ *                   message: "Verification Token is required"
+ *               invalidToken:
+ *                 value:
+ *                   success: false
+ *                   message: "Invalid or expired token"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Internal server error"
  */
 
 /**

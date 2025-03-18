@@ -1,11 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {
-  isLoggedIn,
-  protect,
-  verifyGoogleToken,
-  mockVerifyToken,
-} = require("../middlewares/auth");
+const { protect } = require("../middlewares/auth");
 
 const userController = require("../controllers/userController");
 
@@ -16,14 +11,15 @@ router
   .delete(protect, userController.deleteUser);
 
 router
-  .route("/resend-confirmation-email")
+  .route("/confirm-email")
   .get(protect, userController.resendConfirmationEmail);
 
 // router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
 router
   .route("/confirm-email/:emailVerificationToken")
-  .get(userController.confirmEmail);
+  .patch(userController.confirmEmail);
 router.route("/login").post(userController.login);
+router.route("/logout").post(userController.logout);
 router.route("/forgot-password").post(userController.forgotPassword);
 router
   .patch("/reset-password/:token", userController.resetPassword)
@@ -32,6 +28,5 @@ router
 router.post("/auth/google", userController.googleLogin);
 router.patch("/update-password", protect, userController.updatePassword);
 router.patch("/update-email", protect, userController.updateEmail);
-router.patch("/update-name", protect, userController.updateName);
 
 module.exports = router;
