@@ -176,7 +176,6 @@ const googleLogin = async (req, res) => {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
   const token = authHeader.split("Bearer ")[1];
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(token);
@@ -187,7 +186,6 @@ const googleLogin = async (req, res) => {
     const picture = decoded.picture;
     const emailVerified = decoded.email_verified;
     const googleUid = decoded.firebase?.identities?.["google.com"]?.[0];
-
     let user = await userModel.findOne({ email });
     if (!user || !user.isActive) {
       await userModel.findOneAndDelete({ email });
@@ -195,7 +193,7 @@ const googleLogin = async (req, res) => {
         firstName: name,
         lastName: name,
         email,
-        password: null,
+        password: undefined,
         isEmailConfirmed: true,
         googleId: googleUid,
       });
@@ -205,7 +203,7 @@ const googleLogin = async (req, res) => {
     if (user.googleId === null) {
       user.googleId = googleUid;
       await user.save();
-      return createSendToken(user, 200, res);
+      return createSendToken(user, 200, res, "Logged in successfully");
     }
 
     if (user.googleId != googleUid) {
