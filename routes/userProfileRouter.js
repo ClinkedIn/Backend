@@ -38,10 +38,10 @@ router.route('/skills/:skillName')
     .patch(protect, user.updateSkill)
     .delete(protect, user.deleteSkill);
 
-router.route('/skills/add-endorsement')
+router.route('/skills/endorsements/add-endorsement')
     .post(protect, user.addEndorsement);
 
-router.route('/skills/remove-endorsement/:skillName')
+router.route('/skills/endorsements/remove-endorsement/:skillName')
     .delete(protect, user.deleteEndorsement);
 
 router.route('/pictures/profile-picture')
@@ -49,7 +49,7 @@ router.route('/pictures/profile-picture')
     .get(protect, user.getProfilePicture)
     .delete(protect, user.deleteProfilePicture);
 
-router.route('/cover-picture')
+router.route('/pictures/cover-picture')
     .get(protect, user.getCoverPicture)
     .post(protect, upload.single('file'), user.uploadCoverPicture)
     .delete(protect, user.deleteCoverPicture);

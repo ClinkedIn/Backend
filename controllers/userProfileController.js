@@ -210,9 +210,6 @@ const deleteCoverPicture = (req, res) => handleUserPicture(req, res, 'coverPictu
 const getUserPicture = async (req, res, fieldName) => {
     try {
         const userId = req.user.id;
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res.status(400).json({ message: 'Invalid user ID' });
-        }
 
         // Find the user and retrieve only the required field
         const user = await userModel.findById(userId).select(fieldName);
@@ -388,36 +385,25 @@ const deleteResume = async (req, res) => {
 
 // Helper functions
 
-  const validateExperienceData = (data) => {
-    if (!data.jobTitle) {
-      throw { status: 400, message: 'Job Title is required' };
+const validateExperienceData = (data) => {
+    if (!data.jobTitle || !data.companyName || !data.fromDate) {
+        throw { status: 400, message: 'Job title, company name, and start date are required' };
     }
-    if (!data.companyName) {
-      throw { status: 400, message: 'Company Name is required' };
-    }
-    if (!data.fromDate) {
-      throw { status: 400, message: 'Start Date is required' };
-    }
-    
-    // Validate date formats
+
     const fromDate = new Date(data.fromDate);
     if (isNaN(fromDate.getTime())) {
-      throw { status: 400, message: 'Invalid Start Date' };
+        throw { status: 400, message: 'Invalid start date format' };
     }
-    
-    if (!data.currentlyWorking && !data.toDate) {
-      throw { status: 400, message: 'End Date is required' };
+
+    if (!data.currentlyWorking) {
+        if (!data.toDate || isNaN(new Date(data.toDate).getTime())) {
+            throw { status: 400, message: 'End date is required and must be a valid date if you are not currently working' };
+        }
     }
-    
-    if (!data.currentlyWorking && data.toDate) {
-      const toDate = new Date(data.toDate);
-      if (isNaN(toDate.getTime())) {
-        throw { status: 400, message: 'Invalid End Date' };
-      }
-    }
-  };
-  
-  const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
+};
+
+
+const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
     // Remove experienceIndex from skills that are no longer associated
     for (const skillName of oldSkills) {
       if (!newSkills.includes(skillName)) {
@@ -453,116 +439,102 @@ const deleteResume = async (req, res) => {
         }
       }
     }
-  };
+};
   
-  // Modified error handler to match test expectations
-  const handleControllerError = (error, res, operation) => {
-    console.error(`Error ${operation} experience:`, error);
-    const status = error.status || 500;
-    
-    // Match the expected error messages in the tests
-    if (status === 500) {
-      if (operation === 'adding') {
-        return res.status(status).json({
-          error: 'Failed to add experience',
-          details: error.message
-        });
-      } else {
-        return res.status(status).json({
-          message: 'Server error'
-        });
-      }
-    } else {
-      // For 4xx errors, maintain expected test format
-      return res.status(status).json({
-        error: error.message
-      });
-    }
-  };
-
-  const addExperience = async (req, res) => {
+const addExperience = async (req, res) => {
     try {
-      const userId = req.user.id;
-      
-      // Extract experience data from request body
-      const experienceData = {
-        jobTitle: req.body.jobTitle,
-        companyName: req.body.companyName,
-        fromDate: req.body.fromDate ? new Date(req.body.fromDate) : null,
-        toDate: req.body.currentlyWorking ? null : (req.body.toDate ? new Date(req.body.toDate) : null),
-        currentlyWorking: req.body.currentlyWorking,
-        employmentType: req.body.employmentType,
-        location: req.body.location,
-        locationType: req.body.locationType,
-        description: req.body.description,
-        foundVia: req.body.foundVia,
-        skills: req.body.skills || [], // Expecting an array of skills
-        media: null
-      };
+        const userId = req.user.id;
+        
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
 
-      if (req.file) {
-        try {
-            const fileBuffer = req.file.buffer;
-            const mimeType = req.file.mimetype;
-            const fileSize = req.file.size;
+        // Extract experience data from request body
+        const experienceData = {
+            jobTitle: req.body.jobTitle,
+            companyName: req.body.companyName,
+            fromDate: req.body.fromDate ? new Date(req.body.fromDate) : null,
+            toDate: req.body.currentlyWorking ? null : (req.body.toDate ? new Date(req.body.toDate) : null),
+            currentlyWorking: req.body.currentlyWorking,
+            employmentType: req.body.employmentType,
+            location: req.body.location,
+            locationType: req.body.locationType,
+            description: req.body.description,
+            foundVia: req.body.foundVia,
+            skills: req.body.skills || [], // Expecting an array of skills
+            media: null
+        };
 
-            // Upload the file and get the URL
-            experienceData.media = (await uploadPicture(fileBuffer, mimeType, fileSize)).url;
-        } catch (error) {
-            return res.status(400).json({ error: "Failed to upload media: " + error.message });
+        validateExperienceData(experienceData);
+        
+        // Handle media upload if a file is provided
+        if (req.file) {
+            try {
+                const fileBuffer = req.file.buffer;
+                const mimeType = req.file.mimetype;
+                const fileSize = req.file.size;
+                console.log("File Buffer: ", fileBuffer);
+                // Upload the file and get the URL
+                const uploadData = await uploadPicture(fileBuffer, mimeType, fileSize);
+                console.log("Upload Data: ", uploadData);
+                experienceData.media = uploadData.url;
+                console.log("Media added Successfully: ", experienceData.media);
+            } catch (error) {
+                return res.status(400).json({ error: "Failed to upload media: " + error.message });
+            }
+        }
+        // Ensure workExperience is initialized as an array
+        if (!user.workExperience) {
+            user.workExperience = [];
+            console.log("Work Experience Initialized");
+        }
+
+        // Add the new experience to the user's workExperience array
+        user.workExperience.push(experienceData);
+        // Sort work experience
+        user.workExperience = sortWorkExperience(user.workExperience);
+        // Get the index of the newly added experience
+        const experienceIndex = user.workExperience.findIndex(exp =>
+            exp.jobTitle === experienceData.jobTitle &&
+            exp.companyName === experienceData.companyName &&
+            exp.fromDate.getTime() === experienceData.fromDate.getTime()
+        );
+
+        // Update skills references if experience is found
+        if (experienceIndex !== -1 && experienceData.skills.length > 0) {
+            updateSkillExperienceReferences(user, experienceIndex, experienceData.skills, []);
+        }
+        console.log("Updated Skills References: ", user.skills);
+
+        // Save the updated user document
+        await user.save();
+
+        // Format response
+        const responseExperience = {
+            ...experienceData,
+            fromDate: experienceData.fromDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+            toDate: experienceData.toDate ? experienceData.toDate.toISOString().split('T')[0] : null
+        };
+
+        // Send response
+        return res.status(200).json({
+            message: 'Experience added successfully',
+            experience: responseExperience,
+            sortedWorkExperience: user.workExperience
+        });
+
+    } catch (error) {
+        console.error('Error adding experience:', error);
+        if (error.status) {
+            res.status(error.status).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'Internal server error', details: error.message });
         }
     }
-  
-      // Validate required fields
-      validateExperienceData(experienceData);
-  
-      // Find the user by ID
-      const user = await userModel.findById(userId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      // Add the new experience to the user's workExperience array
-      user.workExperience.push(experienceData);
-  
-      // Sort work experience
-      user.workExperience = sortWorkExperience(user.workExperience);
-  
-      // Get the index of the newly added experience
-      const experienceIndex = user.workExperience.findIndex(exp => 
-        exp.jobTitle === experienceData.jobTitle &&
-        exp.companyName === experienceData.companyName &&
-        exp.fromDate.getTime() === experienceData.fromDate.getTime()
-      );
-  
-      // Update skills references
-      if (experienceData.skills.length > 0) {
-        updateSkillExperienceReferences(user, experienceIndex, experienceData.skills, [])
-      }
-  
-      // Save the updated user document
-      await user.save();
-  
-      // Format response
-      const responseExperience = {
-        ...experienceData,
-        fromDate: experienceData.fromDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-        toDate: experienceData.toDate ? experienceData.toDate.toISOString().split('T')[0] : null
-      };
-  
-      // Send response
-      return res.status(200).json({
-        message: 'Experience added successfully',
-        experience: responseExperience,
-        sortedWorkExperience: user.workExperience
-      });
-  
-    } catch (error) {
-      return handleControllerError(error, res, 'adding');
-    }
-  };
-  
-  const getExperience = async (req, res) => {
+};
+
+const getExperience = async (req, res) => {
     try {
       const userId = req.user.id;
       const experienceIndex = parseInt(req.params.index, 10);
@@ -585,9 +557,9 @@ const deleteResume = async (req, res) => {
       console.error('Error fetching experience:', error);
       res.status(500).json({ error: 'Internal server error', details: error.message });
     }
-  };
+};
   
-  const getAllExperiences = async (req, res) => {
+const getAllExperiences = async (req, res) => {
     try {
       const userId = req.user.id;
       const user = await userModel.findById(userId);
@@ -601,20 +573,17 @@ const deleteResume = async (req, res) => {
       console.error('Error fetching experiences:', error);
       res.status(500).json({ message: 'Server error' });
     }
-  };
+};
   
-  const updateExperience = async (req, res) => {
+const updateExperience = async (req, res) => {
     try {
       const userId = req.user.id;
       const experienceIndex = parseInt(req.params.index, 10);
       const updates = req.body;
         
       // Validate dates if provided
-      if (updates.fromDate && isNaN(Date.parse(updates.fromDate))) {
-        return res.status(400).json({ error: 'Invalid Start Date' });
-      }
-      if (updates.toDate && isNaN(Date.parse(updates.toDate))) {
-        return res.status(400).json({ error: 'Invalid End Date' });
+      if (updates.fromDate && isNaN(Date.parse(updates.fromDate)) || updates.toDate && isNaN(Date.parse(updates.toDate))) {
+        return res.status(400).json({ error: 'Invalid Data' });
       }
   
       const user = await userModel.findById(userId);
@@ -675,9 +644,9 @@ const deleteResume = async (req, res) => {
       console.error('Error updating experience:', error);
       res.status(500).json({ message: 'Server error' });
     }
-  };
+};
   
-  const deleteExperience = async (req, res) => {
+const deleteExperience = async (req, res) => {
     try {
       const userId = req.user.id;
       const experienceIndex = parseInt(req.params.index, 10);
@@ -723,7 +692,7 @@ const deleteResume = async (req, res) => {
       console.error('Error deleting experience:', error);
       res.status(500).json({ error: 'Internal server error', details: error.message });
     }
-  };
+};
 
 
 
@@ -741,7 +710,7 @@ const addSkill = async (req, res) => {
         // Validate skill name
         const skillValidation = await validateSkillName(skillName);
         if (!skillValidation.valid) {
-            return res.status(400).json({ error: skillValidation.message });
+            return res.status(400).json({ error: "Invalid skill name" });
         }
 
         // Check if skill already exists and fetch user
@@ -861,6 +830,10 @@ const updateSkill = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        if (!user.skills || user.skills.length === 0) {
+            return res.status(404).json({ error: 'User has no skills to update' });
+        }
         // validate skill index
         // Find the skill index
         const skillIndex = user.skills.findIndex(skill => skill.skillName.toLowerCase() === skillName.toLowerCase());
@@ -964,7 +937,7 @@ const updateSkill = async (req, res) => {
             message: 'Skill updated successfully', 
             skills: updatedUser.skills
         });
-
+        
     } catch (error) {
         console.error('Error updating skill:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -986,7 +959,8 @@ const deleteSkill = async (req, res) => {
             return res.status(404).json({ error: 'Skill not found' });
         }
 
-        const skillToDelete = user.skills[0];
+        // Use the plain skill name instead of the regex
+        const skillToDelete = { skillName: user.skills[0].skillName };
 
         // Remove skill from the user's skills array
         const result = await userModel.findByIdAndUpdate(
@@ -1021,13 +995,14 @@ const deleteSkill = async (req, res) => {
     }
 };
 
+
 const addEndorsement = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillOwnerId, skillName } = req.body;
-        
         if (userId == skillOwnerId) {
-            return res.status(400).json({ error: "User cannot endorse himself" });
+            console.log("USER ID IS SAME AS OWNER ID")
+            return res.status(400).json({ message: "User cannot endorse himself" });
         }
 
         let user = await userModel.findOne(
@@ -1036,12 +1011,12 @@ const addEndorsement = async (req, res) => {
         );
 
         if (!user) {
-            return res.status(404).json({ error: "User or skill not found" });
+            return res.status(404).json({ message: "User or skill not found" });
         }
 
         const skill = user.skills[0];
         if (skill.endorsements.some(id => id.toString() === userId)) {
-            return res.status(400).json({ error: "You have already endorsed this skill once" });
+            return res.status(400).json({ message: "You have already endorsed this skill once" });
         }
 
         user = await userModel.findOneAndUpdate(
@@ -1061,7 +1036,7 @@ const addEndorsement = async (req, res) => {
 
     } catch (error) {
         console.error("Error endorsing skill:", error);
-        res.status(500).json({ error: "Internal server error", details: error.message });
+        res.status(500).json({ message: "Internal server error", details: error.message });
     }
 };
 
@@ -1081,8 +1056,13 @@ const deleteEndorsement = async (req, res) => {
             return res.status(404).json({ error: "User or skill not found" });
         }
 
+        if (user.skills.length > 0) {
         const skill = user.skills[0];
         if (!skill.endorsements.includes(userId)) {
+            return res.status(404).json({ error: "No endorsement found from this user for this skill" });
+        }
+        }
+        else {
             return res.status(404).json({ error: "No endorsement found from this user for this skill" });
         }
 
@@ -1106,8 +1086,6 @@ const deleteEndorsement = async (req, res) => {
         res.status(500).json({ error: "Internal server error", details: error.message });
     }
 };
-
-
 
 //------------------------------------------EDUCATION--------------------------
 const updateSkillsReferences = async (user, educationIndex, newSkills = [], oldSkills = []) => {
@@ -1859,5 +1837,6 @@ module.exports = {
     followEntity,
     unfollowEntity,
     editContactInfo,
-    editAbout
+    editAbout,
+    uploadPicture
 };

@@ -122,14 +122,17 @@ const userSchema = new mongoose.Schema(
       type: Number, // Index of the education in the education array
       default: null, // First education entry is default
     },
-    skills: [
-      {
-        skillName: { type: String, required: true },
-        endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-        education: { type: [Number], default: [] },
-        experience: { type: [Number], default: [] },
-      },
-    ],
+    skills: {
+      type: [
+        {
+          skillName: { type: String, required: true },
+          endorsements: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+          education: { type: [Number], default: [] },
+          experience: { type: [Number], default: [] },
+        },
+      ],
+      default: [],
+    },
 
     education: [
       {
