@@ -871,6 +871,9 @@
  *                             lastName:
  *                               type: string
  *                               example: "Smith"
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -980,32 +983,15 @@
  *         description: Unauthorized, invalid or missing token
  *       404:
  *         description: Post not found
- *   put:
- *     summary: Update a post
- *     tags: [Posts]
- *     description: Modify an existing post by ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreatePostRequest'
- *     responses:
- *       200:
- *         description: Post updated successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Post not found
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
  *   delete:
  *     summary: Delete a post
  *     tags: [Posts]
- *     description: Remove a post by its ID
+ *     description: Performs a soft delete of a post by marking it as inactive. Only the post owner can delete their posts.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1014,14 +1000,250 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to delete
  *     responses:
  *       200:
  *         description: Post deleted successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post deleted successfully"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own posts"
+ *       404:
+ *         description: Post not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
+ *   put:
+ *     summary: Update a post
+ *     tags: [Posts]
+ *     description: Updates a post's description and/or tagged users. Only the post owner can update their posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: The updated text content of the post
+ *                 example: "Updated post description with new information"
+ *               taggedUsers:
+ *                 type: array
+ *                 description: List of users tagged in the post
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c86"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Smith"
+ *                     companyName:
+ *                       type: string
+ *                       example: null
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post updated successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Updated post description with new information"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/image.jpg"
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-15T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *       400:
+ *         description: Bad request - invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post description cannot be empty"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only update your own posts"
  *       404:
  *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1030,7 +1252,7 @@
  *   post:
  *     summary: Save a post
  *     tags: [Posts]
- *     description: Save a post to a user's collection
+ *     description: Save a post to the user's saved posts collection
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1039,30 +1261,61 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: ID of the post to save
  *     responses:
  *       200:
  *         description: Post saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post saved successfully"
+ *       400:
+ *         description: Bad request - missing post ID or post already saved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *   delete:
- *     summary: Unsave a post
- *     tags: [Posts]
- *     description: Remove a post from a user's saved list
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     responses:
- *       200:
- *         description: Post unsaved successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to save post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**

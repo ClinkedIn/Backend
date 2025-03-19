@@ -10,11 +10,11 @@ router.route('/')
 
 router.route('/:postId')
     .get(postController.getPost)
-    .put(postController.updatePost)
-    .delete(postController.deletePost);
+    .put(protect,postController.updatePost)
+    .delete(protect,postController.deletePost);
 
 router.route('/:postId/save')
-    .post(postController.savePost)
+    .post(protect,postController.savePost)
     .delete(postController.unsavePost);
 
 router.route('/:postId/like')

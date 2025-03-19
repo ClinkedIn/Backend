@@ -90,11 +90,138 @@ const getPost = async (req, res) => {
 };
 
 const deletePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Find the post
+        const post = await postModel.findById(postId);
+        
+        // Check if post exists
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        
+        // Check if post is already inactive (deleted)
+        if (!post.isActive) {
+            return res.status(404).json({ message: 'Post not found or already deleted' });
+        }
+        
+        // Check if user is the owner of the post
+        if (post.userId.toString() !== userId) {
+            return res.status(403).json({ message: 'You can only delete your own posts' });
+        }
+        
+        // Soft delete by setting isActive to false
+        await postModel.findByIdAndUpdate(postId, { 
+            isActive: false,
+            updatedAt: Date.now()
+        });
+        
+        res.status(200).json({ message: 'Post deleted successfully' });
+        
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        res.status(500).json({
+            message: 'Failed to delete post',
+            error: error.message
+        });
+    }
 };
 
 const updatePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { description, taggedUsers } = req.body;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Find the post
+        const post = await postModel.findById(postId);
+        
+        // Check if post exists
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        
+        // Check if user is the owner of the post
+        if (post.userId.toString() !== userId) {
+            return res.status(403).json({ message: 'You can only update your own posts' });
+        }
+        
+        if (!post.isActive) {
+            return res.status(400).json({ message: 'Cannot update inactive posts' });
+        }
+
+        // Create update object with only allowed fields
+        const updateData = {};
+        
+        if (description !== undefined) {
+            // Validate description if provided
+            if (description.trim() === '') {
+                return res.status(400).json({ message: 'Post description cannot be empty' });
+            }
+            updateData.description = description;
+        }
+        
+        if (taggedUsers !== undefined) {
+            updateData.taggedUsers = taggedUsers;
+        }
+        
+        // Only perform update if there are changes
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ message: 'No valid fields to update' });
+        }
+        
+        // Update the post with new data and return the updated document
+        const updatedPost = await postModel.findByIdAndUpdate(
+            postId, 
+            { 
+                ...updateData,
+                updatedAt: Date.now() // Explicitly update the timestamp
+            },
+            { new: true } // Return the modified document
+        ).populate('userId', 'firstName lastName headline profilePicture');
+        
+        // Format response to match your API standard
+        const postResponse = {
+            postId: updatedPost._id,
+            userId: updatedPost.userId._id,
+            firstName: updatedPost.userId.firstName,
+            lastName: updatedPost.userId.lastName,
+            headline: updatedPost.userId.headline || "",
+            profilePicture: updatedPost.userId.profilePicture,
+            postDescription: updatedPost.description,
+            attachments: updatedPost.attachments,
+            impressionCounts: updatedPost.impressionCounts,
+            commentCount: updatedPost.commentCount || 0,
+            repostCount: updatedPost.repostCount || 0,
+            createdAt: updatedPost.createdAt,
+            updatedAt: updatedPost.updatedAt,
+            taggedUsers: updatedPost.taggedUsers
+        };
+        
+        res.status(200).json({
+            message: 'Post updated successfully',
+            post: postResponse
+        });
+        
+    } catch (error) {
+        console.error('Error updating post:', error);
+        res.status(500).json({
+            message: 'Failed to update post',
+            error: error.message
+        });
+    }
 };
 
 
@@ -107,12 +234,12 @@ const getAllPosts = async (req, res) => {
         
         // Get current user's connections and following
         const currentUser = await userModel.findById(userId)
-            .select('connections following');
+            .select('connections following savedPosts');
         
         if (!currentUser) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
+        const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
         // Extract IDs with proper null checks
         const connectionIds = (currentUser.connections || []).map(conn => conn.toString());
         const followedUserIds = (currentUser.following || [])
@@ -205,7 +332,7 @@ const getAllPosts = async (req, res) => {
             // For posts that have multiple reposters, use the most relevant one 
             // (e.g., first one in the array, which could be sorted by date if needed)
             const repostDetails = repostInfo ? repostInfo[0] : null;
-            
+            const isSaved = savedPostsSet.has(post._id.toString());
             return {
                 postId: post._id,
                 userId: post.userId._id,
@@ -221,6 +348,7 @@ const getAllPosts = async (req, res) => {
                 createdAt: post.createdAt,
                 taggedUsers: post.taggedUsers,
                 isRepost: isRepost,
+                isSaved: isSaved,
                 // Only include repost details if this is a repost
                 ...(isRepost && {
                     repostId: repostDetails.repostId,
@@ -257,7 +385,45 @@ const getAllPosts = async (req, res) => {
 
 // Save a post
 const savePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ _id: postId, isActive: true });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Check if user has already saved this post
+        const user = await userModel.findById(userId);
+        
+        if (user.savedPosts && user.savedPosts.includes(postId)) {
+            return res.status(400).json({ message: 'Post already saved' });
+        }
+        
+        // Save the post to user's savedPosts array
+        await userModel.findByIdAndUpdate(
+            userId,
+            { $push: { savedPosts: postId } },
+            { new: true }
+        );
+        
+        res.status(200).json({ message: 'Post saved successfully' });
+        
+    } catch (error) {
+        console.error('Error saving post:', error);
+        res.status(500).json({
+            message: 'Failed to save post',
+            error: error.message
+        });
+    }
 };
 
 const unsavePost = async (req, res) => {
