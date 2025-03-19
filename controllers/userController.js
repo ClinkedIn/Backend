@@ -232,7 +232,13 @@ const login = async (req, res) => {
     if (!user) {
       return res
         .status(404)
-        .json({ message: "Pleas enter a registered email" });
+        .json({ message: "Please enter a registered email" });
+    }
+
+    if (user.googleId !== null && !user.password) {
+      return res.status(401).json({
+        message: "Please login with google",
+      });
     }
 
     const isPasswordValid = await user.correctPassword(password, user.password);
@@ -314,6 +320,13 @@ const forgotPassword = async (req, res) => {
         message: "This email is not registerd",
       });
     }
+
+    if (user.googleId !== null && !user.password) {
+      return res.status(401).json({
+        message: "Please login with google",
+      });
+    }
+
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
@@ -423,7 +436,14 @@ const updatePassword = async (req, res) => {
         .status(400)
         .json({ message: "Please fill all required fields" });
     }
+
+    if (user.googleId !== null && !user.password) {
+      return res.status(401).json({
+        message: "Please login with google",
+      });
+    }
     // check if the password is correct
+
     if (
       !user ||
       !(await user.correctPassword(req.body.currentPassword, user.password))
@@ -456,8 +476,13 @@ const updateEmail = async (req, res) => {
   try {
     // get the user from the collection
     const user = await userModel.findById(req.user.id);
-    const { newEmail, password } = req.body;
 
+    if (user.googleId !== null && !user.password) {
+      return res.status(401).json({
+        message: "Please login with google",
+      });
+    }
+    const { newEmail, password } = req.body;
     if (!newEmail || !password) {
       return res
         .status(400)
