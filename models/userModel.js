@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
+    password: { type: String, required: false },
     profilePicture: { type: String, default: null },
     coverPicture: { type: String, default: null },
     resume: { type: String, default: null },
@@ -245,7 +245,7 @@ const userSchema = new mongoose.Schema(
 ); // Adds createdAt & updatedAt automatically
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
+  if (!this.isModified("password") || !this.password) {
     return next();
   }
   this.password = await bcrypt.hash(this.password, 10);
@@ -267,13 +267,10 @@ userSchema.methods.correctPassword = async function (
 
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
-  console.log(resetToken);
   this.passwordResetToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-
-  console.log(resetToken);
 
   this.passwordResetExpiresAt = Date.now() + 10 * 60 * 1000;
   return resetToken;

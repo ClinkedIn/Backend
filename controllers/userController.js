@@ -1,7 +1,6 @@
 const userModel = require("../models/userModel");
 const crypto = require("crypto");
 const firebaseAdmin = require("./../utils/firebase");
-require("dotenv").config();
 const {
   sendEmailConfirmation,
   sendForgotPasswordEmail,
@@ -14,33 +13,18 @@ const { verifyCaptcha } = require("../utils/verifyCaptcha");
 const { generateTokens } = require("./../middlewares/auth");
 
 const createSendToken = (user, statusCode, res, responseMessage) => {
-  const { accessToken, refreshToken } = generateTokens(user, res);
+  generateTokens(user, res);
 
   return res.status(statusCode).json({
     status: "success",
     message: responseMessage,
-    data: {
-      accessToken,
-      refreshToken,
-      user,
-    },
   });
-};
-
-const filterObj = (obj, ...allowedFields) => {
-  const newObj = {};
-  Object.keys(obj).forEach((el) => {
-    if (allowedFields.includes(el)) {
-      newObj[el] = obj[el];
-    }
-  });
-  return newObj;
 };
 
 const registerUser = async (req, res) => {
   try {
     // get registration data
-    const { firstName, lastName, email, password, recaptchaResponseToken } =
+    let { firstName, lastName, email, password, recaptchaResponseToken } =
       req.body;
     if (
       !firstName ||
@@ -51,16 +35,17 @@ const registerUser = async (req, res) => {
     ) {
       return res.status(400).json({ message: "all fields are required" });
     }
+    email = email.toLowerCase();
     //validate email format and password requirements
     const isValidEmail = validateEmail(email);
     if (!isValidEmail) {
       return res
-        .status(400)
+        .status(422)
         .json({ message: "Email not valid, Write a valid email" });
     }
     const isValidPassword = validatePassword(password);
     if (!isValidPassword) {
-      return res.status(400).json({
+      return res.status(422).json({
         message:
           "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
       });
@@ -71,9 +56,8 @@ const registerUser = async (req, res) => {
     const captchaResponse = await verifyCaptcha(recaptchaResponseToken);
 
     if (!captchaResponse) {
-      return res.status(400).json({
-        success: false,
-        errors: [{ msg: "reCAPTCHA verification failed. Please try again." }],
+      return res.status(422).json({
+        message: "reCAPTCHA verification failed. Please try again.",
       });
     }
 
@@ -95,7 +79,7 @@ const registerUser = async (req, res) => {
       lastName,
       email,
       password,
-      isEmailConfirmed: false,
+      isConfirmed: false,
     });
 
     // remove get confirm-email end point and directly send from here ✅
@@ -138,6 +122,10 @@ const resendConfirmationEmail = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
@@ -174,10 +162,10 @@ const confirmEmail = async (req, res) => {
       message: "Email is confirmed successfully",
     });
   } catch (error) {
+    console.log(error);
     return res.status(500).json({
       success: false,
-      message: "Email confirmation failed",
-      error: error.message,
+      message: "Internal server error",
     });
   }
 };
@@ -188,9 +176,7 @@ const googleLogin = async (req, res) => {
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
   const token = authHeader.split("Bearer ")[1];
-  console.log(token);
   try {
     const decoded = await firebaseAdmin.auth().verifyIdToken(token);
 
@@ -200,7 +186,6 @@ const googleLogin = async (req, res) => {
     const picture = decoded.picture;
     const emailVerified = decoded.email_verified;
     const googleUid = decoded.firebase?.identities?.["google.com"]?.[0];
-
     let user = await userModel.findOne({ email });
     if (!user || !user.isActive) {
       await userModel.findOneAndDelete({ email });
@@ -208,7 +193,7 @@ const googleLogin = async (req, res) => {
         firstName: name,
         lastName: name,
         email,
-        password: null,
+        password: undefined,
         isEmailConfirmed: true,
         googleId: googleUid,
       });
@@ -218,7 +203,7 @@ const googleLogin = async (req, res) => {
     if (user.googleId === null) {
       user.googleId = googleUid;
       await user.save();
-      return createSendToken(user, 200, res);
+      return createSendToken(user, 200, res, "Logged in successfully");
     }
 
     if (user.googleId != googleUid) {
@@ -238,14 +223,16 @@ const login = async (req, res) => {
 
     if (!email || !password) {
       return res
-        .status(401)
-        .json({ message: "please provide email and password" });
+        .status(400)
+        .json({ message: "Please fill all required fields" });
     }
 
     const user = await userModel.findOne({ email, isActive: true });
 
     if (!user) {
-      return res.status(401).json({ message: "wrong email" });
+      return res
+        .status(404)
+        .json({ message: "Pleas enter a registered email" });
     }
 
     const isPasswordValid = await user.correctPassword(password, user.password);
@@ -257,6 +244,36 @@ const login = async (req, res) => {
     createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+    });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Logged out successfully",
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
@@ -272,12 +289,27 @@ const deleteUser = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
+    const email = req.body.email;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all required fields",
+      });
+    }
+
+    if (!validateEmail(email)) {
+      return res.status(422).json({
+        success: false,
+        message: "Please enter a valid email",
+      });
+    }
+
     const user = await userModel.findOne({
       email: req.body.email,
       isActive: true,
     });
     if (!user) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: "This email is not registerd",
       });
@@ -303,6 +335,10 @@ const forgotPassword = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
@@ -310,7 +346,6 @@ const resetPassword = async (req, res) => {
   try {
     //get user based on the token
     const token = req.params.token;
-    console.log(token);
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await userModel.findOne({
       isActive: true,
@@ -320,14 +355,16 @@ const resetPassword = async (req, res) => {
     // if token is not expired
     if (!user) {
       return res
-        .status(400)
+        .status(401)
         .json({ message: "Token is invalid or has expired" });
     }
-    // update changedpasswordat
-    const password = req.body.password;
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
     const isValidPassword = validatePassword(password);
     if (!isValidPassword) {
-      return res.status(400).json({
+      return res.status(422).json({
         message:
           "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
       });
@@ -341,6 +378,10 @@ const resetPassword = async (req, res) => {
     createSendToken(user, 200, res, "Password restted successfully");
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
@@ -348,7 +389,6 @@ const verifyResetPasswordToken = async (req, res) => {
   try {
     //get user based on the token
     const token = req.params.token;
-    //console.log(token);
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
     const user = await userModel.findOne({
       isActive: true,
@@ -377,6 +417,12 @@ const updatePassword = async (req, res) => {
   try {
     // get the user from the collection
     const user = await userModel.findById(req.user.id);
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Please fill all required fields" });
+    }
     // check if the password is correct
     if (
       !user ||
@@ -390,7 +436,7 @@ const updatePassword = async (req, res) => {
     const password = req.body.newPassword;
     const isValidPassword = validatePassword(password);
     if (!isValidPassword) {
-      return res.status(400).json({
+      return res.status(422).json({
         message:
           "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
       });
@@ -402,6 +448,7 @@ const updatePassword = async (req, res) => {
     createSendToken(user, 200, res, "Password updated successfully");
   } catch (error) {
     console.log(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -410,6 +457,13 @@ const updateEmail = async (req, res) => {
     // get the user from the collection
     const user = await userModel.findById(req.user.id);
     const { newEmail, password } = req.body;
+
+    if (!newEmail || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please fill all required fields" });
+    }
+
     // check if the password is correct
     if (!user || !(await user.correctPassword(password, user.password))) {
       return res
@@ -419,14 +473,25 @@ const updateEmail = async (req, res) => {
     const isValidEmail = validateEmail(newEmail);
     if (!isValidEmail) {
       return res
-        .status(400)
+        .status(422)
         .json({ message: "Email not valid, Write a valid email" });
     }
+
+    const existingUser = await userModel.findOne({ email: newEmail });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ message: "Email is already registered, use another email" });
+    }
+
     user.email = newEmail;
     user.isConfirmed = false;
     await user.save();
-
-    await sendEmailConfirmation(user.id);
+    try {
+      await sendEmailConfirmation(user.id);
+    } catch (err) {
+      console.log(err);
+    }
     // log user in send jwt
     createSendToken(
       user,
@@ -436,23 +501,10 @@ const updateEmail = async (req, res) => {
     );
   } catch (error) {
     console.log(error);
-  }
-};
-
-const updateName = async (req, res) => {
-  try {
-    const filteredBody = filterObj(req.body, "firstName", "lastName");
-    const updatedUser = await userModel.findByIdAndUpdate(
-      req.user.id,
-      filteredBody,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-    createSendToken(updatedUser, 200, res, "Name updated sucessfully");
-  } catch (error) {
-    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
 
@@ -464,9 +516,9 @@ module.exports = {
   resetPassword,
   updatePassword,
   deleteUser,
-  updateName,
   updateEmail,
   verifyResetPasswordToken,
   googleLogin,
   resendConfirmationEmail,
+  logout,
 };

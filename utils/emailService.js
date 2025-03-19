@@ -21,7 +21,7 @@ const createConfirmationEmail = async (resetURL, email, token) => {
       <p>Thank you for registering with our Lockedin. Please confirm your email by clicking the link below:</p>
       <a href="${resetURL}"
    onclick="event.preventDefault(); fetch(this.href, {
-     method: 'GET',
+     method: 'PATCH',
      headers: { 'Content-Type': 'application/json' },
    });">
    Confirm Email
