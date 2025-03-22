@@ -962,7 +962,7 @@
  *   get:
  *     summary: Get a single post
  *     tags: [Posts]
- *     description: Retrieve a specific post by its ID
+ *     description: Retrieve a specific post by its ID. Honors post privacy settings and includes saved status.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -971,18 +971,194 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to retrieve
  *     responses:
  *       200:
  *         description: Post retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post retrieved successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Excited to share my latest project!"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["https://res.cloudinary.com/example/image/upload/image.jpg"]
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                     whoCanSee:
+ *                       type: string
+ *                       enum: [anyone, connections]
+ *                       example: "anyone"
+ *                     whoCanComment:
+ *                       type: string
+ *                       enum: [anyone, connections, noOne]
+ *                       example: "anyone"
+ *                     isSaved:
+ *                       type: boolean
+ *                       example: true
+ *                     isRepost:
+ *                       type: boolean
+ *                       example: true
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c87"
+ *                     reposterId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c88"
+ *                     reposterFirstName:
+ *                       type: string
+ *                       example: "Robert"
+ *                     reposterLastName:
+ *                       type: string
+ *                       example: "Johnson"
+ *                     reposterProfilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile2.jpg"
+ *                     reposterHeadline:
+ *                       type: string
+ *                       example: "Marketing Manager at Company XYZ"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "Great insights in this post!"
+ *                     repostDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T10:15:30.123Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have access to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This post is only visible to the author's connections"
  *       404:
  *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**

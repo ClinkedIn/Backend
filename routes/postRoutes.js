@@ -9,17 +9,17 @@ router.route('/')
 
 
 router.route('/:postId')
-    .get(postController.getPost)
+    .get(protect,postController.getPost)
     .put(protect,postController.updatePost)
     .delete(protect,postController.deletePost);
 
 router.route('/:postId/save')
     .post(protect,postController.savePost)
-    .delete(postController.unsavePost);
+    .delete(protect,postController.unsavePost);
 
 router.route('/:postId/like')
-    .post(postController.likePost)
-    .delete(postController.unlikePost); 
+    .post(protect,postController.likePost)
+    .delete(protect,postController.unlikePost); 
 
 router.route('/:postId/repost')
     .post(postController.repostPost);

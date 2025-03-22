@@ -4,6 +4,8 @@ const { protect, mockVerifyToken } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
+router.route('/me')
+    .get(protect, user.getMe);
 router.route('/:userId')
     .get(protect, user.getUserProfile);
 router.route('/')
@@ -16,9 +18,6 @@ router.route('/education/:index')
     .get(protect,user.getEducation)
     .patch(protect, upload.single('file'), user.editEducation)
     .delete(protect,user.deleteEducation);
-
-router.route('/me')
-    .get(protect, user.getMe);
 router.route('/profile')
     .patch(protect,user.editIntro);
 

@@ -86,7 +86,105 @@ const createPost = async (req, res) => {
 };
 
 const getPost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const postId = req.params.postId;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Get the post and check if it's active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        }).populate('userId', 'firstName lastName headline profilePicture connections');
+        
+        // Check if post exists
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        
+        // Check privacy settings - if post is connections only
+        if (post.whoCanSee === 'connections') {
+            // If user is not the post owner
+            if (post.userId.toString() !== userId) {
+                // Get the post owner's connections
+                const connections = post.userId.connections || [];
+                
+                // Check if current user is in the connections
+                const isConnected = connections.some(
+                    connectionId => connectionId.toString() === userId
+                );
+                
+                if (!isConnected) {
+                    return res.status(403).json({ 
+                        message: 'This post is only visible to the author\'s connections' 
+                    });
+                }
+            }
+            // If user is the post owner, they can see it regardless of privacy settings
+        }
+        
+        // Check if current user has saved this post
+        const currentUser = await userModel.findById(userId).select('savedPosts');
+        const isSaved = currentUser && currentUser.savedPosts && 
+                        currentUser.savedPosts.some(savedId => savedId.toString() === postId);
+        
+        // Check if post is a repost
+        const repost = await repostModel.findOne({
+            postId,
+            isActive: true
+        }).populate('userId', 'firstName lastName profilePicture headline');
+        
+        const isRepost = !!repost;
+        
+        // Format post response
+        const postResponse = {
+            postId: post._id,
+            userId: post.userId._id,
+            firstName: post.userId.firstName,
+            lastName: post.userId.lastName,
+            headline: post.userId.headline || "",
+            profilePicture: post.userId.profilePicture,
+            postDescription: post.description,
+            attachments: post.attachments,
+            impressionCounts: post.impressionCounts,
+            commentCount: post.commentCount || 0,
+            repostCount: post.repostCount || 0,
+            createdAt: post.createdAt,
+            updatedAt: post.updatedAt,
+            taggedUsers: post.taggedUsers,
+            whoCanSee: post.whoCanSee, // Include privacy setting in response
+            whoCanComment: post.whoCanComment, // Include comment setting in response
+            isRepost,
+            isSaved,
+            // Include repost details if applicable
+            ...(isRepost && {
+                repostId: repost._id,
+                reposterId: repost.userId._id,
+                reposterFirstName: repost.userId.firstName,
+                reposterLastName: repost.userId.lastName,
+                reposterProfilePicture: repost.userId.profilePicture,
+                reposterHeadline: repost.userId.headline || "",
+                repostDescription: repost.description,
+                repostDate: repost.createdAt
+            })
+        };
+        
+        res.status(200).json({
+            message: 'Post retrieved successfully',
+            post: postResponse
+        });
+        
+    } catch (error) {
+        console.error('Error retrieving post:', error);
+        res.status(500).json({
+            message: 'Failed to retrieve post',
+            error: error.message
+        });
+    }
 };
 
 const deletePost = async (req, res) => {
@@ -427,17 +525,222 @@ const savePost = async (req, res) => {
 };
 
 const unsavePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ _id: postId, isActive: true });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Check if user has saved this post
+        const user = await userModel.findById(userId);
+        
+        if (!user.savedPosts || !user.savedPosts.includes(postId)) {
+            return res.status(400).json({ message: 'Post is not in saved posts' });
+        }
+        
+        // Remove the post from user's savedPosts array
+        await userModel.findByIdAndUpdate(
+            userId,
+            { $pull: { savedPosts: postId } },
+            { new: true }
+        );
+        
+        res.status(200).json({ message: 'Post removed from saved posts successfully' });
+        
+    } catch (error) {
+        console.error('Error unsaving post:', error);
+        res.status(500).json({
+            message: 'Failed to remove post from saved posts',
+            error: error.message
+        });
+    }
 };
 
-
-// Like a post
 const likePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { impressionType = 'like' } = req.body; // Default to 'like' if not specified
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Validate impression type
+        const validImpressionTypes = ['like', 'support', 'celebrate', 'love', 'insightful', 'funny'];
+        if (!validImpressionTypes.includes(impressionType)) {
+            return res.status(400).json({ 
+                message: 'Invalid impression type',
+                validTypes: validImpressionTypes
+            });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Check if user has already impressed this post
+        const existingImpression = await impressionModel.findOne({
+            targetId: postId,
+            targetType: "Post",
+            userId: userId,
+        });
+        if (existingImpression) {
+            // If the user already has an active impression on this post
+            if (existingImpression.type === impressionType) {
+                return res.status(400).json({ 
+                    message: `You have already ${impressionType}d this post` 
+                });
+            } else {
+                // Store the old type before updating
+                const oldType = existingImpression.type;
+                
+                // If they're changing their impression type, update it
+                existingImpression.type = impressionType;
+                await existingImpression.save();
+                
+                // Initialize impression counts if needed
+                const impressionCounts = post.impressionCounts || {};
+                
+                // Calculate new counts
+                const oldTypeCount = Math.max(0, (impressionCounts[oldType] || 1) - 1);
+                const newTypeCount = (impressionCounts[impressionType] || 0) + 1;
+                
+                // Use findByIdAndUpdate with specific field updates to avoid validation issues
+                const updatedPost = await postModel.findByIdAndUpdate(
+                    postId,
+                    { 
+                        [`impressionCounts.${oldType}`]: oldTypeCount,
+                        [`impressionCounts.${impressionType}`]: newTypeCount
+                    },
+                    { new: true }
+                );
+                
+                return res.status(200).json({ 
+                    message: `Impression changed from ${oldType} to ${impressionType}`,
+                    impressionCounts: updatedPost.impressionCounts
+                });
+            }
+        }
+        
+        // Create new impression
+        const newImpression = await impressionModel.create({
+            targetId: postId,
+            targetType: "Post",
+            userId,
+            type: impressionType,
+            isActive: true
+        });
+        // Initialize impression counts if needed
+        const impressionCounts = post.impressionCounts || {};
+        const typeCount = (impressionCounts[impressionType] || 0) + 1;
+        const totalCount = (impressionCounts.total || 0) + 1;
+        
+        // Use findByIdAndUpdate with specific field updates to avoid validation issues
+        const updatedPost = await postModel.findByIdAndUpdate(
+            postId,
+            { 
+                [`impressionCounts.${impressionType}`]: typeCount,
+                'impressionCounts.total': totalCount
+            },
+            { new: true }
+        );
+        
+        res.status(200).json({ 
+            message: `Post ${impressionType}d successfully`,
+            impressionCounts: updatedPost.impressionCounts
+        });
+        
+    } catch (error) {
+        console.error(`Error ${req.body.impressionType || 'like'}ing post:`, error);
+        res.status(500).json({
+            message: `Failed to ${req.body.impressionType || 'like'} post`,
+            error: error.message
+        });
+    }
 };
 
 const unlikePost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Check if user has an active impression on this post
+        const existingImpression = await impressionModel.findOne({
+            targetId: postId,
+            targetType: "Post",
+            userId,
+        });
+        
+        if (!existingImpression) {
+            return res.status(400).json({ message: 'You have not reacted to this post' });
+        }
+        
+        // Get the impression type before deleting
+        const impressionType = existingImpression.type;
+        
+        // Hard delete the impression
+        await impressionModel.findByIdAndDelete(existingImpression._id);
+        
+        // Initialize impression counts if needed
+        const impressionCounts = post.impressionCounts || {};
+        const typeCount = Math.max(0, (impressionCounts[impressionType] || 0) - 1);
+        const totalCount = Math.max(0, (impressionCounts.total || 0) - 1);
+        
+        // Use findByIdAndUpdate with specific field updates to avoid validation issues
+        const updatedPost = await postModel.findByIdAndUpdate(
+            postId,
+            { 
+                [`impressionCounts.${impressionType}`]: typeCount,
+                'impressionCounts.total': totalCount
+            },
+            { new: true }
+        );
+        
+        res.status(200).json({
+            message: `Post ${impressionType} removed successfully`,
+            impressionCounts: updatedPost.impressionCounts
+        });
+        
+    } catch (error) {
+        console.error('Error removing post impression:', error);
+        res.status(500).json({
+            message: 'Failed to remove post impression',
+            error: error.message
+        });
+    }
 };
 
 // Reposting a post
