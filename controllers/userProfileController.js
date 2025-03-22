@@ -49,6 +49,29 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+const getMe = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // Find the user by ID
+        const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({ 
+            message: 'User profile retrieved successfully',
+            user
+        });
+    } catch (error) {
+        console.error('Error retrieving user profile:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve user profile',
+            error: error.message 
+        });
+    }
+};
+
 const getAllUsers = async (req, res) => {
     try {
         // Extract query parameters for filtering
@@ -1804,6 +1827,7 @@ const editAbout = async (req, res) => {
 };
 module.exports = {
     getAllUsers,
+    getMe,
     getUserProfile,
     addEducation,
     editEducation,

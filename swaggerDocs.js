@@ -3318,6 +3318,195 @@
 
 /**
  * @swagger
+ * /user/me:
+ *   get:
+ *     summary: Get logged in user profile
+ *     tags: [Users]
+ *     description: Retrieves a user's profile
+ *     operationId: getMe
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User profile retrieved successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 5a96ecd7fc5c55fee3eab5fe
+ *                     firstName:
+ *                       type: string
+ *                       example: Torrance
+ *                     lastName:
+ *                       type: string
+ *                       example: Willms
+ *                     email:
+ *                       type: string
+ *                       example: Cyril.Wunsch62@yahoo.com
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/81.jpg
+ *                     coverPicture:
+ *                       type: string
+ *                       example: https://picsum.photos/seed/MFzbMCDqC/675/1424
+ *                     resume:
+ *                       type: string
+ *                       example: https://content-cutlet.info
+ *                     bio:
+ *                       type: string
+ *                       example: Stipes conatus creber sit.
+ *                     location:
+ *                       type: string
+ *                       example: Kalebchester
+ *                     lastJobTitle:
+ *                       type: string
+ *                       example: Global Response Planner
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                     mainEducation:
+ *                       type: string
+ *                       nullable: true
+ *                     profilePrivacySettings:
+ *                       type: string
+ *                       enum: [public, private, connectionsOnly]
+ *                       example: public
+ *                     workExperience:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           jobTitle:
+ *                             type: string
+ *                           companyName:
+ *                             type: string
+ *                           fromDate:
+ *                             type: string
+ *                             format: date-time
+ *                           toDate:
+ *                             type: string
+ *                             format: date-time
+ *                           employmentType:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           locationType:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           skillName:
+ *                             type: string
+ *                           endorsements:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                           degree:
+ *                             type: string
+ *                           fieldOfStudy:
+ *                             type: string
+ *                           startDate:
+ *                             type: string
+ *                             format: date-time
+ *                           endDate:
+ *                             type: string
+ *                             format: date-time
+ *                           grade:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     connectionList:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       403:
+ *         description: Access denied due to privacy settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: This profile is private
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve user profile
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
  * /user:
  *   get:
  *     summary: Get a list of users

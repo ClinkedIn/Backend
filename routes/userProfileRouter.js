@@ -17,6 +17,8 @@ router.route('/education/:index')
     .patch(protect, upload.single('file'), user.editEducation)
     .delete(protect,user.deleteEducation);
 
+router.route('/me')
+    .get(protect, user.getMe);
 router.route('/profile')
     .patch(protect,user.editIntro);
 
