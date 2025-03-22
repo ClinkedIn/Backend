@@ -1498,9 +1498,9 @@
  * @swagger
  * /posts/{postId}/like:
  *   post:
- *     summary: Like a post
+ *     summary: Like or react to a post
  *     tags: [Posts]
- *     description: Add a like to a post
+ *     description: Add a reaction to a post (like, support, celebrate, etc.)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1509,19 +1509,107 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to like
  *     requestBody:
- *
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               impressionType:
+ *                 type: string
+ *                 enum: [like, support, celebrate, love, insightful, funny]
+ *                 default: like
+ *                 description: Type of reaction to add to the post
  *     responses:
  *       200:
- *         description: Post liked successfully
+ *         description: Post liked successfully or impression changed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post liked successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 5
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 15
+ *       400:
+ *         description: Bad request - missing post ID, invalid impression type, or user already liked this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have already liked this post"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to like post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  *
  *   delete:
- *     summary: Unlike a post
+ *     summary: Unlike or remove reaction from a post
  *     tags: [Posts]
- *     description: Remove a like from a post
+ *     description: Remove a user's reaction from a post
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1530,12 +1618,85 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to unlike
  *     responses:
  *       200:
- *         description: Post unliked successfully
+ *         description: Reaction removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post like removed successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 4
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 14
+ *       400:
+ *         description: Bad request - missing post ID or user hasn't reacted to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have not reacted to this post"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove post impression"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1544,7 +1705,7 @@
  *   post:
  *     summary: Repost a post
  *     tags: [Posts]
- *     description: Repost an existing post
+ *     description: Create a repost of an existing post with optional description
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1553,50 +1714,193 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to repost
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: Optional description to add to the repost
  *     responses:
- *       200:
+ *       201:
  *         description: Post reposted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reposted successfully"
+ *                 repost:
+ *                   type: object
+ *                   properties:
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     originalPostId:
+ *                       type: string
+ *                       example: "60d21b1c67d0d8992e610c83"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d0fe4677975f4ae0329ea4"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at XYZ Corp"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1624420422/profile/user123.jpg"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "This is a great post that I wanted to share!"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-03-22T14:30:00.000Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to repost post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
- * /posts/{postId}/repost/{repostId}:
+ * /posts/{repostId}/repost:
  *   delete:
  *     summary: Delete a repost
  *     tags: [Posts]
- *     description: Remove a repost from a user's profile
+ *     description: Remove a repost from the user's profile by setting it to inactive. Only the owner of the repost can delete it.
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
  *       - in: path
  *         name: repostId
  *         required: true
  *         schema:
  *           type: string
- *         description: The repost ID
+ *         description: The ID of the repost to delete
  *     responses:
  *       200:
  *         description: Repost deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost deleted successfully"
+ *       400:
+ *         description: Bad request - missing repost ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the repost
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own reposts"
+ *       404:
+ *         description: Repost not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete repost"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
  * /posts/{postId}/report:
  *   post:
- *     summary: Report a post
+ *     summary: Report a post for policy violations
  *     tags: [Posts]
- *     description: Report a post for inappropriate content
+ *     description: Report a post for violating platform policies. Users can specify a policy violation reason and optionally indicate why they don't want to see similar content.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1605,12 +1909,129 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement",
+ *                   "This person is impersonating someone", 
+ *                   "This account has been hacked", 
+ *                   "This account is not a real person"
+ *                 ]
+ *                 description: Reason for reporting the post (policy violation type)
+ *                 example: "Misinformation"
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author", 
+ *                   "I'm not interested in this topic", 
+ *                   "I've seen too many posts on this topic", 
+ *                   "I've seen this post before", 
+ *                   "This post is old", 
+ *                   "It's something else"
+ *                 ]
+ *                 description: Optional reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
  *     responses:
- *       200:
+ *       201:
  *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully"
+ *                 reportId:
+ *                   type: string
+ *                   example: "60d21b4667d0d8992e610c85"
+ *       400:
+ *         description: Bad request - missing required fields or invalid reason
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid report reason"
+ *                 validReasons:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child
+ * exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy violation reason
+ *                 value:
+ *                   message: "Invalid report reason"
+ *                   validReasons: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *               invalidDontWantToSee:
+ *                 summary: Invalid "don't want to see" reason
+ *                 value:
+ *                   message: "Invalid \"don't want to see\" reason"
+ *                   validReasons: ["I'm not interested in the author", "I'm not interested in this topic", "I've seen too many posts on this topic", "I've seen this post before", "This post is old", "It's something else"]
+ *               missingPolicy:
+ *                 summary: Missing policy violation reason
+ *                 value:
+ *                   message: "Report reason (policy) is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to report post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**

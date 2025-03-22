@@ -1,6 +1,7 @@
 const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
 const repostModel = require('../models/repostModel');
+const reportModel = require('../models/reportModel');
 const cloudinary = require('../utils/cloudinary');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
@@ -599,7 +600,6 @@ const likePost = async (req, res) => {
         // Check if user has already impressed this post
         const existingImpression = await impressionModel.findOne({
             targetId: postId,
-            targetType: "Post",
             userId: userId,
         });
         if (existingImpression) {
@@ -700,7 +700,6 @@ const unlikePost = async (req, res) => {
         // Check if user has an active impression on this post
         const existingImpression = await impressionModel.findOne({
             targetId: postId,
-            targetType: "Post",
             userId,
         });
         
@@ -745,19 +744,228 @@ const unlikePost = async (req, res) => {
 
 // Reposting a post
 const repostPost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { description } = req.body;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Create new repost
+        const newRepost = await repostModel.create({
+            userId,
+            postId,
+            description: description || '',
+            isActive: true
+        });
+        
+        // Increment repost count on original post
+        const updatedPost = await postModel.findByIdAndUpdate(
+            postId,
+            { $inc: { repostCount: 1 } },
+            { new: true }
+        );
+        
+        // Get user details for response
+        const user = await userModel.findById(userId).select('firstName lastName headline profilePicture');
+        
+        // Format response
+        const repostResponse = {
+            repostId: newRepost._id,
+            originalPostId: postId,
+            userId: userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            headline: user.headline || "",
+            profilePicture: user.profilePicture,
+            repostDescription: newRepost.description,
+            createdAt: newRepost.createdAt,
+        };
+        
+        res.status(201).json({
+            message: 'Post reposted successfully',
+            repost: repostResponse
+        });
+        
+    } catch (error) {
+        console.error('Error reposting post:', error);
+        res.status(500).json({
+            message: 'Failed to repost post',
+            error: error.message
+        });
+    }
 };
 
 const deleteRepost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { repostId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!repostId) {
+            return res.status(400).json({ message: 'Repost ID is required' });
+        }
+        
+        // Find the repost
+        const repost = await repostModel.findById(repostId);
+        
+        // Check if repost exists
+        if (!repost) {
+            return res.status(404).json({ message: 'Repost not found' });
+        }
+        
+        // Check if repost is already inactive (deleted)
+        if (!repost.isActive) {
+            return res.status(404).json({ message: 'Repost not found or already deleted' });
+        }
+        
+        // Check if user is the owner of the repost
+        if (repost.userId.toString() !== userId) {
+            return res.status(403).json({ message: 'You can only delete your own reposts' });
+        }
+        
+        // Get the original post ID before updating the repost
+        const postId = repost.postId;
+        
+        // Soft delete by setting isActive to false
+        await repostModel.findByIdAndUpdate(repostId, { 
+            isActive: false
+        });
+        
+        // Get the original post
+        const post = await postModel.findById(postId);
+        
+        if (post && post.repostCount > 0) {
+            // Decrement repost count on original post (ensure it doesn't go below 0)
+            await postModel.findByIdAndUpdate(
+                postId,
+                { $inc: { repostCount: -1 } }
+            );
+        }
+        
+        res.status(200).json({ message: 'Repost deleted successfully' });
+        
+    } catch (error) {
+        console.error('Error deleting repost:', error);
+        res.status(500).json({
+            message: 'Failed to delete repost',
+            error: error.message
+        });
+    }
 };
 
 
 // Report a post
 const reportPost = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const { postId } = req.params;
+        const userId = req.user.id;
+        const { policy, dontWantToSee } = req.body;
+        
+        // Validate required inputs
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        if (!policy) {
+            return res.status(400).json({ message: 'Report reason (policy) is required' });
+        }
+        
+        // Validate policy enum value
+        const validPolicies = [
+            // General content violations
+            "Harassment", 
+            "Fraud or scam", 
+            "Spam", 
+            "Misinformation", 
+            "Hateful speech", 
+            "Threats or violence", 
+            "Self-harm", 
+            "Graphic content", 
+            "Dangerous or extremist organizations", 
+            "Sexual content", 
+            "Fake account", 
+            "Child exploitation", 
+            "Illegal goods and services", 
+            "Infringement",
+            // User-specific violations
+            "This person is impersonating someone", 
+            "This account has been hacked", 
+            "This account is not a real person"
+        ];
+        
+        if (!validPolicies.includes(policy)) {
+            return res.status(400).json({ 
+                message: 'Invalid report reason',
+                validReasons: validPolicies
+            });
+        }
+        
+        // Validate dontWantToSee if provided
+        if (dontWantToSee) {
+            const validReasons = [
+                "I'm not interested in the author", 
+                "I'm not interested in this topic", 
+                "I've seen too many posts on this topic", 
+                "I've seen this post before", 
+                "This post is old", 
+                "It's something else"
+            ];
+            
+            if (!validReasons.includes(dontWantToSee)) {
+                return res.status(400).json({ 
+                    message: 'Invalid "don\'t want to see" reason',
+                    validReasons
+                });
+            }
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        
+        // Create new report
+        const newReport = await reportModel.create({
+            userId,
+            reportedId: postId,
+            reportedType: 'Post',
+            policy,
+            ...(dontWantToSee && { dontWantToSee })
+        });
+        
+        res.status(201).json({ 
+            message: 'Post reported successfully',
+            reportId: newReport._id
+        });
+        
+    } catch (error) {
+        console.error('Error reporting post:', error);
+        res.status(500).json({
+            message: 'Failed to report post',
+            error: error.message
+        });
+    }
 };
-
 
 
 module.exports = {

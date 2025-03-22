@@ -22,14 +22,14 @@ router.route('/:postId/like')
     .delete(protect,postController.unlikePost); 
 
 router.route('/:postId/repost')
-    .post(postController.repostPost);
+    .post(protect,postController.repostPost);
 
-router.route('/:postId/repost/:repostId')
-    .delete(postController.deleteRepost);
+router.route('/:repostId/repost')
+    .delete(protect,postController.deleteRepost);
 
 
 router.route('/:postId/report')
-    .post(postController.reportPost);
+    .post(protect,postController.reportPost);
     
 
 module.exports = router;
