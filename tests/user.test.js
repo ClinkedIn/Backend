@@ -4,13 +4,18 @@ const request = require('supertest');
 const express = require('express');
 const userModel = require('../models/userModel');
 const companyModel = require('../models/companyModel');
+const mongoose = require('mongoose');
 const {
+    getMe,
+    getAllUsers,
+    getUserProfile,
     addEducation,
-    getEducation,
     editEducation,
+    getEducation,
     getEducations,
     deleteEducation,
-    editIntro, addExperience,
+    editIntro,
+    addExperience,
     getAllExperiences,
     updateExperience,
     sortWorkExperience,
@@ -22,16 +27,42 @@ const {
     getResume,
     uploadResume,
     deleteResume,
+    deleteSkill,
+    deleteExperience,
+    deleteProfilePicture,
+    deleteCoverPicture,
+    getSkill,
+    getExperience,
+    getProfilePicture,
+    getCoverPicture,
+    addEndorsement,
+    deleteEndorsement,
     updatePrivacySettings,
     followEntity,
     unfollowEntity,
-    getUserProfile,
-    getAllUsers,
-    deleteSkill,
-    editContactInfo
+    editContactInfo,
+    editAbout,
+    uploadPicture
 } = require('../controllers/userProfileController');
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const uploadMiddleware = require('../middlewares/multer');
+
+jest.mock('../controllers/userProfileController', () => {
+    const actualModule = jest.requireActual('../controllers/userProfileController');
+    return {
+        ...actualModule,
+        uploadPicture: jest.fn(),
+    };
+});
+
+jest.mock('../controllers/userProfileController', () => {
+    const actualModule = jest.requireActual('../controllers/userProfileController');
+    return {
+        ...actualModule,
+        uploadPicture: jest.fn(),
+    };
+});
+
 
 jest.mock('../utils/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
@@ -60,7 +91,8 @@ describe('POST /education', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
-
+    let mockUser;
+    const mockUserId = '0b3169152ee6c171d25e6860';
     test('should successfully add education', async () => {
         const mockEducationData = {
             school: 'Harvard University',
@@ -112,10 +144,8 @@ describe('POST /education', () => {
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
-
     test('should return 500 on server error', async () => {
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database failure'));
-
         const response = await request(app)
             .post('/education')
             .send({ school: 'Harvard University' });
@@ -178,6 +208,15 @@ describe('GET /education/:index', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid education index');
+    });
+    test('should return 500 on server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database failure'));
+
+        const response = await request(app)
+            .get('/education/0');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Server error');
     });
 });
 
@@ -495,215 +534,127 @@ describe('PATCH /profile', () => {
 });
 
 
-app.post('/experience', mockVerifyToken, addExperience);
-app.put('/experience/:index', mockVerifyToken, updateExperience);
-app.get('/experience', mockVerifyToken, getAllExperiences)
+app.post('/experience', mockVerifyToken, uploadMiddleware.single('file'), addExperience);
+app.get('/experience', mockVerifyToken, getAllExperiences);
 
-describe('POST /experience', () => {
+app.get('/experience/:index', mockVerifyToken, getExperience)
+app.put('/experience/:index', mockVerifyToken, uploadMiddleware.single('file'), updateExperience);
+app.delete('/experience/:index', mockVerifyToken, deleteExperience);
+
+describe('POST /experience - addExperience', () => {
+    let mockUser;
+    const mockUserId = '0b3169152ee6c171d25e6860';
+
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-    /*
-    test('should successfully add experience', async () => {
-        const mockExperienceData = {
-            jobTitle: 'SWE',
-            companyName: 'Microsoft',
-            fromDate: '2018-09-01',
-            toDate: '2023-09-01',
-            currentlyWorking: false,
-            employmentType: 'Full Time',
-            location: 'Egypt',
-            locationType: 'Onsite',
-            description: 'Senior SWE',
-            foundVia: 'LinkedIn',
-            skills: ['Problem Solving'],
-            media: 'media'
-        };
 
-        const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
+        mockUser = {
+            _id: mockUserId,
             workExperience: [],
-            save: jest.fn().mockResolvedValue(true),
+            skills: ["React"],
+            save: jest.fn().mockResolvedValue()
         };
 
-        userModel.findById = jest.fn().mockResolvedValue(mockUser);
+        userModel.findById.mockResolvedValue(mockUser);
+    });
+
+    test('Should add experience successfully', async () => {
+        const experienceData = {
+            jobTitle: 'Software Engineer',
+            companyName: 'Tech Corp',
+            fromDate: '2022-01-01',
+            currentlyWorking: true,
+            skills: ['JavaScript', 'React'],
+            employmentType: 'Full-time',
+            location: 'New York',
+            locationType: 'On-site',
+            description: 'Developed web applications',
+            foundVia: 'LinkedIn'
+        };
 
         const response = await request(app)
             .post('/experience')
-            .send(mockExperienceData);
+            .send(experienceData);
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Experience added successfully');
-        expect(response.body.experience).toEqual(expect.objectContaining(mockExperienceData));
-        expect(response.body.sortedWorkExperience).toHaveLength(1);
-    });
-
-    test('should sort work experience in reverse chronological order', async () => {
-        const experiences = [
-            {
-                jobTitle: 'Junior Developer',
-                companyName: 'Small Company',
-                fromDate: '2015-01-01',
-                toDate: '2017-12-31',
-                currentlyWorking: false,
-                employmentType: 'Full Time',
-                location: 'Remote',
-                locationType: 'Remote',
-                description: 'Junior role',
-                foundVia: 'Referral',
-                skills: ['HTML', 'CSS'],
-                media: ''
-            },
-            {
-                jobTitle: 'Senior SWE',
-                companyName: 'Google',
-                fromDate: '2022-10-01',
-                toDate: '2025-12-01',
-                currentlyWorking: false,
-                employmentType: 'Full Time',
-                location: 'USA',
-                locationType: 'Hybrid',
-                description: 'Leading projects',
-                foundVia: 'Direct',
-                skills: ['System Design', 'Leadership'],
-                media: ''
-            },
-            {
-                jobTitle: 'SWE',
-                companyName: 'Microsoft',
-                fromDate: '2023-01-01',
-                toDate: '2023-09-01',
-                currentlyWorking: false,
-                employmentType: 'Full Time',
-                location: 'Egypt',
-                locationType: 'Onsite',
-                description: 'Senior SWE',
-                foundVia: 'LinkedIn',
-                skills: ['Problem Solving'],
-                media: 'media'
-            }
-        ];
-
-        const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
-            workExperience: [experiences[0]],
-            save: jest.fn().mockResolvedValue(true),
-        };
-
-        userModel.findById = jest.fn()
-            .mockResolvedValueOnce(mockUser) // First call (adding second experience)
-            .mockResolvedValueOnce({ ...mockUser, workExperience: [...mockUser.workExperience, experiences[1]] }) // Second call (adding third experience)
-            .mockResolvedValueOnce({ ...mockUser, workExperience: [...mockUser.workExperience, experiences[1], experiences[2]] });
-
-        await request(app).post('/experience').send(experiences[1]);
-        const response = await request(app).post('/experience').send(experiences[2]);
-
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Experience added successfully');
-
-        const sortedExperience = response.body.sortedWorkExperience.map(exp => exp.companyName);
-        expect(sortedExperience).toEqual(['Google', 'Microsoft', 'Small Company']);
-    });
-    */ 
-
-    test('should return 400 if required fields are missing', async () => {
-        const incompleteExperience = {
+        expect(response.body.experience).toMatchObject({
             jobTitle: 'Software Engineer',
-            companyName: '',
-            fromDate: '2020-01-01'
+            companyName: 'Tech Corp',
+            fromDate: '2022-01-01',
+            currentlyWorking: true,
+            skills: ['JavaScript', 'React'],
+            employmentType: 'Full-time',
+            location: 'New York',
+            locationType: 'On-site',
+            description: 'Developed web applications',
+            foundVia: 'LinkedIn'
+        });
+        expect(mockUser.workExperience.length).toBe(1);
+        expect(mockUser.save).toHaveBeenCalledTimes(1);
+    });
+
+    test('Should return 400 if jobTitle is missing', async () => {
+        const experienceData = {
+            companyName: 'Tech Corp',
+            fromDate: '2022-01-01',
+            currentlyWorking: true,
+            skills: ['JavaScript', 'React'],
+            employmentType: 'Full-time',
+            location: 'New York',
+            locationType: 'On-site',
+            description: 'Developed web applications',
+            foundVia: 'LinkedIn'
         };
 
         const response = await request(app)
             .post('/experience')
-            .send(incompleteExperience);
+            .send(experienceData);
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Company Name is required');
+        expect(response.body.error).toBe('Job title, company name, and start date are required');
     });
 
-    test('should return 400 if end date is missing and currentlyWorking is false', async () => {
-        const experienceWithNoEndDate = {
-            jobTitle: 'Software Engineer',
-            companyName: 'Amazon',
-            fromDate: '2020-01-01',
-            currentlyWorking: false,
-            employmentType: 'Full Time',
-            location: 'USA',
-            locationType: 'Hybrid',
-            description: 'Working at Amazon',
-            foundVia: 'LinkedIn',
-            skills: ['AWS', 'Java'],
-            media: ''
-        };
+    test('Should return 404 if user is not found', async () => {
+        userModel.findById.mockResolvedValue(null);
 
         const response = await request(app)
             .post('/experience')
-            .send(experienceWithNoEndDate);
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('End Date is required');
-    });
-
-    test('should return 404 if user is not found', async () => {
-        userModel.findById = jest.fn().mockResolvedValue(null);
-
-        const experience = {
-            jobTitle: 'SWE',
-            companyName: 'Microsoft',
-            fromDate: '2018-09-01',
-            toDate: '2023-09-01',
-            currentlyWorking: false,
-            employmentType: 'Full Time',
-            location: 'Egypt',
-            locationType: 'Onsite',
-            description: 'Senior SWE',
-            foundVia: 'LinkedIn',
-            skills: ['Problem Solving'],
-            media: 'media'
-        };
-
-        const response = await request(app)
-            .post('/experience')
-            .send(experience);
+            .send({ jobTitle: 'Developer', companyName: 'ABC' });
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
-    test('should return 500 if database error occurs', async () => {
-        userModel.findById = jest.fn().mockRejectedValue(new Error('Database error'));
-
-        const experience = {
-            jobTitle: 'SWE',
-            companyName: 'Microsoft',
-            fromDate: '2018-09-01',
-            toDate: '2023-09-01',
-            currentlyWorking: false,
-            employmentType: 'Full Time',
-            location: 'Egypt',
-            locationType: 'Onsite',
-            description: 'Senior SWE',
-            foundVia: 'LinkedIn',
-            skills: ['Problem Solving'],
-            media: 'media'
-        };
+    test('Should handle internal server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database error'));
 
         const response = await request(app)
             .post('/experience')
-            .send(experience);
+            .send({ jobTitle: 'Developer', companyName: 'ABC' });
 
         expect(response.status).toBe(500);
-        expect(response.body.error).toBe('Failed to add experience');
+        expect(response.body.error).toBe('Internal server error');
+    });
+
+    test('Should return 400 if media upload fails', async () => {
+        uploadPicture.mockRejectedValue(new Error('Upload error'));
+
+        const response = await request(app)
+            .post('/experience')
+            .field('jobTitle', 'Software Engineer')
+            .field('companyName', 'Tech Corp')
+            .field('fromDate', '2022-01-01')
+            .field('currentlyWorking', true)
+            .attach('file', Buffer.from('mockFileContent'), { filename: 'photo.png', contentType: 'image/jpeg' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain('Failed to upload media');
     });
 });
 
-
 describe('GET /experience - Get User Experiences', () => {
     const userId = 'cc81c18d6b9fc1b83e2bebe3';
-
-    // beforeEach(() => {
-    //userId = new mongoose.Types.ObjectId();
-    // });
 
     it('should return 404 if user is not found', async () => {
         userModel.findById.mockResolvedValue(null); // Simulate user not found
@@ -740,6 +691,102 @@ describe('GET /experience - Get User Experiences', () => {
 
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Server error');
+    });
+});
+
+
+describe('GET /experience/:index', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+    const experienceIndex = 1; // Mock experience index
+    const mockWorkExperience = [
+        { company: 'Company A', role: 'Developer' },
+        { company: 'Company B', role: 'Manager' }
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return experience successfully', async () => {
+        // Mock userModel.findById to return a user with workExperience
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                workExperience: mockWorkExperience
+            })
+        }));
+
+        const response = await request(app)
+            .get(`/experience/${experienceIndex}`);
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.experience).toEqual(mockWorkExperience[experienceIndex]);
+    });
+
+    test('should return 400 for invalid experience index (NaN)', async () => {
+        const invalidIndex = 'invalid';
+
+        const response = await request(app)
+            .get(`/experience/${invalidIndex}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience index');
+    });
+
+    test('should return 400 for invalid experience index (negative)', async () => {
+        const invalidIndex = -1;
+
+        const response = await request(app)
+            .get(`/experience/${invalidIndex}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience index');
+    });
+
+    test('should return 400 for invalid experience index (out of range)', async () => {
+        // Mock userModel.findById to return a user with workExperience
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                workExperience: mockWorkExperience
+            })
+        }));
+
+        const invalidIndex = mockWorkExperience.length; // Out of range index
+
+        const response = await request(app)
+            .get(`/experience/${invalidIndex}`);
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Experience index out of range');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .get(`/experience/${experienceIndex}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .get(`/experience/${experienceIndex}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+        expect(response.body.details).toBe('Database error');
     });
 });
 
@@ -842,7 +889,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
             .send({ fromDate: 'invalid-date' }); // Invalid date
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Invalid Start Date');
+        expect(response.body.error).toBe('Invalid Data');
     });
 
     test('should return 400 if toDate is invalid', async () => {
@@ -853,7 +900,7 @@ describe('PUT /experience/:index - Update Work Experience', () => {
             .send({ toDate: 'invalid-date' }); // Invalid date
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Invalid End Date');
+        expect(response.body.error).toBe('Invalid Data');
     });
 
     test('should return 500 if there is a server error', async () => {
@@ -868,6 +915,116 @@ describe('PUT /experience/:index - Update Work Experience', () => {
     });
 });
 
+describe('DELETE /experience/:index', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+    const experienceIndex = 1; // Mock experience index
+    const mockWorkExperience = [
+        { company: 'Company A', role: 'Developer' },
+        { company: 'Company B', role: 'Manager' }
+    ];
+    const mockSkills = [
+        { skillName: 'Problem Solving', experience: [0, 1] },
+        { skillName: 'Communication', experience: [1] }
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should delete experience successfully', async () => {
+        // Mock userModel.findById to return a user with workExperience and skills
+        const mockUser = {
+            _id: userId,
+            workExperience: mockWorkExperience,
+            skills: mockSkills,
+            save: jest.fn().mockResolvedValue(true)
+        };
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+
+        const response = await request(app)
+            .delete(`/experience/${experienceIndex}`);
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Experience deleted successfully');
+        expect(response.body.deletedExperience).toEqual({ company: 'Company B', role: 'Manager' });
+        expect(response.body.updatedSkills).toEqual([
+            { skillName: 'Problem Solving', experience: [0] }, // Index 1 removed and shifted
+            { skillName: 'Communication', experience: [] } // Index 1 removed
+        ]);
+    });
+
+    test('should return 400 for invalid experience index (NaN)', async () => {
+        const invalidIndex = 'invalid';
+
+        const response = await request(app)
+            .delete(`/experience/${invalidIndex}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience index');
+    });
+
+    test('should return 400 for invalid experience index (negative)', async () => {
+        const invalidIndex = -1;
+
+        const response = await request(app)
+            .delete(`/experience/${invalidIndex}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience index');
+    });
+
+    test('should return 400 for invalid experience index (out of bounds)', async () => {
+        // Mock userModel.findById to return a user with workExperience
+        const mockUser = {
+            _id: userId,
+            workExperience: mockWorkExperience,
+            skills: mockSkills,
+            save: jest.fn().mockResolvedValue(true)
+        };
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+
+        const invalidIndex = mockWorkExperience.length; // Out of bounds index
+
+        const response = await request(app)
+            .delete(`/experience/${invalidIndex}`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience index');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .delete(`/experience/${experienceIndex}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .delete(`/experience/${experienceIndex}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+        expect(response.body.details).toBe('Database error');
+    });
+});
 
 /*
 Skills Section Tests
@@ -875,10 +1032,12 @@ Skills Section Tests
 
 
 app.post('/skills', mockVerifyToken, addSkill);
+app.get('/skills', mockVerifyToken, getAllSkills);
+
 app.put('/skills/:skillName', mockVerifyToken, updateSkill);
 app.delete('/skills/:skillName', mockVerifyToken, deleteSkill);
+app.get('/skills/:skillName', mockVerifyToken, getSkill);
 
-/*
 describe('POST /skills', () => {
 
     beforeEach(() => {
@@ -890,111 +1049,365 @@ describe('POST /skills', () => {
         const mockSkillData = {
             skillName: 'Problem Solving',
             educationIndexes: [0],
+            experienceIndexes: [1]
         };
 
         const mockUser = {
             _id: mockUserId,
             education: [{}], // Mocking one education entry
+            workExperience: [{}, {}], // Mocking two work experience entries
             skills: []
         };
 
         const mockUpdatedUser = {
             _id: mockUserId,
-            skills: [{ skillName: 'Problem Solving', education: [0], endorsements: [] }]
+            education: [{}],
+            workExperience: [{}, {}],
+            skills: [{ 
+                skillName: 'Problem Solving', 
+                education: [0], 
+                experience: [1],
+                endorsements: [] 
+            }]
         };
+
+        // Mock validateSkillName helper function
+        const validateSkillName = jest.fn().mockResolvedValue({ valid: true });
+        global.validateSkillName = validateSkillName;
 
         userModel.exists.mockResolvedValue(false); // Skill does not exist
         userModel.findById.mockResolvedValue(mockUser); // User found
         userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser); // Simulating skill addition
+        userModel.updateOne.mockResolvedValue({ nModified: 1 }); // Mock successful updates
+
+        // Mock the req.user object that would be set by authentication middleware
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .post('/skills')
-            .send(mockSkillData);
+            .send(mockSkillData)
+            .set('x-mock-user', JSON.stringify(mockReq.user)); // Setting mock user in request
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill added successfully');
         expect(response.body.skill).toEqual({
             skillName: 'Problem Solving',
             education: [0],
+            experience: [1],
             endorsements: []
         });
     });
 
     test('should return 400 if skill already exists', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // Mock validateSkillName helper function
+        const validateSkillName = jest.fn().mockResolvedValue({ valid: true });
+        global.validateSkillName = validateSkillName;
+        
         userModel.exists.mockResolvedValue(true); // Skill exists
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Problem Solving', educationIndexes: [0] });
+            .send({ skillName: 'Problem Solving', educationIndexes: [0] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill already exists');
     });
 
     test('should return 400 if skill name is invalid', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // Mock validateSkillName helper function to return invalid
+        const validateSkillName = jest.fn().mockResolvedValue({ valid: false, message: 'Invalid skill name' });
+        global.validateSkillName = validateSkillName;
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: '', educationIndexes: [0] });
+            .send({ skillName: '', educationIndexes: [0] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Invalid skill name'); // Assuming validateSkillName() returns this
+        expect(response.body.error).toBe('Invalid skill name');
     });
 
-    test('should return 400 if educationIndexes is not an array', async () => {
+    test('should handle education indexes correctly when not an array', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
         userModel.exists.mockResolvedValue(false);
+        
+        const mockUser = {
+            _id: mockUserId,
+            education: [{}],
+            workExperience: [{}],
+            skills: []
+        };
+        
+        const mockUpdatedUser = {
+            _id: mockUserId,
+            education: [{}],
+            workExperience: [{}],
+            skills: [{ 
+                skillName: 'Critical Thinking', 
+                education: [], 
+                experience: [],
+                endorsements: [] 
+            }]
+        };
+        
+        userModel.findById.mockResolvedValue(mockUser);
+        userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser);
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', educationIndexes: "notAnArray" });
+            .send({ skillName: 'Critical Thinking', educationIndexes: "notAnArray" })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Education indexes must be an array');
+        // The function should handle this case by setting an empty array
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill added successfully');
+        expect(response.body.skill.education).toEqual([]);
     });
 
-    test('should return 400 if educationIndexes contains invalid indexes', async () => {
+    test('should filter out invalid education and experience indexes', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
         const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
-            education: [{}] // Only one valid index (0)
+            _id: mockUserId,
+            education: [{}], // Only one valid index (0)
+            workExperience: [{}], // Only one valid index (0)
+            skills: []
+        };
+        
+        const mockUpdatedUser = {
+            _id: mockUserId,
+            education: [{}],
+            workExperience: [{}],
+            skills: [{ 
+                skillName: 'Critical Thinking', 
+                education: [0], 
+                experience: [0],
+                endorsements: [] 
+            }]
         };
 
         userModel.exists.mockResolvedValue(false);
         userModel.findById.mockResolvedValue(mockUser);
+        userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser);
+        userModel.updateOne.mockResolvedValue({ nModified: 1 });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', educationIndexes: [0, 5] }); // Index 5 is out of bounds
+            .send({ 
+                skillName: 'Critical Thinking', 
+                educationIndexes: [0, 5], // Index 5 is out of bounds
+                experienceIndexes: [0, 3]  // Index 3 is out of bounds
+            })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Some provided education indexes are invalid');
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill added successfully');
+        expect(response.body.skill.education).toEqual([0]); // Only valid index
+        expect(response.body.skill.experience).toEqual([0]); // Only valid index
     });
 
     test('should return 404 if user is not found', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
         userModel.exists.mockResolvedValue(false);
         userModel.findById.mockResolvedValue(null); // Simulating a missing user
 
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', educationIndexes: [] });
+            .send({ skillName: 'Critical Thinking', educationIndexes: [] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
     test('should return 500 if database update fails', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+
         const mockUser = {
-            _id: '0b3169152ee6c171d25e6860',
-            education: [{}]
+            _id: mockUserId,
+            education: [{}],
+            workExperience: [{}]
         };
 
         userModel.exists.mockResolvedValue(false);
         userModel.findById.mockResolvedValue(mockUser);
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
 
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .post('/skills')
-            .send({ skillName: 'Critical Thinking', educationIndexes: [0] });
+            .send({ skillName: 'Critical Thinking', educationIndexes: [0] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
+    });
+});
+
+describe('GET /skills', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+    const mockSkills = [
+        { skillName: 'Problem Solving', level: 'Intermediate' },
+        { skillName: 'Communication', level: 'Advanced' }
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return all skills for the user', async () => {
+        // Mock userModel.findById to return a user with skills
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                skills: mockSkills
+            })
+        }));
+
+        const response = await request(app)
+            .get('/skills');
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.skills).toEqual(mockSkills);
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .get('/skills');
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .get('/skills');
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+        expect(response.body.details).toBe('Database error');
+    });
+});
+
+describe('GET /skills/:skillName', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+    const skillName = 'Problem Solving'; // Mock skill name
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return the skill if found', async () => {
+        const mockSkill = { skillName: 'Problem Solving', level: 'Intermediate' };
+
+        // Mock userModel.findById to return a user with the skill
+        userModel.findById.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue({
+                _id: userId,
+                skills: [mockSkill]
+            })
+        }));
+
+        const response = await request(app)
+            .get(`/skills/${skillName}`);
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.skill).toEqual(mockSkill);
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .get(`/skills/${skillName}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('User not found');
+    });
+
+    test('should return 404 if skill is not found', async () => {
+        // Mock userModel.findById to return a user with no matching skill
+        userModel.findById.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue({
+                _id: userId,
+                skills: []
+            })
+        }));
+
+        const response = await request(app)
+            .get(`/skills/${skillName}`);
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Skill not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            lean: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .get(`/skills/${skillName}`);
+
+        expect(response.status).toBe(500);
+        expect(response.body.error).toBe('Internal server error');
+        expect(response.body.details).toBe('Database error');
     });
 });
 
@@ -1004,389 +1417,582 @@ describe('PUT /skills/:skillName', () => {
     });
 
     test('should return 400 if no updates are provided', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // mock this
+        //const user = await userModel.findById(userId, "skills education workExperience");
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [] }],
+            education: [],
+            workExperience: []
+        });
+        
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .put('/skills/Problem Solving')
             .send({});
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('No updates provided');
-    });
-
-    test('should return 400 if new skill name is the same as the current one', async () => {
-        userModel.findById.mockResolvedValue({
-            skills: [{ skillName: 'Problem Solving', education: [] }],
-        });
-
-        const response = await request(app)
-            .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Problem Solving' });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Skill name is the same');
+        expect(response.body.error).toBe('No valid updates provided');
     });
 
     test('should return 400 if new skill name is invalid', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // Mock validateSkillName to return invalid
+        const validateSkillName = jest.fn().mockReturnValue({ valid: false, message: 'Invalid skill name' });
+        global.validateSkillName = validateSkillName;
+        
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [{ skillName: 'Problem Solving', education: [] }],
         });
 
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: '!' });
+            .send({ newSkillName: '!' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Invalid skill name');
     });
 
     test('should return 400 if new skill name already exists in user profile', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // Mock validateSkillName to return valid
+        const validateSkillName = jest.fn().mockReturnValue({ valid: true });
+        global.validateSkillName = validateSkillName;
+        
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [
                 { skillName: 'Problem Solving', education: [] },
                 { skillName: 'Critical Thinking', education: [] },
             ],
         });
 
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Critical Thinking' });
+            .send({ newSkillName: 'Critical Thinking' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Skill already exists');
     });
 
     test('should return 400 if education indexes contain invalid values', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [{ skillName: 'Problem Solving', education: [] }],
-            education: ['Degree 1', 'Degree 2'],
+            education: [{}, {}], // Two education entries
+            workExperience: []
         });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ educationIndexes: [0, 5] }); // Invalid index 5
+            .send({ educationIndexes: [0, 5] }) // Invalid index 5
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Some provided education indexes are invalid');
     });
 
-    test('should return 404 if user is not found', async () => {
-        userModel.findById.mockResolvedValue(null);
+    test('should return 400 if experience indexes contain invalid values', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [], experience: [] }],
+            education: [],
+            workExperience: [{}, {}] // Two work experience entries
+        });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Critical Thinking' });
+            .send({ experienceIndexes: [0, 5] }) // Invalid index 5
+            .set('x-mock-user', JSON.stringify(mockReq.user));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Some provided experience indexes are invalid');
+    });
+
+    test('should return 400 if educationIndexes is not an array', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [] }],
+            education: [{}, {}],
+            workExperience: []
+        });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ educationIndexes: "not an array" })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid education indexes format');
+    });
+
+    test('should return 400 if experienceIndexes is not an array', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [], experience: [] }],
+            education: [],
+            workExperience: [{}, {}]
+        });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ experienceIndexes: "not an array" })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Invalid experience indexes format');
+    });
+
+    test('should return 404 if user is not found', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        userModel.findById.mockResolvedValue(null);
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
     test('should return 404 if skill is not found', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [{ skillName: 'Critical Thinking', education: [] }],
+            education: [],
+            workExperience: []
         });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Creative Thinking' });
+            .send({ newSkillName: 'Creative Thinking' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('Skill not found');
     });
 
     test('should update skill name successfully', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        // Mock validateSkillName to return valid
+        const validateSkillName = jest.fn().mockReturnValue({ valid: true });
+        global.validateSkillName = validateSkillName;
+        
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [{ skillName: 'Problem Solving', education: [] }],
+            education: [],
+            workExperience: []
         });
 
         userModel.findByIdAndUpdate.mockResolvedValue({
             skills: [{ skillName: 'Critical Thinking', education: [] }],
         });
 
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Critical Thinking' });
+            .send({ newSkillName: 'Critical Thinking' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill updated successfully');
-        expect(response.body.skill.skillName).toBe('Critical Thinking');
+        expect(response.body.skills).toBeDefined();
     });
 
     test('should update skill education indexes successfully', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
         userModel.findById.mockResolvedValue({
+            _id: mockUserId,
             skills: [{ skillName: 'Problem Solving', education: [] }],
-            education: ['Degree 1', 'Degree 2', 'Degree 3'],
+            education: [{}, {}, {}], // Three education entries
+            workExperience: []
         });
 
         userModel.findByIdAndUpdate.mockResolvedValue({
             skills: [{ skillName: 'Problem Solving', education: [0, 2] }],
         });
+        
+        userModel.updateOne.mockResolvedValue({ nModified: 1 });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ educationIndexes: [0, 2] });
+            .send({ educationIndexes: [0, 2] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill updated successfully');
-        expect(response.body.skill.education).toEqual([0, 2]);
+        expect(response.body.skills).toBeDefined();
     });
 
-    test('should return 500 if an internal server error occurs', async () => {
-        userModel.findById.mockRejectedValue(new Error('Database error'));
+    test('should update skill experience indexes successfully', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        userModel.findById.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: 'Problem Solving', education: [], experience: [] }],
+            education: [],
+            workExperience: [{}, {}, {}] // Three work experience entries
+        });
+
+        userModel.findByIdAndUpdate.mockResolvedValue({
+            skills: [{ skillName: 'Problem Solving', education: [], experience: [1, 2] }],
+        });
+        
+        userModel.updateOne.mockResolvedValue({ nModified: 1 });
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
 
         const response = await request(app)
             .put('/skills/Problem Solving')
-            .send({ newSkillName: 'Critical Thinking' });
+            .send({ experienceIndexes: [1, 2] })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Skill updated successfully');
+        expect(response.body.skills).toBeDefined();
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        const mockUserId = '0b3169152ee6c171d25e6860';
+        
+        userModel.findById.mockRejectedValue(new Error('Database error'));
+
+        // Mock the req.user object
+        const mockReq = {
+            user: { id: mockUserId }
+        };
+
+        const response = await request(app)
+            .put('/skills/Problem Solving')
+            .send({ newSkillName: 'Critical Thinking' })
+            .set('x-mock-user', JSON.stringify(mockReq.user));
 
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
     });
 });
-*/
 
-/*
 describe('DELETE /skills/:skillName', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+    const skillName = 'Problem Solving'; // Mock skill name
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
     test('should return 404 if skill is not found', async () => {
-        userModel.findOne.mockResolvedValue(null);
+        // Mock userModel.findOne to return a user with no matching skill
+        userModel.findOne.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue({ _id: userId, skills: [] })
+        }));
 
         const response = await request(app)
-            .delete('/skills/Problem Solving');
+            .delete(`/skills/${skillName}`);
+
+        console.log('Response Status:', response.status); // Debugging: Log the response status
+        console.log('Response Body:', response.body); // Debugging: Log the response body
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('Skill not found');
     });
 
     test('should return 404 if user is not found', async () => {
-        userModel.findOne.mockResolvedValue({
-            skills: [{ skillName: 'Problem Solving' }]
-        });
+        // Mock userModel.findOne to return a user with the skill
+        userModel.findOne.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue({
+                _id: userId,
+                skills: [{ skillName: new RegExp(`^${skillName}$`, 'i') }]
+            })
+        }));
 
-        userModel.findByIdAndUpdate.mockResolvedValue(null); // Simulating user not found
+        // Mock userModel.findByIdAndUpdate to return null (user not found)
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
 
         const response = await request(app)
-            .delete('/skills/Problem Solving');
+            .delete(`/skills/${skillName}`);
 
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
 
     test('should delete skill successfully', async () => {
-        const skillToDelete = { skillName: 'Problem Solving' };
-
-        userModel.findOne.mockResolvedValue({
-            skills: [skillToDelete],
-        });
-
+        const skillToDelete = { skillName: 'Problem Solving' }; // Use plain skill name
+    
+        // Mock userModel.findOne to return a user with the skill
+        userModel.findOne.mockImplementation(() => ({
+            lean: jest.fn().mockResolvedValue({
+                _id: userId,
+                skills: [skillToDelete] // Use plain skill name
+            })
+        }));
+    
+        // Mock userModel.findByIdAndUpdate to return the updated user
         userModel.findByIdAndUpdate.mockResolvedValue({
-            skills: [],
+            _id: userId,
+            skills: [] // Skill removed
         });
-
+    
+        // Mock userModel.updateMany to simulate removing the skill from education and work experience
+        userModel.updateMany.mockResolvedValue({});
+    
         const response = await request(app)
-            .delete('/skills/Problem Solving');
-
+            .delete(`/skills/${skillName}`)
+            .set('x-mock-user', JSON.stringify({ id: userId })); // Simulate authenticated user
+    
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+    
         expect(response.status).toBe(200);
         expect(response.body.message).toBe('Skill deleted successfully');
-        expect(response.body.deletedSkill).toEqual(skillToDelete);
+        expect(response.body.deletedSkill).toEqual(skillToDelete); // Use plain skill name
     });
 
     test('should return 500 if an internal server error occurs', async () => {
-        userModel.findOne.mockRejectedValue(new Error('Database error'));
+        // Mock userModel.findOne to throw an error
+        userModel.findOne.mockImplementation(() => ({
+            lean: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
 
         const response = await request(app)
-            .delete('/skills/Problem Solving');
+            .delete(`/skills/${skillName}`);
 
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Internal server error');
+        expect(response.body.details).toBe('Database error');
     });
 });
-*/
-   
-/*
 
-describe('POST /user/skills/add-endorsement', () => {
+app.post('/skills/endorsements/add-endorsement', mockVerifyToken, addEndorsement);
+app.delete('/skills/endorsements/remove-endorsement/:skillName', mockVerifyToken, deleteEndorsement);
+
+describe("POST /skills/endorsements/add-endorsement", () => {
+    const mockUserId = "0b3169152ee6c171d25e6860";
+    const mockEndorserId = "d29ccbd4ac1b1cb9faefb867";
+
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('should endorse a skill successfully', async () => {
-        const mockUserId = 'd29ccbd4ac1b1cb9faefb867';
-        const mockSkillData = { skillName: 'JavaScript' };
-        const mockEndorserId = '0b3169152ee6c171d25e6860';
-
-        userModel.findById.mockResolvedValue({
+    it("should successfully endorse a skill", async () => {
+        userModel.findOne.mockResolvedValue({
             _id: mockUserId,
-            skills: [{ skillName: 'JavaScript', endorsements: [] }]
+            skills: [{ skillName: "JavaScript", endorsements: [] }]
         });
-
-        userModel.findByIdAndUpdate.mockResolvedValue({
+        userModel.findOneAndUpdate.mockResolvedValue({
             _id: mockUserId,
-            skills: [{ skillName: 'JavaScript', endorsements: [mockEndorserId] }]
+            skills: [{ skillName: "JavaScript", endorsements: [mockEndorserId] }]
         });
 
         const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: mockUserId, skillName: 'JavaScript' });
+            .post("/skills/endorsements/add-endorsement")
+            .send({ skillOwnerId: mockUserId, skillName: "JavaScript" });
 
         expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Skill endorsement created successfully');
-        expect(response.body.skill.skillName).toBe('JavaScript');
+        expect(response.body.message).toBe("Skill endorsement created successfully");
         expect(response.body.skill.endorsements).toContain(mockEndorserId);
     });
 
-    it('should return 400 if user tries to endorse their own skill', async () => {
-        const mockUserId = 'd29ccbd4ac1b1cb9faefb867';
-
+    it("should return 400 if user tries to endorse their own skill", async () => {
         const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: mockUserId, skillName: 'JavaScript' });
+            .post("/skills/endorsements/add-endorsement")
+            .send({ skillOwnerId: "cc81c18d6b9fc1b83e2bebe3", skillName: "JavaScript" });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('You cannot endorse your own skill');
+        expect(response.body.message).toBe("User cannot endorse himself");
     });
 
-    it('should return 400 if the skill is already endorsed', async () => {
-        userModel.findById.mockResolvedValue({
-            _id: 'd29ccbd4ac1b1cb9faefb867',
-            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_1'] }]
+    it("should return 404 if user or skill does not exist", async () => {
+        userModel.findOne.mockResolvedValue(null);
+        
+        const response = await request(app)
+            .post("/skills/endorsements/add-endorsement")
+            .send({ skillOwnerId: mockUserId, skillName: "Python" });
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe("User or skill not found");
+    });
+
+    it("should return 400 if skill has already been endorsed by the user", async () => {
+        userModel.findOne.mockResolvedValue({
+            _id: mockUserId,
+            skills: [{ skillName: "JavaScript", endorsements: ["cc81c18d6b9fc1b83e2bebe3"] }]
         });
 
         const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
+            .post("/skills/endorsements/add-endorsement")
+            .send({ skillOwnerId: mockUserId, skillName: "JavaScript" });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Skill already endorsed');
+        expect(response.body.message).toBe("You have already endorsed this skill once");
     });
 
-    it('should return 404 if the user is not found', async () => {
-        userModel.findById.mockResolvedValue(null);
-
+    it("should return 500 if there is a server error", async () => {
+        userModel.findOne.mockRejectedValue(new Error("Database error"));
+        
         const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: 'invalid_id', skillName: 'JavaScript' });
-
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('User not found');
-    });
-
-    it('should return 404 if the skill is not found', async () => {
-        userModel.findById.mockResolvedValue({
-            _id: '0b3169152ee6c171d25e6860',
-            skills: []
-        });
-
-        const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
-
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('Skill not found');
-    });
-
-    it('should return 500 if an internal server error occurs', async () => {
-        userModel.findById.mockRejectedValue(new Error('Database error'));
-
-        const response = await request(app)
-            .post('/user/skills/add-endorsement')
-            .send({ skillOwnerId: '0b3169152ee6c171d25e6860', skillName: 'JavaScript' });
+            .post("/skills/endorsements/add-endorsement")
+            .send({ skillOwnerId: mockUserId, skillName: "JavaScript" });
 
         expect(response.status).toBe(500);
-        expect(response.body.error).toBe('Internal server error');
+        expect(response.body.message).toBe("Internal server error");
     });
 });
 
-describe('DELETE /user/skills/remove-endorsement/:skillName', () => {
+
+describe("DELETE /skills/endorsements/remove-endorsement/:skillName", () => {
+    let userId, skillOwnerId, skillName;
+
     beforeEach(() => {
-        jest.clearAllMocks();
+        userId = "cc81c18d6b9fc1b83e2bebe3";
+        skillOwnerId = "d29ccbd4ac1b1cb9faefb867";
+        skillName = "JavaScript";
     });
 
-    it('should remove an endorsement successfully', async () => {
-        const mockUserId = '64f8a1b2c3d4e5f6a7b8c9d0';
-        const skillName = 'JavaScript';
+    it("should successfully delete an endorsement", async () => {
+        const user = {
+            _id: skillOwnerId,
+            skills: [{ skillName, endorsements: [userId] }],
+        };
 
-        userModel.findById.mockResolvedValue({
-            _id: mockUserId,
-            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_1', 'USER_ID_2'] }]
+        userModel.findOne.mockResolvedValue(user);
+        userModel.findOneAndUpdate.mockResolvedValue({
+            ...user,
+            skills: [{ skillName, endorsements: [] }],
         });
 
-        userModel.findByIdAndUpdate.mockResolvedValue({
-            _id: mockUserId,
-            skills: [{ skillName: 'JavaScript', endorsements: ['USER_ID_2'] }]
+        const res = await request(app)
+            .delete(`/skills/endorsements/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId });
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe("Skill endorsement deleted successfully");
+        expect(res.body.skill.endorsements).toHaveLength(0);
+    });
+
+    it("should return 404 if user is not found", async () => {
+        userModel.findOne.mockResolvedValue(null);
+
+        const res = await request(app)
+            .delete(`/skills/endorsements/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId });
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe("User or skill not found");
+    });
+
+    it("should return 404 if skill does not exist", async () => {
+        userModel.findOne.mockResolvedValue(null);
+
+        const res = await request(app)
+            .delete(`/skills/endorsements/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId });
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe("User or skill not found");
+    });
+
+    it("should return 404 if endorsement is not found", async () => {
+        userModel.findOne.mockResolvedValue({
+            _id: skillOwnerId,
+            skills: [{ skillName, endorsements: [] }],
         });
 
-        const response = await request(app)
-            .delete(`/user/skills/remove-endorsement/${skillName}`)
-            .send({ skillOwnerId: mockUserId });
+        const res = await request(app)
+            .delete(`/skills/endorsements/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId });
 
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Skill endorsement deleted successfully');
-        expect(response.body.skill.skillName).toBe(skillName);
-        expect(response.body.skill.endorsements).not.toContain('USER_ID_1');
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe("No endorsement found from this user for this skill");
     });
 
-    it('should return 400 if skill name is missing', async () => {
-        const response = await request(app)
-            .delete('/user/skills/remove-endorsement/')
-            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
+    it("should handle server errors", async () => {
+        userModel.findOne.mockRejectedValue(new Error("Database error"));
 
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Skill name is required');
-    });
+        const res = await request(app)
+            .delete(`/skills/endorsements/remove-endorsement/${skillName}`)
+            .send({ skillOwnerId });
 
-    it('should return 404 if the user is not found', async () => {
-        userModel.findById.mockResolvedValue(null);
-
-        const response = await request(app)
-            .delete('/user/skills/remove-endorsement/JavaScript')
-            .send({ skillOwnerId: 'invalid_id' });
-
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('User not found');
-    });
-
-    it('should return 404 if the skill is not found', async () => {
-        userModel.findById.mockResolvedValue({
-            _id: '64f8a1b2c3d4e5f6a7b8c9d0',
-            skills: []
-        });
-
-        const response = await request(app)
-            .delete('/user/skills/remove-endorsement/JavaScript')
-            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
-
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('Skill not found');
-    });
-
-    it('should return 400 if the endorsement does not exist', async () => {
-        userModel.findById.mockResolvedValue({
-            _id: '64f8a1b2c3d4e5f6a7b8c9d0',
-            skills: [{ skillName: 'JavaScript', endorsements: [] }]
-        });
-
-        const response = await request(app)
-            .delete('/user/skills/remove-endorsement/JavaScript')
-            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Endorsement not found');
-    });
-
-    it('should return 500 if an internal server error occurs', async () => {
-        userModel.findById.mockRejectedValue(new Error('Database error'));
-
-        const response = await request(app)
-            .delete('/user/skills/remove-endorsement/JavaScript')
-            .send({ skillOwnerId: '64f8a1b2c3d4e5f6a7b8c9d0' });
-
-        expect(response.status).toBe(500);
-        expect(response.body.error).toBe('Internal server error');
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe("Internal server error");
     });
 });
-
-*/
 
 /*
 Profile and Cover Pictures Tests
@@ -1394,6 +2000,12 @@ Profile and Cover Pictures Tests
 
 app.post('/add-profile-picture', mockVerifyToken, uploadMiddleware.single('file'), uploadProfilePicture);
 app.post('/add-cover-picture', mockVerifyToken, uploadMiddleware.single('file'), uploadCoverPicture);
+
+app.delete('/profile-picture', mockVerifyToken, deleteProfilePicture);
+app.delete('/cover-picture', mockVerifyToken, deleteCoverPicture);
+
+app.get('/profile-picture', mockVerifyToken, getProfilePicture);
+app.get('/cover-picture', mockVerifyToken, getCoverPicture);
 
 describe('POST /add-profile-picture', () => {
     const userId = 'cc81c18d6b9fc1b83e2bebe3';
@@ -1509,6 +2121,153 @@ describe('POST /add-profile-picture', () => {
 
 });
 
+describe('GET /profile-picture', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return profile picture successfully', async () => {
+        jest.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(true);
+        // Mock userModel.findById to return a user with profilePicture
+        const mockProfilePicture = 'https://example.com/profile.jpg';
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                profilePicture: mockProfilePicture
+            })
+        }));
+
+        const response = await request(app)
+            .get('/profile-picture');
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.profilePicture).toBe(mockProfilePicture);
+    });
+
+    test('should return 404 if user is not found', async () => {
+        jest.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(true);
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .get('/profile-picture');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if profile picture is not set', async () => {
+        jest.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(true);
+        // Mock userModel.findById to return a user without profilePicture
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                profilePicture: null
+            })
+        }));
+
+        const response = await request(app)
+            .get('/profile-picture');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('profile Picture not set');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        jest.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(true);
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .get('/profile-picture');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBe('Database error');
+    });
+});
+
+describe('GET /cover-picture', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should return cover picture successfully', async () => {
+        // Mock userModel.findById to return a user with coverPicture
+        const mockCoverPicture = 'https://example.com/cover.jpg';
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                coverPicture: mockCoverPicture
+            })
+        }));
+
+        const response = await request(app)
+            .get('/cover-picture');
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.coverPicture).toBe(mockCoverPicture);
+    });
+
+    test('should return 404 if user is not found', async () => {
+        jest.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(true)
+        // Mock userModel.findById to return null (user not found)
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+
+        const response = await request(app)
+            .get('/cover-picture');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 400 if cover picture is not set', async () => {
+
+        // Mock userModel.findById to return a user without coverPicture
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue({
+                _id: userId,
+                coverPicture: null
+            })
+        }));
+
+        const response = await request(app)
+            .get('/cover-picture');
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe('cover Picture not set');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+
+        // Mock userModel.findById to throw an error
+        userModel.findById.mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+
+        const response = await request(app)
+            .get('/cover-picture');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBe('Database error');
+    });
+});
+
 
 describe('POST /add-cover-picture', () => {
     const userId = 'cc81c18d6b9fc1b83e2bebe3';
@@ -1614,6 +2373,104 @@ describe('POST /add-cover-picture', () => {
         expect(response.status).toBe(500);
         expect(response.body.message).toBe('Internal server error');
         expect(response.body.error).toBeDefined();
+    });
+});
+
+describe('DELETE /profile-picture', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should delete profile picture successfully', async () => {
+        // Mock userModel.findByIdAndUpdate to return the updated user
+        const updatedUser = {
+            _id: userId,
+            profilePicture: null
+        };
+        userModel.findByIdAndUpdate.mockResolvedValue(updatedUser);
+
+        const response = await request(app)
+            .delete('/profile-picture');
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Profile Picture deleted successfully');
+        expect(response.body).not.toHaveProperty('profilePicture'); // No URL returned for deletion
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findByIdAndUpdate to return null (user not found)
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .delete('/profile-picture');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findByIdAndUpdate to throw an error
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .delete('/profile-picture');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBe('Database error');
+    });
+});
+
+describe('DELETE /cover-picture', () => {
+    const userId = '0b3169152ee6c171d25e6860'; // Mock user ID
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should delete cover picture successfully', async () => {
+        // Mock userModel.findByIdAndUpdate to return the updated user
+        const updatedUser = {
+            _id: userId,
+            coverPicture: null
+        };
+        userModel.findByIdAndUpdate.mockResolvedValue(updatedUser);
+
+        const response = await request(app)
+            .delete('/cover-picture');
+
+        console.log('Response Body:', response.body); // Debugging: Log the response body
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('Cover Picture deleted successfully');
+        expect(response.body).not.toHaveProperty('coverPicture'); // No URL returned for deletion
+    });
+
+    test('should return 404 if user is not found', async () => {
+        // Mock userModel.findByIdAndUpdate to return null (user not found)
+        userModel.findByIdAndUpdate.mockResolvedValue(null);
+
+        const response = await request(app)
+            .delete('/cover-picture');
+
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+
+    test('should return 500 if an internal server error occurs', async () => {
+        // Mock userModel.findByIdAndUpdate to throw an error
+        userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app)
+            .delete('/cover-picture');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Internal server error');
+        expect(response.body.error).toBe('Database error');
     });
 });
 
@@ -2848,5 +3705,104 @@ describe('PATCH /contact-info - Edit Contact Info', () => {
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Failed to update contact information');
         expect(response.body.details).toBe('Database error');
+    });
+});
+
+app.get('/me', mockVerifyToken, getMe);
+
+describe('GET /me - Get Current User Profile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve own profile', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';  // Same as authenticated user ID
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'private',  // Even if private, own profile should be accessible
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should exclude sensitive fields from response', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        // Complete user with sensitive fields
+        const completeUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            password: 'hashed_password_here',
+            resetPasswordToken: 'some_token',
+            resetPasswordTokenExpiry: new Date(),
+            verificationToken: 'verification_token',
+            refreshToken: 'refresh_token',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        // Expected response after sensitive fields are filtered
+        const filteredUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        // Mock the select function to filter out sensitive fields
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(filteredUser)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.user).not.toHaveProperty('password');
+        expect(response.body.user).not.toHaveProperty('resetPasswordToken');
+        expect(response.body.user).not.toHaveProperty('resetPasswordTokenExpiry');
+        expect(response.body.user).not.toHaveProperty('verificationToken');
+        expect(response.body.user).not.toHaveProperty('refreshToken');
+    });
+
+    test('should return 404 when user not found', async () => {
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    test('should return 500 when server error occurs', async () => {
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve user profile');
+        expect(response.body.error).toBe('Database error');
     });
 });

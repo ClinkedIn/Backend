@@ -871,6 +871,9 @@
  *                             lastName:
  *                               type: string
  *                               example: "Smith"
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -959,7 +962,7 @@
  *   get:
  *     summary: Get a single post
  *     tags: [Posts]
- *     description: Retrieve a specific post by its ID
+ *     description: Retrieve a specific post by its ID. Honors post privacy settings and includes saved status.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -968,44 +971,203 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to retrieve
  *     responses:
  *       200:
  *         description: Post retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post retrieved successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Excited to share my latest project!"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["https://res.cloudinary.com/example/image/upload/image.jpg"]
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                     whoCanSee:
+ *                       type: string
+ *                       enum: [anyone, connections]
+ *                       example: "anyone"
+ *                     whoCanComment:
+ *                       type: string
+ *                       enum: [anyone, connections, noOne]
+ *                       example: "anyone"
+ *                     isSaved:
+ *                       type: boolean
+ *                       example: true
+ *                     isRepost:
+ *                       type: boolean
+ *                       example: true
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c87"
+ *                     reposterId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c88"
+ *                     reposterFirstName:
+ *                       type: string
+ *                       example: "Robert"
+ *                     reposterLastName:
+ *                       type: string
+ *                       example: "Johnson"
+ *                     reposterProfilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile2.jpg"
+ *                     reposterHeadline:
+ *                       type: string
+ *                       example: "Marketing Manager at Company XYZ"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "Great insights in this post!"
+ *                     repostDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T10:15:30.123Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have access to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This post is only visible to the author's connections"
  *       404:
  *         description: Post not found
- *   put:
- *     summary: Update a post
- *     tags: [Posts]
- *     description: Modify an existing post by ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreatePostRequest'
- *     responses:
- *       200:
- *         description: Post updated successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
  *   delete:
  *     summary: Delete a post
  *     tags: [Posts]
- *     description: Remove a post by its ID
+ *     description: Performs a soft delete of a post by marking it as inactive. Only the post owner can delete their posts.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1014,14 +1176,250 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to delete
  *     responses:
  *       200:
  *         description: Post deleted successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post deleted successfully"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own posts"
+ *       404:
+ *         description: Post not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
+ *   put:
+ *     summary: Update a post
+ *     tags: [Posts]
+ *     description: Updates a post's description and/or tagged users. Only the post owner can update their posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: The updated text content of the post
+ *                 example: "Updated post description with new information"
+ *               taggedUsers:
+ *                 type: array
+ *                 description: List of users tagged in the post
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c86"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Smith"
+ *                     companyName:
+ *                       type: string
+ *                       example: null
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post updated successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Updated post description with new information"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/image.jpg"
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-15T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *       400:
+ *         description: Bad request - invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post description cannot be empty"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only update your own posts"
  *       404:
  *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1030,7 +1428,7 @@
  *   post:
  *     summary: Save a post
  *     tags: [Posts]
- *     description: Save a post to a user's collection
+ *     description: Save a post to the user's saved posts collection
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1039,39 +1437,70 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: ID of the post to save
  *     responses:
  *       200:
  *         description: Post saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post saved successfully"
+ *       400:
+ *         description: Bad request - missing post ID or post already saved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *   delete:
- *     summary: Unsave a post
- *     tags: [Posts]
- *     description: Remove a post from a user's saved list
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     responses:
- *       200:
- *         description: Post unsaved successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to save post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
  * /posts/{postId}/like:
  *   post:
- *     summary: Like a post
+ *     summary: Like or react to a post
  *     tags: [Posts]
- *     description: Add a like to a post
+ *     description: Add a reaction to a post (like, support, celebrate, etc.)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1080,19 +1509,107 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to like
  *     requestBody:
- *
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               impressionType:
+ *                 type: string
+ *                 enum: [like, support, celebrate, love, insightful, funny]
+ *                 default: like
+ *                 description: Type of reaction to add to the post
  *     responses:
  *       200:
- *         description: Post liked successfully
+ *         description: Post liked successfully or impression changed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post liked successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 5
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 15
+ *       400:
+ *         description: Bad request - missing post ID, invalid impression type, or user already liked this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have already liked this post"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to like post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  *
  *   delete:
- *     summary: Unlike a post
+ *     summary: Unlike or remove reaction from a post
  *     tags: [Posts]
- *     description: Remove a like from a post
+ *     description: Remove a user's reaction from a post
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1101,12 +1618,85 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to unlike
  *     responses:
  *       200:
- *         description: Post unliked successfully
+ *         description: Reaction removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post like removed successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 4
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 14
+ *       400:
+ *         description: Bad request - missing post ID or user hasn't reacted to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have not reacted to this post"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove post impression"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1115,7 +1705,7 @@
  *   post:
  *     summary: Repost a post
  *     tags: [Posts]
- *     description: Repost an existing post
+ *     description: Create a repost of an existing post with optional description
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1124,50 +1714,193 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to repost
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: Optional description to add to the repost
  *     responses:
- *       200:
+ *       201:
  *         description: Post reposted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reposted successfully"
+ *                 repost:
+ *                   type: object
+ *                   properties:
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     originalPostId:
+ *                       type: string
+ *                       example: "60d21b1c67d0d8992e610c83"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d0fe4677975f4ae0329ea4"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at XYZ Corp"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1624420422/profile/user123.jpg"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "This is a great post that I wanted to share!"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-03-22T14:30:00.000Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to repost post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
- * /posts/{postId}/repost/{repostId}:
+ * /posts/{repostId}/repost:
  *   delete:
  *     summary: Delete a repost
  *     tags: [Posts]
- *     description: Remove a repost from a user's profile
+ *     description: Remove a repost from the user's profile by setting it to inactive. Only the owner of the repost can delete it.
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
  *       - in: path
  *         name: repostId
  *         required: true
  *         schema:
  *           type: string
- *         description: The repost ID
+ *         description: The ID of the repost to delete
  *     responses:
  *       200:
  *         description: Repost deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost deleted successfully"
+ *       400:
+ *         description: Bad request - missing repost ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the repost
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own reposts"
+ *       404:
+ *         description: Repost not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete repost"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
  * /posts/{postId}/report:
  *   post:
- *     summary: Report a post
+ *     summary: Report a post for policy violations
  *     tags: [Posts]
- *     description: Report a post for inappropriate content
+ *     description: Report a post for violating platform policies. Users can specify a policy violation reason and optionally indicate why they don't want to see similar content.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1176,12 +1909,129 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement",
+ *                   "This person is impersonating someone", 
+ *                   "This account has been hacked", 
+ *                   "This account is not a real person"
+ *                 ]
+ *                 description: Reason for reporting the post (policy violation type)
+ *                 example: "Misinformation"
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author", 
+ *                   "I'm not interested in this topic", 
+ *                   "I've seen too many posts on this topic", 
+ *                   "I've seen this post before", 
+ *                   "This post is old", 
+ *                   "It's something else"
+ *                 ]
+ *                 description: Optional reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
  *     responses:
- *       200:
+ *       201:
  *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully"
+ *                 reportId:
+ *                   type: string
+ *                   example: "60d21b4667d0d8992e610c85"
+ *       400:
+ *         description: Bad request - missing required fields or invalid reason
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid report reason"
+ *                 validReasons:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child
+ * exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy violation reason
+ *                 value:
+ *                   message: "Invalid report reason"
+ *                   validReasons: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *               invalidDontWantToSee:
+ *                 summary: Invalid "don't want to see" reason
+ *                 value:
+ *                   message: "Invalid \"don't want to see\" reason"
+ *                   validReasons: ["I'm not interested in the author", "I'm not interested in this topic", "I've seen too many posts on this topic", "I've seen this post before", "This post is old", "It's something else"]
+ *               missingPolicy:
+ *                 summary: Missing policy violation reason
+ *                 value:
+ *                   message: "Report reason (policy) is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to report post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -3065,6 +3915,195 @@
 
 /**
  * @swagger
+ * /user/me:
+ *   get:
+ *     summary: Get logged in user profile
+ *     tags: [Users]
+ *     description: Retrieves a user's profile
+ *     operationId: getMe
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User profile retrieved successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 5a96ecd7fc5c55fee3eab5fe
+ *                     firstName:
+ *                       type: string
+ *                       example: Torrance
+ *                     lastName:
+ *                       type: string
+ *                       example: Willms
+ *                     email:
+ *                       type: string
+ *                       example: Cyril.Wunsch62@yahoo.com
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/81.jpg
+ *                     coverPicture:
+ *                       type: string
+ *                       example: https://picsum.photos/seed/MFzbMCDqC/675/1424
+ *                     resume:
+ *                       type: string
+ *                       example: https://content-cutlet.info
+ *                     bio:
+ *                       type: string
+ *                       example: Stipes conatus creber sit.
+ *                     location:
+ *                       type: string
+ *                       example: Kalebchester
+ *                     lastJobTitle:
+ *                       type: string
+ *                       example: Global Response Planner
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                     mainEducation:
+ *                       type: string
+ *                       nullable: true
+ *                     profilePrivacySettings:
+ *                       type: string
+ *                       enum: [public, private, connectionsOnly]
+ *                       example: public
+ *                     workExperience:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           jobTitle:
+ *                             type: string
+ *                           companyName:
+ *                             type: string
+ *                           fromDate:
+ *                             type: string
+ *                             format: date-time
+ *                           toDate:
+ *                             type: string
+ *                             format: date-time
+ *                           employmentType:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           locationType:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           skillName:
+ *                             type: string
+ *                           endorsements:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                           degree:
+ *                             type: string
+ *                           fieldOfStudy:
+ *                             type: string
+ *                           startDate:
+ *                             type: string
+ *                             format: date-time
+ *                           endDate:
+ *                             type: string
+ *                             format: date-time
+ *                           grade:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     connectionList:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       403:
+ *         description: Access denied due to privacy settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: This profile is private
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve user profile
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
  * /user:
  *   get:
  *     summary: Get a list of users
@@ -3197,29 +4236,19 @@
  *                   example: Internal server error details
  */
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// PROFILE AND COVER PICS DOCUMENTATION //////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * @swagger
- * /user/profile-picture:
- *   get:
- *     summary: Get profile picture
- *     tags: [Users]
- *     description: Retrieve the user's profile picture
- *     responses:
- *       200:
- *         description: Profile picture retrieved successfully
- *       400:
- *         description: Profile picture not set
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: User not found
- *       500:
- *         description: Internal Server Error
- *
+ * /user/pictures/profile-picture:
  *   post:
- *     summary: Upload a profile picture
+ *     summary: Upload or update the user's profile picture
  *     tags: [Users]
- *     description: Upload or update a user's profile picture
+ *     description: Uploads a new profile picture for the user, validating file type and size before saving.
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -3227,99 +4256,194 @@
  *           schema:
  *             type: object
  *             properties:
- *               profilePicture:
+ *               file:
  *                 type: string
  *                 format: binary
+ *                 description: The profile picture file to be uploaded.
  *     responses:
  *       200:
- *         description: Profile picture uploaded successfully
+ *         description: Profile Picture updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Profile Picture updated successfully"
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *                   example: "https://example.com/uploads/profile.jpg"
  *       400:
- *         description: Invalid file format
+ *         description: Invalid request due to missing file or incorrect file format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: |
+ *                      "No file uploaded" OR
+ *                      "File size too large. Maximum allowed size is 5MB." OR
+ *                      "Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed."
  *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal Server Error
- *
- *   delete:
- *     summary: Delete profile picture
- *     tags: [Users]
- *     description: Remove a user's profile picture
- *     responses:
- *       200:
- *         description: Profile picture deleted successfully
- *       401:
- *         description: Unauthorized
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: Profile picture not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
  */
 
 /**
  * @swagger
- * /user/profile-picture:
- *   post:
- *     summary: Upload a profile picture
- *     tags: [Users]
- *     description: Upload or update a user's profile picture
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               profilePicture:
- *                 type: string
- *                 format: binary
+ * /user/pictures/profile-picture:
+ *   get:
+ *     summary: Get the user's profile picture
+ *     description: Retrieves the URL of the user's profile picture.
+ *     tags: 
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Profile picture uploaded successfully
- *       400:
- *         description: Invalid file format
+ *         description: Profile picture retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 profilePicture:
+ *                   type: string
+ *                   example: "https://example.com/uploads/profile-picture.jpg"
  *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal Server Error
- *
- *   delete:
- *     summary: Delete profile picture
- *     tags: [Users]
- *     description: Remove a user's profile picture
- *     responses:
- *       200:
- *         description: Profile picture deleted successfully
- *       401:
- *         description: Unauthorized
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: Profile picture not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
  */
 
 /**
  * @swagger
- * /user/cover-picture:
- *   get:
- *     summary: Get cover photo
- *     tags: [Users]
- *     description: Retrieve the user's cover photo
+ * /user/pictures/profile-picture:
+ *   delete:
+ *     summary: Delete the user's profile picture
+ *     description: Removes the user's profile picture by setting the profilePicture field to null.
+ *     tags: 
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Cover photo retrieved successfully
- *       400:
- *         description: Cover photo not set
+ *         description: Profile Picture deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Profile Picture deleted successfully"
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
- *
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
+ */
+
+/**
+ * @swagger
+ * /user/pictures/cover-picture:
  *   post:
- *     summary: Upload a cover photo
+ *     summary: Upload or update the user's cover picture
  *     tags: [Users]
- *     description: Upload or update a user's cover photo
+ *     description: Uploads a new cover picture for the user, validating file type and size before saving.
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -3327,33 +4451,190 @@
  *           schema:
  *             type: object
  *             properties:
- *               coverPhoto:
+ *               file:
  *                 type: string
  *                 format: binary
+ *                 description: The cover picture file to be uploaded.
  *     responses:
  *       200:
- *         description: Cover photo uploaded successfully
+ *         description: Cover Picture updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Cover Picture updated successfully"
+ *                 coverPicture:
+ *                   type: string
+ *                   format: uri
+ *                   example: "https://example.com/uploads/cover.jpg"
  *       400:
- *         description: Invalid file format
+ *         description: Invalid request due to missing file or incorrect file format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: |
+ *                      "No file uploaded" OR
+ *                      "File size too large. Maximum allowed size is 5MB." OR
+ *                      "Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed."
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
- *
- *   delete:
- *     summary: Delete cover photo
- *     tags: [Users]
- *     description: Remove a user's cover photo
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
+ */
+
+/**
+ * @swagger
+ * /user/pictures/cover-picture:
+ *   get:
+ *     summary: Get the user's profile picture
+ *     description: Retrieves the URL of the user's cover picture.
+ *     tags: 
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Cover photo deleted successfully
+ *         description: Cover picture retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 coverPicture:
+ *                   type: string
+ *                   example: "https://example.com/uploads/cover-picture.jpg"
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: Cover photo not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
  */
+
+/**
+ * @swagger
+ * /user/pictures/cover-picture:
+ *   delete:
+ *     summary: Delete the user's cover picture
+ *     description: Removes the user's cover picture by setting the coverPicture field to null.
+ *     tags: 
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cover picture deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Cover Picture deleted successfully"
+ *       401:
+ *         description: Unauthorized access (User not logged in).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Unexpected failure"
+ */
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// RESUME DOCUMENTATION //////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /**
  * @swagger
@@ -3481,92 +4762,311 @@
  *         description: Server error
  */
 
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// EXPERIENCE DOCUMENTATION //////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * @swagger
  * /user/experience:
  *   post:
- *     summary: Add a new work experience
+ *     summary: Add a new work experience for the authenticated user.
+ *     description: Allows a user to add a new experience entry to their profile, including job details, employment type, location, skills, and optional media uploads.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Adds a work experience entry to the user's profile.
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required:
- *               - jobTitle
- *               - companyName
- *               - fromDate
- *               - employmentType
  *             properties:
  *               jobTitle:
  *                 type: string
  *                 example: "Software Engineer"
  *               companyName:
  *                 type: string
- *                 example: "TechCorp"
+ *                 example: "Google"
  *               fromDate:
  *                 type: string
  *                 format: date
- *                 example: "2022-01-01"
+ *                 example: "2023-01-01"
  *               toDate:
  *                 type: string
  *                 format: date
- *                 example: "2023-06-01"
+ *                 nullable: true
+ *                 example: "2024-06-01"
  *               currentlyWorking:
  *                 type: boolean
- *                 default: false
+ *                 example: false
  *               employmentType:
  *                 type: string
  *                 enum: ["Full Time", "Part Time", "Freelance", "Self Employed", "Contract", "Internship", "Apprenticeship", "Seasonal"]
+ *                 example: "Full Time"
  *               location:
  *                 type: string
- *                 example: "New York, USA"
+ *                 example: "San Francisco, CA"
  *               locationType:
  *                 type: string
  *                 enum: ["Onsite", "Hybrid", "Remote"]
+ *                 example: "Hybrid"
  *               description:
  *                 type: string
- *                 example: "Developed web applications using React and Node.js."
+ *                 example: "Worked on backend development for a high-scale system."
  *               foundVia:
  *                 type: string
+ *                 enum: ["Indeed", "LinkedIn", "Company Website", "Other job sites", "Referral", "Contracted by Recruiter", "Staffing Agency", "Other"]
  *                 example: "LinkedIn"
  *               skills:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["JavaScript", "React", "Node.js"]
+ *                 example: ["JavaScript", "Node.js", "MongoDB"]
  *               media:
  *                 type: string
  *                 format: binary
  *     responses:
  *       200:
- *         description: Experience added successfully
+ *         description: Experience added successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Experience added successfully"
+ *                 experience:
+ *                   type: object
+ *                   properties:
+ *                     jobTitle:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Google"
+ *                     fromDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2023-01-01"
+ *                     toDate:
+ *                       type: string
+ *                       format: date
+ *                       nullable: true
+ *                       example: "2024-06-01"
+ *                     currentlyWorking:
+ *                       type: boolean
+ *                       example: false
+ *                     employmentType:
+ *                       type: string
+ *                       example: "Full Time"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     locationType:
+ *                       type: string
+ *                       example: "Hybrid"
+ *                     description:
+ *                       type: string
+ *                       example: "Worked on backend development for a high-scale system."
+ *                     foundVia:
+ *                       type: string
+ *                       example: "LinkedIn"
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["JavaScript", "Node.js", "MongoDB"]
+ *                     media:
+ *                       type: string
+ *                       example: "https://example.com/media.jpg"
+ *                 sortedWorkExperience:
+ *                   type: array
+ *                   description: A sorted list of the user's work experiences.
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobTitle:
+ *                         type: string
+ *                         example: "Senior Developer"
+ *                       companyName:
+ *                         type: string
+ *                         example: "Amazon"
+ *                       fromDate:
+ *                         type: string
+ *                         format: date
+ *                         example: "2020-06-01"
+ *                       toDate:
+ *                         type: string
+ *                         format: date
+ *                         nullable: true
+ *                         example: "2022-08-01"
+ *                       currentlyWorking:
+ *                         type: boolean
+ *                         example: false
+ *                       employmentType:
+ *                         type: string
+ *                         example: "Full Time"
+ *                       location:
+ *                         type: string
+ *                         example: "Seattle, WA"
+ *                       locationType:
+ *                         type: string
+ *                         example: "Onsite"
+ *                       description:
+ *                         type: string
+ *                         example: "Managed backend development for cloud applications."
+ *                       foundVia:
+ *                         type: string
+ *                         example: "Referral"
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Python", "AWS", "Django"]
  *       400:
- *         description: Bad request
+ *         description: Invalid request data or failed media upload.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid experience data"
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal server error
- *
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+
+/**
+ * @swagger
+ * /user/experience:
  *   get:
- *     summary: Get all work experiences
+ *     summary: Retrieve all work experiences of the authenticated user.
+ *     description: Fetches the list of work experiences associated with the authenticated user.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Retrieves all work experiences of the user.
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Experiences retrieved successfully
+ *         description: Successfully retrieved experiences.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 experiences:
+ *                   type: array
+ *                   description: List of work experiences.
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobTitle:
+ *                         type: string
+ *                         example: "Software Engineer"
+ *                       companyName:
+ *                         type: string
+ *                         example: "Google"
+ *                       fromDate:
+ *                         type: string
+ *                         format: date
+ *                         example: "2023-01-01"
+ *                       toDate:
+ *                         type: string
+ *                         format: date
+ *                         nullable: true
+ *                         example: "2024-06-01"
+ *                       currentlyWorking:
+ *                         type: boolean
+ *                         example: false
+ *                       employmentType:
+ *                         type: string
+ *                         example: "Full Time"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                       locationType:
+ *                         type: string
+ *                         example: "Hybrid"
+ *                       description:
+ *                         type: string
+ *                         example: "Worked on backend development for a high-scale system."
+ *                       foundVia:
+ *                         type: string
+ *                         example: "LinkedIn"
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["JavaScript", "Node.js", "MongoDB"]
+ *                       media:
+ *                         type: string
+ *                         example: "https://example.com/media.jpg"
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal server error
- *
- *
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ */
+
+/**
+ * @swagger
  * /user/experience/{index}:
  *   get:
  *     summary: Get a specific work experience
@@ -3580,26 +5080,87 @@
  *         required: true
  *         schema:
  *           type: integer
+ *         description: The index of the work experience entry to retrieve.
  *     responses:
  *       200:
- *         description: Experience retrieved successfully
+ *         description: Experience retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 experience:
+ *                   type: object
+ *                   properties:
+ *                     jobTitle:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Tech Corp"
+ *                     fromDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2022-01-01T00:00:00.000Z"
+ *                     toDate:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       example: "2023-06-30T00:00:00.000Z"
+ *                     currentlyWorking:
+ *                       type: boolean
+ *                       example: false
+ *                     employmentType:
+ *                       type: string
+ *                       enum: ["Full Time", "Part Time", "Freelance", "Self Employed", "Contract", "Internship", "Apprenticeship", "Seasonal"]
+ *                       example: "Full Time"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     locationType:
+ *                       type: string
+ *                       enum: ["Onsite", "Hybrid", "Remote"]
+ *                       example: "Hybrid"
+ *                     description:
+ *                       type: string
+ *                       example: "Developed and maintained web applications."
+ *                     foundVia:
+ *                       type: string
+ *                       enum: ["Indeed", "LinkedIn", "Company Website", "Other job sites", "Referral", "Contracted by Recruiter", "Staffing Agency", "Other"]
+ *                       example: "LinkedIn"
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["JavaScript", "React", "Node.js"]
+ *                     media:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "http://example.com/image.jpg"
  *       400:
- *         description: Invalid index
+ *         description: Bad request due to an invalid or out-of-range index.
  *       404:
- *         description: User or experience not found
+ *         description: User not found.
+ *       401:
+ *         description: Unauthorized request (missing or invalid token).
  *       500:
- *         description: Internal server error
- *
+ *         description: Internal server error.
+ */
+
+/**
+ * @swagger
+ * /user/experience/{index}:
  *   patch:
- *     summary: Update a work experience
+ *     summary: Update a specific work experience entry of the authenticated user.
+ *     description: Updates an existing work experience entry using the provided index and request body.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Updates a work experience entry at the specified index.
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: index
  *         required: true
+ *         description: Index of the work experience to update.
  *         schema:
  *           type: integer
  *     requestBody:
@@ -3611,65 +5172,264 @@
  *             properties:
  *               jobTitle:
  *                 type: string
+ *                 example: "Senior Software Engineer"
  *               companyName:
  *                 type: string
+ *                 example: "Amazon"
  *               fromDate:
  *                 type: string
  *                 format: date
+ *                 example: "2022-03-01"
  *               toDate:
  *                 type: string
  *                 format: date
+ *                 nullable: true
+ *                 example: "2024-01-01"
  *               currentlyWorking:
  *                 type: boolean
+ *                 example: false
  *               employmentType:
  *                 type: string
+ *                 example: "Full Time"
  *               location:
  *                 type: string
+ *                 example: "New York, NY"
  *               locationType:
  *                 type: string
+ *                 example: "Remote"
  *               description:
  *                 type: string
+ *                 example: "Developed scalable microservices architecture."
  *               foundVia:
  *                 type: string
+ *                 example: "Recruiter"
  *               skills:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 example: ["Python", "AWS", "DynamoDB"]
  *               media:
  *                 type: string
  *                 format: binary
  *     responses:
  *       200:
- *         description: Experience updated successfully
+ *         description: Experience updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Experience updated successfully"
+ *                 experience:
+ *                   type: object
+ *                   properties:
+ *                     jobTitle:
+ *                       type: string
+ *                       example: "Senior Software Engineer"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Amazon"
+ *                     fromDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2022-03-01"
+ *                     toDate:
+ *                       type: string
+ *                       format: date
+ *                       nullable: true
+ *                       example: "2024-01-01"
+ *                     currentlyWorking:
+ *                       type: boolean
+ *                       example: false
+ *                     employmentType:
+ *                       type: string
+ *                       example: "Full Time"
+ *                     location:
+ *                       type: string
+ *                       example: "New York, NY"
+ *                     locationType:
+ *                       type: string
+ *                       example: "Remote"
+ *                     description:
+ *                       type: string
+ *                       example: "Developed scalable microservices architecture."
+ *                     foundVia:
+ *                       type: string
+ *                       example: "Recruiter"
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Python", "AWS", "DynamoDB"]
+ *                     media:
+ *                       type: string
+ *                       example: "https://example.com/media.jpg"
+ *                 sortedWorkExperience:
+ *                   type: array
+ *                   description: Sorted list of updated work experiences.
+ *                   items:
+ *                     type: object
  *       400:
- *         description: Bad request
+ *         description: Invalid request (e.g., invalid date format, file upload error).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid Data"
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User or experience not found
+ *         description: User or experience not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal server error
- *
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ */
+
+/**
+ * @swagger
+ * /user/experience/{index}:
  *   delete:
- *     summary: Delete a work experience
+ *     summary: Delete a specific work experience entry of the authenticated user.
+ *     description: Removes a work experience entry by index and updates associated skills.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Deletes a work experience entry at the specified index.
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: index
  *         required: true
+ *         description: Index of the work experience to delete.
  *         schema:
  *           type: integer
  *     responses:
  *       200:
- *         description: Experience deleted successfully
+ *         description: Experience deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Experience deleted successfully"
+ *                 deletedExperience:
+ *                   type: object
+ *                   properties:
+ *                     jobTitle:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Google"
+ *                     fromDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2021-06-01"
+ *                     toDate:
+ *                       type: string
+ *                       format: date
+ *                       example: "2023-07-01"
+ *                     employmentType:
+ *                       type: string
+ *                       example: "Full Time"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                 updatedSkills:
+ *                   type: array
+ *                   description: Updated list of skills after experience deletion.
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       skillName:
+ *                         type: string
+ *                         example: "JavaScript"
+ *                       experience:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
+ *                       education:
+ *                         type: array
+ *                         items:
+ *                           type: integer
+ *                         example: [0, 1]
  *       400:
- *         description: Invalid index
+ *         description: Invalid request (e.g., invalid index).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid experience index"
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User or experience not found
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
  *       500:
- *         description: Internal server error
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 details:
+ *                   type: string
+ *                   example: "Unexpected database issue"
  */
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// EDUCATION DOCUMENTATION //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @swagger
@@ -4016,69 +5776,42 @@
  *                   example: Server error
  */
 
-/**
- * @swagger
- * /user/certifications:
- *   post:
- *     summary: Add certification
- *     tags: [Users]
- *     security:
- *       - BearerAuth: []
- *     description: Add a certification to a user's profile
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/Certification"
- *     responses:
- *       200:
- *         description: Certification added successfully
- *       400:
- *         description: Invalid input data
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal Server Error
- */
+///////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// SKILLS DOCUMENTATION //////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @swagger
  * /user/skills:
  *   post:
- *     summary: Add a new skill to the user's profile
+ *     summary: Add a new skill to the authenticated user's profile.
+ *     description: Adds a skill associated with education and work experience indices.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Adds a skill to the authenticated user's profile and associates it with their education and work experience records. The skill must be unique for the user and linked to at least one education or work experience entry.
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - skillName
  *             properties:
  *               skillName:
  *                 type: string
  *                 example: "JavaScript"
- *                 description: "The name of the skill to be added. It is case-insensitive and must not already exist in the user's skills."
  *               educationIndexes:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [0, 1]
- *                 description: "Array of indexes referring to the user's education records. Must be valid indexes within the user's education list."
+ *                 example: [0, 2]
  *               experienceIndexes:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [0]
- *                 description: "Array of indexes referring to the user's work experience records. Must be valid indexes within the user's work experience list."
+ *                 example: [1, 3]
  *     responses:
  *       200:
- *         description: Skill added successfully
+ *         description: Skill added successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -4102,14 +5835,14 @@
  *                       type: array
  *                       items:
  *                         type: integer
- *                       example: [0, 1]
+ *                       example: [0, 2]
  *                     experience:
  *                       type: array
  *                       items:
  *                         type: integer
- *                       example: [0]
+ *                       example: [1, 3]
  *       400:
- *         description: Bad request - Invalid input data
+ *         description: Invalid request (e.g., skill already exists or invalid skill name).
  *         content:
  *           application/json:
  *             schema:
@@ -4117,9 +5850,19 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill already exists or invalid indexes provided"
+ *                   example: "Skill already exists"
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
- *         description: User not found
+ *         description: User not found.
  *         content:
  *           application/json:
  *             schema:
@@ -4129,7 +5872,7 @@
  *                   type: string
  *                   example: "User not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
  *         content:
  *           application/json:
  *             schema:
@@ -4140,7 +5883,7 @@
  *                   example: "Internal server error"
  *                 details:
  *                   type: string
- *                   example: "Error message details"
+ *                   example: "Unexpected database issue"
  */
 
 /**
@@ -4183,6 +5926,16 @@
  *                         items:
  *                           type: integer
  *                         example: [0]
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
  *         description: User not found
  *         content:
@@ -4253,6 +6006,16 @@
  *                       items:
  *                         type: integer
  *                       example: [0]
+ *       401:
+ *         description: Unauthorized - No authentication token provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Unauthorized"
  *       404:
  *         description: User or skill not found
  *         content:
@@ -4282,19 +6045,19 @@
  * @swagger
  * /user/skills/{skillName}:
  *   patch:
- *     summary: Update a user's skill
+ *     summary: Update an existing skill for the authenticated user.
+ *     description: Updates a skill's name, education indices, and work experience indices.
  *     tags: [Users]
  *     security:
- *       - BearerAuth: []
- *     description: Update the skill name, associated education indexes, or experience indexes for a given skill.
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: skillName
  *         required: true
  *         schema:
  *           type: string
- *           example: "JavaScript"
- *         description: The current name of the skill to be updated.
+ *         example: "JavaScript"
+ *         description: The name of the skill to be updated.
  *     requestBody:
  *       required: true
  *       content:
@@ -4305,22 +6068,19 @@
  *               newSkillName:
  *                 type: string
  *                 example: "Node.js"
- *                 description: The new name for the skill (optional).
  *               educationIndexes:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [0, 1]
- *                 description: List of education indexes to associate with the skill (optional).
+ *                 example: [0, 2]
  *               experienceIndexes:
  *                 type: array
  *                 items:
  *                   type: integer
- *                 example: [2, 3]
- *                 description: List of experience indexes to associate with the skill (optional).
+ *                 example: [1, 3]
  *     responses:
  *       200:
- *         description: Skill updated successfully
+ *         description: Skill updated successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -4341,19 +6101,19 @@
  *                         type: array
  *                         items:
  *                           type: string
- *                         example: ["userId1", "userId2"]
+ *                         example: []
  *                       education:
  *                         type: array
  *                         items:
  *                           type: integer
- *                         example: [0, 1]
+ *                         example: [0, 2]
  *                       experience:
  *                         type: array
  *                         items:
  *                           type: integer
- *                         example: [2, 3]
+ *                         example: [1, 3]
  *       400:
- *         description: Invalid request or duplicate skill
+ *         description: Invalid request due to incorrect input data..
  *         content:
  *           application/json:
  *             schema:
@@ -4361,9 +6121,14 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill name is the same"
+ *                   example: |
+ *                      "Some provided experience indexes are invalid" OR
+ *                      "Invalid experience indexes format" OR
+ *                      "Invalid education indexes format" OR
+ *                      "Some provided education indexes are invalid" OR
+ *                      "No valid updates provided"
  *       404:
- *         description: User or skill not found
+ *         description: Skill or user not found.
  *         content:
  *           application/json:
  *             schema:
@@ -4373,7 +6138,7 @@
  *                   type: string
  *                   example: "Skill not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
  *         content:
  *           application/json:
  *             schema:
@@ -4384,29 +6149,28 @@
  *                   example: "Internal server error"
  *                 details:
  *                   type: string
- *                   example: "Error message details"
+ *                   example: "Unexpected database issue"
  */
 
 /**
  * @swagger
- * /user/skills/{skillName}:
+ * /users/skills/{skillName}:
  *   delete:
- *     summary: Delete a user's skill
+ *     summary: Delete a skill from the user's profile
  *     tags: [Users]
+ *     description: Removes a skill from the user's profile along with any references in education and work experience.
  *     security:
- *       - BearerAuth: []
- *     description: Remove a skill from the authenticated user's profile.
+ *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: skillName
+ *       - name: skillName
+ *         in: path
  *         required: true
+ *         description: The name of the skill to delete.
  *         schema:
  *           type: string
- *           example: "JavaScript"
- *         description: The name of the skill to delete.
  *     responses:
  *       200:
- *         description: Skill deleted successfully
+ *         description: Skill deleted successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -4421,23 +6185,8 @@
  *                     skillName:
  *                       type: string
  *                       example: "JavaScript"
- *                     endorsements:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ["userId1", "userId2"]
- *                     education:
- *                       type: array
- *                       items:
- *                         type: integer
- *                       example: [0, 1]
- *                     experience:
- *                       type: array
- *                       items:
- *                         type: integer
- *                       example: [2, 3]
  *       404:
- *         description: Skill not found
+ *         description: Skill or user not found.
  *         content:
  *           application/json:
  *             schema:
@@ -4445,9 +6194,10 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: "Skill not found"
+ *                   example: | 
+ *                      "Skill not found" OR "User not found"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error.
  *         content:
  *           application/json:
  *             schema:
@@ -4458,12 +6208,16 @@
  *                   example: "Internal server error"
  *                 details:
  *                   type: string
- *                   example: "Error message details"
+ *                   example: "Unexpected error details here"
  */
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// ENDORSEMENTS DOCUMENTATION //////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @swagger
- * /user/skills/add-endorsement:
+ * /user/skills/endorsements/add-endorsement:
  *   post:
  *     summary: Endorse a user's skill
  *     tags: [Users]
@@ -4522,7 +6276,7 @@
  *       500:
  *         description: Internal Server Error
  *
- * /user/skills/remove-endorsement/{skillName}:
+ * /user/skills/endorsements/remove-endorsement/{skillName}:
  *   delete:
  *     summary: Remove endorsement from a skill
  *     tags: [Users]
@@ -4585,6 +6339,63 @@
  *       500:
  *         description: Internal Server Error
  */
+
+/**
+ * @swagger
+ * /user/certifications:
+ *   post:
+ *     summary: Add certification
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Add a certification to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/Certification"
+ *     responses:
+ *       200:
+ *         description: Certification added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// PRIVACY SETTINGS DOCUMENTATION /////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @swagger
+ * /user/certifications:
+ *   post:
+ *     summary: Add certification
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: []
+ *     description: Add a certification to a user's profile
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/Certification"
+ *     responses:
+ *       200:
+ *         description: Certification added successfully
+ *       400:
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+
 
 /**
  * @swagger
@@ -4771,6 +6582,9 @@
  *       404:
  *         description: User not found
  */
+
+
+
 
 /**
  * @swagger
