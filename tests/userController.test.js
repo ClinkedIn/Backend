@@ -42,124 +42,485 @@ jest.mock("../utils/firebase");
 // =======================
 // Tests for registerUser
 // =======================
+// describe("registerUser", () => {
+//   let req, res;
+//   beforeEach(() => {
+//     req = { body: {} };
+//     res = mockRes();
+//   });
+
+//   it("should return 400 if required fields are missing", async () => {
+//     req.body = {}; // no fields provided
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(400);
+//     expect(res.json).toHaveBeenCalledWith({
+//       message: "all fields are required",
+//     });
+//   });
+
+//   it("should return 400 for invalid email", async () => {
+//     req.body = {
+//       firstName: "John",
+//       lastName: "Doe",
+//       email: "invalid",
+//       password: "Password1",
+//       recaptchaResponseToken: "token",
+//     };
+//     validateEmail.mockReturnValue(false);
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(400);
+//     expect(res.json).toHaveBeenCalledWith({
+//       message: "Email not valid, Write a valid email",
+//     });
+//   });
+
+//   it("should return 400 for invalid password", async () => {
+//     req.body = {
+//       firstName: "John",
+//       lastName: "Doe",
+//       email: "john@example.com",
+//       password: "invalid",
+//       recaptchaResponseToken: "token",
+//     };
+//     validateEmail.mockReturnValue(true);
+//     validatePassword.mockReturnValue(false);
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(400);
+//     expect(res.json).toHaveBeenCalledWith({
+//       message:
+//         "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
+//     });
+//   });
+
+//   it("should return 400 if captcha verification fails", async () => {
+//     req.body = {
+//       firstName: "John",
+//       lastName: "Doe",
+//       email: "john@example.com",
+//       password: "Password1",
+//       recaptchaResponseToken: "token",
+//     };
+//     validateEmail.mockReturnValue(true);
+//     validatePassword.mockReturnValue(true);
+//     verifyCaptcha.mockResolvedValue(false);
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(400);
+//     expect(res.json).toHaveBeenCalledWith({
+//       success: false,
+//       errors: [{ msg: "reCAPTCHA verification failed. Please try again." }],
+//     });
+//   });
+
+//   it("should return 409 if user already exists", async () => {
+//     req.body = {
+//       firstName: "John",
+//       lastName: "Doe",
+//       email: "john@example.com",
+//       password: "Password1",
+//       recaptchaResponseToken: "token",
+//     };
+//     validateEmail.mockReturnValue(true);
+//     validatePassword.mockReturnValue(true);
+//     verifyCaptcha.mockResolvedValue(true);
+//     userModel.findOne.mockResolvedValue({ _id: "existingUserId" });
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(409);
+//     expect(res.json).toHaveBeenCalledWith({
+//       message: "The User already exist use another email",
+//     });
+//   });
+
+//   it("should register new user successfully", async () => {
+//     req.body = {
+//       firstName: "John",
+//       lastName: "Doe",
+//       email: "john@example.com",
+//       password: "Password1",
+//       recaptchaResponseToken: "token",
+//     };
+//     validateEmail.mockReturnValue(true);
+//     validatePassword.mockReturnValue(true);
+//     verifyCaptcha.mockResolvedValue(true);
+//     userModel.findOne.mockResolvedValue(null);
+//     const newUser = { _id: "newUserId" };
+//     userModel.create.mockResolvedValue(newUser);
+//     sendEmailConfirmation.mockResolvedValue(true);
+//     generateTokens.mockReturnValue({
+//       accessToken: "access",
+//       refreshToken: "refresh",
+//     });
+
+//     await userController.registerUser(req, res);
+//     expect(res.status).toHaveBeenCalledWith(201);
+//     expect(res.json).toHaveBeenCalledWith({
+//       status: "success",
+//       message:
+//         "User registered successfully. Please check your email to confirm your account.",
+//       data: { accessToken: "access", refreshToken: "refresh", user: newUser },
+//     });
+//   });
+// });
 describe("registerUser", () => {
-  let req, res;
-  beforeEach(() => {
-    req = { body: {} };
-    res = mockRes();
-  });
-
-  it("should return 400 if required fields are missing", async () => {
-    req.body = {}; // no fields provided
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "all fields are required",
-    });
-  });
-
-  it("should return 400 for invalid email", async () => {
-    req.body = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "invalid",
-      password: "Password1",
-      recaptchaResponseToken: "token",
-    };
-    validateEmail.mockReturnValue(false);
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "Email not valid, Write a valid email",
-    });
-  });
-
-  it("should return 400 for invalid password", async () => {
-    req.body = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      password: "invalid",
-      recaptchaResponseToken: "token",
-    };
-    validateEmail.mockReturnValue(true);
-    validatePassword.mockReturnValue(false);
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      message:
-        "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
-    });
-  });
-
-  it("should return 400 if captcha verification fails", async () => {
-    req.body = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      password: "Password1",
-      recaptchaResponseToken: "token",
-    };
-    validateEmail.mockReturnValue(true);
-    validatePassword.mockReturnValue(true);
-    verifyCaptcha.mockResolvedValue(false);
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      errors: [{ msg: "reCAPTCHA verification failed. Please try again." }],
-    });
-  });
-
-  it("should return 409 if user already exists", async () => {
-    req.body = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      password: "Password1",
-      recaptchaResponseToken: "token",
-    };
-    validateEmail.mockReturnValue(true);
-    validatePassword.mockReturnValue(true);
-    verifyCaptcha.mockResolvedValue(true);
-    userModel.findOne.mockResolvedValue({ _id: "existingUserId" });
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "The User already exist use another email",
-    });
-  });
-
-  it("should register new user successfully", async () => {
-    req.body = {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      password: "Password1",
-      recaptchaResponseToken: "token",
-    };
-    validateEmail.mockReturnValue(true);
-    validatePassword.mockReturnValue(true);
-    verifyCaptcha.mockResolvedValue(true);
-    userModel.findOne.mockResolvedValue(null);
-    const newUser = { _id: "newUserId" };
-    userModel.create.mockResolvedValue(newUser);
-    sendEmailConfirmation.mockResolvedValue(true);
-    generateTokens.mockReturnValue({
-      accessToken: "access",
-      refreshToken: "refresh",
+    let req, res;
+    beforeEach(() => {
+        req = {
+            body: {},
+            protocol: "http",
+            get: jest.fn().mockReturnValue("localhost"),
+        };
+        res = mockRes();
     });
 
-    await userController.registerUser(req, res);
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith({
-      status: "success",
-      message:
-        "User registered successfully. Please check your email to confirm your account.",
-      data: { accessToken: "access", refreshToken: "refresh", user: newUser },
+    // Test case 1: Missing required fields
+    it("should return 400 if required fields are missing", async () => {
+        const testCases = [
+            {
+                body: {
+                    lastName: "Doe",
+                    email: "john@example.com",
+                    password: "Password123",
+                    recaptchaResponseToken: "token",
+                },
+                missing: "firstName",
+            },
+            {
+                body: {
+                    firstName: "John",
+                    email: "john@example.com",
+                    password: "Password123",
+                    recaptchaResponseToken: "token",
+                },
+                missing: "lastName",
+            },
+            {
+                body: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    password: "Password123",
+                    recaptchaResponseToken: "token",
+                },
+                missing: "email",
+            },
+            {
+                body: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    email: "john@example.com",
+                    recaptchaResponseToken: "token",
+                },
+                missing: "password",
+            },
+            {
+                body: {
+                    firstName: "John",
+                    lastName: "Doe",
+                    email: "john@example.com",
+                    password: "Password123",
+                },
+                missing: "recaptchaResponseToken",
+            },
+            { body: {} }, // No fields provided
+        ];
+
+        for (const testCase of testCases) {
+            req.body = testCase.body;
+            await userController.registerUser(req, res);
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                message: "all fields are required",
+            });
+
+            // Reset mocks for next case
+            jest.clearAllMocks();
+        }
     });
-  });
+
+    // Test case 2: Invalid email format
+    it("should return 422 for invalid email format", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "invalid-email",
+            password: "Password123",
+            recaptchaResponseToken: "token",
+        };
+
+        validateEmail.mockReturnValue(false);
+
+        await userController.registerUser(req, res);
+
+        expect(validateEmail).toHaveBeenCalledWith("invalid-email");
+        expect(res.status).toHaveBeenCalledWith(422);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "Email not valid, Write a valid email",
+        });
+    });
+
+    // Test case 3: Invalid password
+    it("should return 422 for invalid password", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+            password: "weakpassword",
+            recaptchaResponseToken: "token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(false);
+
+        await userController.registerUser(req, res);
+
+        expect(validateEmail).toHaveBeenCalledWith("john@example.com");
+        expect(validatePassword).toHaveBeenCalledWith("weakpassword");
+        expect(res.status).toHaveBeenCalledWith(422);
+        expect(res.json).toHaveBeenCalledWith({
+            message:
+                "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long.",
+        });
+    });
+
+    // Test case 4: Failed captcha verification
+    it("should return 422 if captcha verification fails", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+            password: "Password123",
+            recaptchaResponseToken: "invalid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+        verifyCaptcha.mockResolvedValue(false);
+
+        await userController.registerUser(req, res);
+
+        expect(validateEmail).toHaveBeenCalledWith("john@example.com");
+        expect(validatePassword).toHaveBeenCalledWith("Password123");
+        expect(verifyCaptcha).toHaveBeenCalledWith("invalid-token");
+        expect(res.status).toHaveBeenCalledWith(422);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "reCAPTCHA verification failed. Please try again.",
+        });
+    });
+
+    // Test case 5: User already exists
+    it("should return 409 if user already exists", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "existing@example.com",
+            password: "Password123",
+            recaptchaResponseToken: "valid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+        verifyCaptcha.mockResolvedValue(true);
+        userModel.findOne.mockImplementation((query) => {
+            if (
+                query.email === "existing@example.com" &&
+                query.isActive === true
+            ) {
+                return Promise.resolve({ _id: "existingUserId" });
+            }
+            return Promise.resolve(null);
+        });
+
+        await userController.registerUser(req, res);
+
+        expect(userModel.findOne).toHaveBeenCalledWith({
+            email: "existing@example.com",
+            isActive: true,
+        });
+        expect(res.status).toHaveBeenCalledWith(409);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "The User already exist use another email",
+        });
+    });
+
+    // Test case 6: Reactivating a deactivated user account
+    it("should delete deactivated user before creating new one", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "deactivated@example.com",
+            password: "Password123",
+            recaptchaResponseToken: "valid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+        verifyCaptcha.mockResolvedValue(true);
+
+        // Mock finding active user (none found)
+        userModel.findOne
+            .mockImplementationOnce(() => Promise.resolve(null))
+            // Mock finding deactivated user
+            .mockImplementationOnce(() => Promise.resolve({ _id: "deactivatedUserId" }));
+
+        userModel.deleteOne = jest.fn().mockResolvedValue({ deletedCount: 1 });
+
+        const newUser = {
+            id: "newUserId",
+            ...req.body,
+            isConfirmed: false,
+        };
+        userModel.create.mockResolvedValue(newUser);
+        sendEmailConfirmation.mockResolvedValue(true);
+
+        await userController.registerUser(req, res);
+
+        expect(userModel.findOne).toHaveBeenNthCalledWith(1, {
+            email: "deactivated@example.com",
+            isActive: true,
+        });
+        expect(userModel.findOne).toHaveBeenNthCalledWith(2, {
+            email: "deactivated@example.com",
+            isActive: false,
+        });
+        expect(userModel.deleteOne).toHaveBeenCalledWith({
+            email: "deactivated@example.com",
+        });
+        expect(userModel.create).toHaveBeenCalled();
+    });
+
+    // Test case 7: Successful user registration
+    // it("should register new user successfully", async () => {
+    //     req.body = {
+    //         firstName: "John",
+    //         lastName: "Doe",
+    //         email: "john@example.com",
+    //         password: "Password123",
+    //         recaptchaResponseToken: "valid-token",
+    //     };
+
+    //     validateEmail.mockReturnValue(true);
+    //     validatePassword.mockReturnValue(true);
+    //     verifyCaptcha.mockResolvedValue(true);
+
+    //     // No existing user found
+    //     userModel.findOne.mockResolvedValue(null);
+
+    //     const newUser = { _id: "newUserId" };
+    //     userModel.create.mockResolvedValue(newUser);
+    //     sendEmailConfirmation.mockResolvedValue(true);
+
+    //     await userController.registerUser(req, res);
+
+    //     expect(res.status).toHaveBeenCalledWith(201);
+    //     expect(res.json).toHaveBeenCalledWith({
+    //         status: "success",
+    //         message:
+    //             "User registered successfully. Please check your email to confirm your account.",
+    //     });
+
+    //     // Verify that the mocked createSendToken was called with the correct parameters.
+    //     expect(createSendToken).toHaveBeenCalledWith(
+    //         newUser,
+    //         201,
+    //         res,
+    //         "User registered successfully. Please check your email to confirm your account."
+    //     );
+    // });
+
+    // Test case 9: Unhandled error during registration
+    it("should return 500 if an unhandled error occurs", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+            password: "Password123",
+            recaptchaResponseToken: "valid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+        verifyCaptcha.mockResolvedValue(true);
+
+        // Mock unexpected error
+        const errorMessage = "Database connection lost";
+        userModel.findOne.mockRejectedValue(new Error(errorMessage));
+
+        await userController.registerUser(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({
+            success: false,
+            message: "Registration failed",
+            error: errorMessage,
+        });
+    });
+
+    // Test case 10: Custom status code in error
+    it("should use error's statusCode if provided", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john@example.com",
+            password: "Password123",
+            recaptchaResponseToken: "valid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+
+        // Mock error with custom status code
+        const customError = new Error("Custom error");
+        customError.statusCode = 503;
+        verifyCaptcha.mockRejectedValue(customError);
+
+        await userController.registerUser(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(503);
+        expect(res.json).toHaveBeenCalledWith({
+            success: false,
+            message: "Registration failed",
+            error: "Custom error",
+        });
+    });
+
+    // Test case 11: Email converted to lowercase
+    it("should convert email to lowercase", async () => {
+        req.body = {
+            firstName: "John",
+            lastName: "Doe",
+            email: "John.Doe@Example.com",
+            password: "Password123",
+            recaptchaResponseToken: "valid-token",
+        };
+
+        validateEmail.mockReturnValue(true);
+        validatePassword.mockReturnValue(true);
+        verifyCaptcha.mockResolvedValue(true);
+        userModel.findOne.mockResolvedValue(null);
+
+        const newUser = {
+            id: "newUserId",
+            firstName: "John",
+            lastName: "Doe",
+            email: "john.doe@example.com",
+            isConfirmed: false,
+        };
+        userModel.create.mockResolvedValue(newUser);
+        sendEmailConfirmation.mockResolvedValue(true);
+
+        await userController.registerUser(req, res);
+
+        expect(validateEmail).toHaveBeenCalledWith("john.doe@example.com");
+        expect(userModel.findOne).toHaveBeenCalledWith({
+            email: "john.doe@example.com",
+            isActive: true,
+        });
+        expect(userModel.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                email: "john.doe@example.com",
+            })
+        );
+    });
 });
+
 
 // ==============================
 // Tests for resendConfirmationEmail
