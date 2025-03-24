@@ -19,7 +19,8 @@ router.route('/:postId/save')
 
 router.route('/:postId/like')
     .post(protect,postController.likePost)
-    .delete(protect,postController.unlikePost); 
+    .delete(protect,postController.unlikePost)
+    .get(protect,postController.getPostImpressions);
 
 router.route('/:postId/repost')
     .post(protect,postController.repostPost);
@@ -30,7 +31,8 @@ router.route('/:repostId/repost')
 
 router.route('/:postId/report')
     .post(protect,postController.reportPost);
-    
+
+
 
 module.exports = router;
 
