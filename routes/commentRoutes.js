@@ -11,7 +11,7 @@ router.route('/:commentId')
     .delete(protect,comment.deleteComment)
     .get(protect,comment.getComment)
 
-router.route('/post/:postId')
+router.route('/:postId/post')
     .get(protect, comment.getPostComments);
 
 router.route('/reply/:commentId')
@@ -19,5 +19,6 @@ router.route('/reply/:commentId')
 
 router.route('/:commentId/like')
     .post(protect, comment.likeComment)
-    .delete(protect, comment.unlikeComment);
+    .delete(protect, comment.unlikeComment)
+    .get(protect, comment.getCommentImpressions);
 module.exports = router;

@@ -3023,7 +3023,7 @@
 
 /**
  * @swagger
- * /comments/post/{postId}:
+ * /comments/{postId}/post:
  *   get:
  *     summary: Get comments for a specific post
  *     tags: [Comments]
@@ -8974,6 +8974,416 @@
  *                 message:
  *                   type: string
  *                   example: "Failed to search users"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}/like:
+ *   get:
+ *     summary: Get users who reacted to a post
+ *     tags: [Posts]
+ *     description: |
+ *       Retrieve a paginated list of users who reacted to a specific post, with optional filtering by impression type.
+ *       This endpoint provides similar functionality to LinkedIn's reaction panel, offering the ability to view all reactions
+ *       or filter by specific types (like, celebrate, support, etc.). Results include user profile information and
+ *       are sorted by most recent first.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to get impressions for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [like, support, celebrate, love, insightful, funny]
+ *         description: Filter by impression type (optional). Omit to get all types (equivalent to the "All" tab)
+ *         example: "love"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of users who reacted to the post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Impressions retrieved successfully"
+ *                 impressions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       impressionId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for this impression/reaction
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who created this impression
+ *                       type:
+ *                         type: string
+ *                         enum: [like, support, celebrate, love, insightful, funny]
+ *                         example: "love"
+ *                         description: Type of impression/reaction
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: Timestamp when the impression was created
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the user
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the user
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Professional headline of the user
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the user's profile picture
+ *                 counts:
+ *                   type: object
+ *                   description: Count of each impression type for this post
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 42
+ *                       description: Number of "like" impressions
+ *                     support:
+ *                       type: number
+ *                       example: 15
+ *                       description: Number of "support" impressions
+ *                     celebrate:
+ *                       type: number
+ *                       example: 8
+ *                       description: Number of "celebrate" impressions
+ *                     love:
+ *                       type: number
+ *                       example: 23
+ *                       description: Number of "love" impressions
+ *                     insightful:
+ *                       type: number
+ *                       example: 19
+ *                       description: Number of "insightful" impressions
+ *                     funny:
+ *                       type: number
+ *                       example: 7
+ *                       description: Number of "funny" impressions
+ *                     total:
+ *                       type: number
+ *                       example: 114
+ *                       description: Total number of impressions across all types
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     totalImpressions:
+ *                       type: number
+ *                       example: 114
+ *                       description: Total number of impressions (filtered by type if applicable)
+ *                     totalPages:
+ *                       type: number
+ *                       example: 12
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing post ID or invalid impression type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get impressions"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}/like:
+ *   get:
+ *     summary: Get users who reacted to a comment
+ *     tags: [Comments]
+ *     description: |
+ *       Retrieve a paginated list of users who reacted to a specific comment, with optional filtering by impression type.
+ *       This endpoint provides similar functionality to LinkedIn's reaction panel, offering the ability to view all reactions
+ *       or filter by specific types (like, celebrate, support, etc.). Results include user profile information and
+ *       are sorted by most recent first.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the comment to get impressions for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [like, support, celebrate, love, insightful, funny]
+ *         description: Filter by impression type (optional). Omit to get all types (equivalent to the "All" tab)
+ *         example: "love"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of users who reacted to the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Impressions retrieved successfully"
+ *                 impressions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       impressionId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for this impression/reaction
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who created this impression
+ *                       type:
+ *                         type: string
+ *                         enum: [like, support, celebrate, love, insightful, funny]
+ *                         example: "love"
+ *                         description: Type of impression/reaction
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: Timestamp when the impression was created
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the user
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the user
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Professional headline of the user
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the user's profile picture
+ *                 counts:
+ *                   type: object
+ *                   description: Count of each impression type for this comment
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 12
+ *                       description: Number of "like" impressions
+ *                     support:
+ *                       type: number
+ *                       example: 5
+ *                       description: Number of "support" impressions
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                       description: Number of "celebrate" impressions
+ *                     love:
+ *                       type: number
+ *                       example: 7
+ *                       description: Number of "love" impressions
+ *                     insightful:
+ *                       type: number
+ *                       example: 8
+ *                       description: Number of "insightful" impressions
+ *                     funny:
+ *                       type: number
+ *                       example: 4
+ *                       description: Number of "funny" impressions
+ *                     total:
+ *                       type: number
+ *                       example: 39
+ *                       description: Total number of impressions across all types
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     totalImpressions:
+ *                       type: number
+ *                       example: 39
+ *                       description: Total number of impressions (filtered by type if applicable)
+ *                     totalPages:
+ *                       type: number
+ *                       example: 4
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing comment ID or invalid impression type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get impressions"
  *                 error:
  *                   type: string
  *                   example: "Error details"

@@ -628,6 +628,127 @@ const unlikeComment = async (req, res) => {
     }
 };
 
+const getCommentImpressions = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const { type, page = 1, limit = 10 } = req.query;
+        
+        // Validate input
+        if (!commentId) {
+            return res.status(400).json({ message: 'Comment ID is required' });
+        }
+        
+        // Check if comment exists and is active
+        const comment = await commentModel.findOne({ 
+            _id: commentId, 
+            isActive: true 
+        });
+        
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found or inactive' });
+        }
+        
+        // Build query for impressions
+        const query = {
+            targetId: commentId,
+            targetType: "Comment"
+        };
+        
+        // Add type filter if provided
+        if (type) {
+            const validImpressionTypes = ['like', 'support', 'celebrate', 'love', 'insightful', 'funny'];
+            if (!validImpressionTypes.includes(type)) {
+                return res.status(400).json({ 
+                    message: 'Invalid impression type',
+                    validTypes: validImpressionTypes
+                });
+            }
+            query.type = type;
+        }
+        
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination metadata
+        const totalImpressions = await impressionModel.countDocuments(query);
+        
+        // Find impressions with pagination
+        const impressions = await impressionModel.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skipIndex)
+            .limit(limitNum);
+            
+        // Get user details for each impression
+        const userIds = impressions.map(impression => impression.userId);
+        const users = await userModel.find(
+            { _id: { $in: userIds } },
+            'firstName lastName headline profilePicture'
+        );
+        
+        // Create a map of user details for quick lookup
+        const userMap = {};
+        users.forEach(user => {
+            userMap[user._id.toString()] = {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                headline: user.headline || "",
+                profilePicture: user.profilePicture
+            };
+        });
+        
+        // Combine impression data with user details
+        const impressionsWithUserInfo = impressions.map(impression => {
+            const user = userMap[impression.userId.toString()] || {};
+            return {
+                impressionId: impression._id,
+                userId: impression.userId,
+                type: impression.type,
+                createdAt: impression.createdAt,
+                ...user
+            };
+        });
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalImpressions / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+        
+        // Get counts for each impression type
+        const impressionCounts = comment.impressionCounts || {};
+        
+        // Return results with pagination metadata and counts for each impression type
+        res.status(200).json({
+            message: "Impressions retrieved successfully",
+            impressions: impressionsWithUserInfo,
+            counts: {
+                like: impressionCounts.like || 0,
+                support: impressionCounts.support || 0,
+                celebrate: impressionCounts.celebrate || 0,
+                love: impressionCounts.love || 0,
+                insightful: impressionCounts.insightful || 0,
+                funny: impressionCounts.funny || 0,
+                total: impressionCounts.total || 0
+            },
+            pagination: {
+                totalImpressions,
+                totalPages,
+                currentPage: pageNum,
+                pageSize: limitNum,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting comment impressions:', error);
+        res.status(500).json({
+            message: 'Failed to get impressions',
+            error: error.message
+        });
+    }
+};
 module.exports = {
     addComment,
     updateComment,
@@ -636,5 +757,6 @@ module.exports = {
     deleteComment,
     getCommentReplies,
     likeComment,
-    unlikeComment
+    unlikeComment,
+    getCommentImpressions
 };
