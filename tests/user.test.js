@@ -6,6 +6,7 @@ const userModel = require('../models/userModel');
 const companyModel = require('../models/companyModel');
 const mongoose = require('mongoose');
 const {
+    getMe,
     getAllUsers,
     getUserProfile,
     addEducation,
@@ -62,11 +63,13 @@ jest.mock('../controllers/userProfileController', () => {
     };
 });
 
-
 jest.mock('../utils/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
     validateEndorsements: jest.requireActual('../utils/userProfileUtils').validateEndorsements,
-    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience
+    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience,
+    uploadPicture: jest.requireActual('../utils/filesHandler').uploadPicture,
+    validatePicture: jest.requireActual('../utils/filesHandler').validatePicture,
+    updateSkillExperienceReferences: jest.requireActual('../utils/userProfileUtils').updateSkillExperienceReferences
   }));
 
 jest.mock('../models/userModel');
@@ -90,7 +93,8 @@ describe('POST /education', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
-
+    let mockUser;
+    const mockUserId = '0b3169152ee6c171d25e6860';
     test('should successfully add education', async () => {
         const mockEducationData = {
             school: 'Harvard University',
@@ -142,10 +146,8 @@ describe('POST /education', () => {
         expect(response.status).toBe(404);
         expect(response.body.error).toBe('User not found');
     });
-
     test('should return 500 on server error', async () => {
         userModel.findByIdAndUpdate.mockRejectedValue(new Error('Database failure'));
-
         const response = await request(app)
             .post('/education')
             .send({ school: 'Harvard University' });
@@ -208,6 +210,15 @@ describe('GET /education/:index', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid education index');
+    });
+    test('should return 500 on server error', async () => {
+        userModel.findById.mockRejectedValue(new Error('Database failure'));
+
+        const response = await request(app)
+            .get('/education/0');
+
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Server error');
     });
 });
 
@@ -556,7 +567,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -575,7 +586,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -637,6 +648,7 @@ describe('POST /experience - addExperience', () => {
             .field('companyName', 'Tech Corp')
             .field('fromDate', '2022-01-01')
             .field('currentlyWorking', true)
+            .field('employmentType', 'Full Time')
             .attach('file', Buffer.from('mockFileContent'), { filename: 'photo.png', contentType: 'image/jpeg' });
 
         expect(response.status).toBe(400);
@@ -2032,7 +2044,6 @@ describe('POST /add-profile-picture', () => {
         );
     });
 
-
     test('should return 400 if no file is uploaded', async () => {
         const response = await request(app)
             .post('/add-profile-picture')
@@ -2042,14 +2053,13 @@ describe('POST /add-profile-picture', () => {
         expect(response.body.message).toBe('No file uploaded');
     });
 
-
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
 
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-
+        
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
@@ -3696,5 +3706,104 @@ describe('PATCH /contact-info - Edit Contact Info', () => {
         expect(response.status).toBe(500);
         expect(response.body.error).toBe('Failed to update contact information');
         expect(response.body.details).toBe('Database error');
+    });
+});
+
+app.get('/me', mockVerifyToken, getMe);
+
+describe('GET /me - Get Current User Profile', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should successfully retrieve own profile', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';  // Same as authenticated user ID
+        
+        const mockUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'private',  // Even if private, own profile should be accessible
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(mockUser)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User profile retrieved successfully');
+        expect(response.body.user).toEqual(mockUser);
+    });
+
+    test('should exclude sensitive fields from response', async () => {
+        const userId = 'cc81c18d6b9fc1b83e2bebe3';
+        
+        // Complete user with sensitive fields
+        const completeUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            password: 'hashed_password_here',
+            resetPasswordToken: 'some_token',
+            resetPasswordTokenExpiry: new Date(),
+            verificationToken: 'verification_token',
+            refreshToken: 'refresh_token',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        // Expected response after sensitive fields are filtered
+        const filteredUser = {
+            _id: userId,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            profilePrivacySettings: 'public',
+            connectionList: [],
+            blockedUsers: []
+        };
+        
+        // Mock the select function to filter out sensitive fields
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(filteredUser)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.user).not.toHaveProperty('password');
+        expect(response.body.user).not.toHaveProperty('resetPasswordToken');
+        expect(response.body.user).not.toHaveProperty('resetPasswordTokenExpiry');
+        expect(response.body.user).not.toHaveProperty('verificationToken');
+        expect(response.body.user).not.toHaveProperty('refreshToken');
+    });
+
+    test('should return 404 when user not found', async () => {
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockResolvedValue(null)
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(404);
+        expect(response.body.message).toBe('User not found');
+    });
+    test('should return 500 when server error occurs', async () => {
+        userModel.findById = jest.fn().mockImplementation(() => ({
+            select: jest.fn().mockRejectedValue(new Error('Database error'))
+        }));
+        
+        const response = await request(app).get('/me');
+        
+        expect(response.status).toBe(500);
+        expect(response.body.message).toBe('Failed to retrieve user profile');
+        expect(response.body.error).toBe('Database error');
     });
 });

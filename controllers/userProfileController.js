@@ -1,11 +1,13 @@
 const userModel = require('../models/userModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, updateSkillExperienceReferences } = require('../utils/userProfileUtils')
+const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 const cloudinary = require('../utils/cloudinary');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
+const customError = require('../utils/customError');
 
 
 const getUserProfile = async (req, res) => {
@@ -35,6 +37,29 @@ const getUserProfile = async (req, res) => {
         }
         if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
             return res.status(403).json({ message: 'This profile is not available' });
+        }
+        res.status(200).json({ 
+            message: 'User profile retrieved successfully',
+            user
+        });
+    } catch (error) {
+        console.error('Error retrieving user profile:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve user profile',
+            error: error.message 
+        });
+    }
+};
+
+const getMe = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // Find the user by ID
+        const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
@@ -115,41 +140,6 @@ const getAllUsers = async (req, res) => {
 ****************************************************
 */
 
-// PICTURE CONSTANTS
-const ALLOWED_PICTURE_MIME_TYPES = Object.freeze([
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
-    'image/heic', 'image/heif', 'image/bmp', 'image/tiff', 'image/svg+xml'
-]);
-const MAX_PICTURE_SIZE = 5 * 1024 * 1024; // 5MB
-const INVALID_PICTURE_TYPE_MESSAGE = "Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed."
-
-
-// Validation Functions
-const validateFileType = async (ALLOWED_MIME_TYPES, mimeType, ERROR_MESSAGE) => {
-    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-        throw new Error(ERROR_MESSAGE);
-    }
-};
-
-const validateFileSize = async (maxSize, fileSize) => {
-    if (fileSize > maxSize) {
-        throw new Error('File size too large. Maximum allowed size is 5MB.');
-    }
-};
-
-const validateFile = async (mimeType, fileSize) => {
-    await Promise.all([
-        validateFileType(ALLOWED_PICTURE_MIME_TYPES, mimeType, INVALID_PICTURE_TYPE_MESSAGE),
-        validateFileSize(MAX_PICTURE_SIZE, fileSize)
-    ]);
-};
-
-// File Upload Logic
-const uploadPicture = async (fileBuffer, mimeType, fileSize) => {
-    await validateFile(mimeType, fileSize);
-    return await uploadFile(fileBuffer); // Assuming uploadFile() uploads and returns a file URL
-};
-
 // Unified User Picture Handling
 const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
     try {
@@ -168,13 +158,13 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
             }
 
             const { buffer, mimetype, size } = req.file;
-
+/*
             try {
                 await validateFile(mimetype, size); // Validate before uploading
             } catch (validationError) {
                 return res.status(400).json({ message: validationError.message });
             }
-
+*/
             const uploadResult = await uploadPicture(buffer, mimetype, size);
             updateData[fieldName] = uploadResult.url;
         }
@@ -189,12 +179,13 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
             message: `${fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${isDelete ? 'deleted' : 'updated'} successfully`,
             ...(isDelete ? {} : { [fieldName]: updateData[fieldName] })
         });
-    } catch (error) {
-        console.error(`Error ${isDelete ? 'deleting' : 'uploading'} ${fieldName}:`, error);
-        res.status(500).json({ 
-            message: 'Internal server error', 
-            error: error.message || 'Unexpected failure' 
-        });
+    } catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error creating message:', err);
+            res.status(500).json({ message: 'Internal server error', error: err.message });
+        }
     }
 };
 
@@ -383,8 +374,7 @@ const deleteResume = async (req, res) => {
 ***************************************************
 */
 
-// Helper functions
-
+// Helper function
 const validateExperienceData = (data) => {
     if (!data.jobTitle || !data.companyName || !data.fromDate) {
         throw { status: 400, message: 'Job title, company name, and start date are required' };
@@ -400,47 +390,13 @@ const validateExperienceData = (data) => {
             throw { status: 400, message: 'End date is required and must be a valid date if you are not currently working' };
         }
     }
+   
+    if (!data.employmentType || (data.employmentType && !['Full Time', 'Part Time', 'Freelance', 'Self Employed', 'Contract', 'Internship', 'Apprenticeship', 'Seasonal'].includes(data.employmentType))) {
+        throw { status: 400, message: 'Invalid employment type' };
+    }
 };
 
 
-const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
-    // Remove experienceIndex from skills that are no longer associated
-    for (const skillName of oldSkills) {
-      if (!newSkills.includes(skillName)) {
-        const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
-        if (skillIndex !== -1) {
-          user.skills[skillIndex].experience = user.skills[skillIndex].experience.filter(i => i !== experienceIndex);
-          
-          // Remove skill if it's no longer referenced anywhere
-          if (user.skills[skillIndex].experience.length === 0 && user.skills[skillIndex].education.length === 0) {
-            user.skills.splice(skillIndex, 1);
-          }
-        }
-      }
-    }
-  
-    // Add experienceIndex to newly added skills
-    for (const skillName of newSkills) {
-      if (!oldSkills.includes(skillName)) {
-        const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
-        if (skillIndex !== -1) {
-          // If skill exists, add experience index if not already present
-          if (!user.skills[skillIndex].experience.includes(experienceIndex)) {
-            user.skills[skillIndex].experience.push(experienceIndex);
-          }
-        } else {
-          // If skill does not exist, create a new entry
-          user.skills.push({
-            skillName,
-            experience: [experienceIndex],
-            education: [],
-            endorsements: []
-          });
-        }
-      }
-    }
-};
-  
 const addExperience = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -467,7 +423,7 @@ const addExperience = async (req, res) => {
         };
 
         validateExperienceData(experienceData);
-        
+        console.log("Current Working: ", experienceData.currentlyWorking);
         // Handle media upload if a file is provided
         if (req.file) {
             try {
@@ -492,6 +448,7 @@ const addExperience = async (req, res) => {
 
         // Add the new experience to the user's workExperience array
         user.workExperience.push(experienceData);
+        console.log("Experience Added: ", user.workExperience);
         // Sort work experience
         user.workExperience = sortWorkExperience(user.workExperience);
         // Get the index of the newly added experience
@@ -1804,6 +1761,7 @@ const editAbout = async (req, res) => {
 };
 module.exports = {
     getAllUsers,
+    getMe,
     getUserProfile,
     addEducation,
     editEducation,
@@ -1838,5 +1796,5 @@ module.exports = {
     unfollowEntity,
     editContactInfo,
     editAbout,
-    uploadPicture
+    uploadPicture,
 };

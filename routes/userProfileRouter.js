@@ -4,6 +4,8 @@ const { protect, mockVerifyToken } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
+router.route('/me')
+    .get(protect, user.getMe);
 router.route('/:userId')
     .get(protect, user.getUserProfile);
 router.route('/')
@@ -16,43 +18,42 @@ router.route('/education/:index')
     .get(protect,user.getEducation)
     .patch(protect, upload.single('file'), user.editEducation)
     .delete(protect,user.deleteEducation);
-
 router.route('/profile')
     .patch(protect,user.editIntro);
 
 router.route('/experience')
-    .post(protect, upload.single('file'), user.addExperience)
-    .get(protect, user.getAllExperiences);
+    .post(mockVerifyToken, upload.single('file'), user.addExperience)
+    .get(mockVerifyToken, user.getAllExperiences);
 
 router.route('/experience/:index')
-    .get(protect, user.getExperience)
-    .patch(protect,  upload.single('file'), user.updateExperience)
-    .delete(protect, user.deleteExperience);
+    .get(mockVerifyToken, user.getExperience)
+    .patch(mockVerifyToken,  upload.single('file'), user.updateExperience)
+    .delete(mockVerifyToken, user.deleteExperience);
     
 router.route('/skills')
-    .get(protect, user.getAllSkills)
-    .post(protect, user.addSkill);
+    .get(mockVerifyToken, user.getAllSkills)
+    .post(mockVerifyToken, user.addSkill);
 
 router.route('/skills/:skillName')
-    .get(protect, user.getSkill)
-    .patch(protect, user.updateSkill)
-    .delete(protect, user.deleteSkill);
+    .get(mockVerifyToken, user.getSkill)
+    .patch(mockVerifyToken, user.updateSkill)
+    .delete(mockVerifyToken, user.deleteSkill);
 
 router.route('/skills/endorsements/add-endorsement')
-    .post(protect, user.addEndorsement);
+    .post(mockVerifyToken, user.addEndorsement);
 
 router.route('/skills/endorsements/remove-endorsement/:skillName')
-    .delete(protect, user.deleteEndorsement);
+    .delete(mockVerifyToken, user.deleteEndorsement);
 
 router.route('/pictures/profile-picture')
-    .post(protect, upload.single('file'), user.uploadProfilePicture)
-    .get(protect, user.getProfilePicture)
-    .delete(protect, user.deleteProfilePicture);
+    .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
+    .get(mockVerifyToken, user.getProfilePicture)
+    .delete(mockVerifyToken, user.deleteProfilePicture);
 
 router.route('/pictures/cover-picture')
-    .get(protect, user.getCoverPicture)
-    .post(protect, upload.single('file'), user.uploadCoverPicture)
-    .delete(protect, user.deleteCoverPicture);
+    .get(mockVerifyToken, user.getCoverPicture)
+    .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
+    .delete(mockVerifyToken, user.deleteCoverPicture);
 
 router.route('/resume')
     .get(protect, user.getResume)
