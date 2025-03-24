@@ -16,7 +16,6 @@ const { verifyCaptcha } = require("../utils/verifyCaptcha");
 const { generateTokens } = require("./../middlewares/auth");
 const firebaseAdmin = require("../utils/firebase");
 const crypto = require("crypto");
-//const { it } = require("@faker-js/faker");
 
 // Create a simple mock response object
 const mockRes = () => {
@@ -696,19 +695,17 @@ describe("googleLogin", () => {
       firebase: { identities: { "google.com": ["googleUid"] } },
     };
 
-    // ✅ Mock Firebase authentication correctly
     firebaseAdmin.auth = jest.fn().mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue(decoded),
     });
 
-    // ✅ Mock existing user with null googleId and a working save function
     const existingUser = {
       _id: "existingUserId",
       googleId: null,
       isActive: true,
       save: jest.fn().mockResolvedValue(true),
     };
-    // ✅ Mock database queries
+
     userModel.findOne = jest.fn().mockResolvedValue(existingUser);
     generateTokens.mockReturnValue({
       accessToken: "access",
@@ -717,7 +714,6 @@ describe("googleLogin", () => {
 
     await userController.googleLogin(req, res);
 
-    // ✅ Now, existingUser.googleId should be updated
     expect(existingUser.googleId).toBe("googleUid");
     expect(existingUser.save).toHaveBeenCalled();
 
@@ -1383,7 +1379,7 @@ describe("updateEmail", () => {
       id: "someUserId",
       password: "hashed",
       isActive: true,
-      email: "notyou@gmail.com", // ✅ Ensure email is present
+      email: "notyou@gmail.com",
       isConfirmed: true,
       correctPassword: jest.fn().mockResolvedValue(true),
       save: jest.fn().mockResolvedValue(true),
@@ -1416,7 +1412,7 @@ describe("updateEmail", () => {
       id: "someUserId",
       password: "hashed",
       isActive: true,
-      email: "notyou@gmail.com", // ✅ Ensure email is present
+      email: "notyou@gmail.com",
       isConfirmed: true,
       correctPassword: jest.fn().mockResolvedValue(true),
       save: jest.fn().mockResolvedValue(true),
