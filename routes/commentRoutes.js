@@ -11,5 +11,13 @@ router.route('/:commentId')
     .delete(protect,comment.deleteComment)
     .get(protect,comment.getComment)
 
-    
+router.route('/post/:postId')
+    .get(protect, comment.getPostComments);
+
+router.route('/reply/:commentId')
+    .get(protect, comment.getCommentReplies);
+
+router.route('/:commentId/like')
+    .post(protect, comment.likeComment)
+    .delete(protect, comment.unlikeComment);
 module.exports = router;

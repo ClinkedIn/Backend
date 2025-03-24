@@ -14,11 +14,11 @@ const chatRouter = require("./routes/chatRoutes");
 const messageRouter = require("./routes/messageRoutes");
 const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
+const searchRouter = require("./routes/searchRoutes");
 //to be removed
 const uploadRouter = require("./routes/uploadRoutes");
 const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
-
 const app = express();
 connectDB();
 app.use(express.json());
@@ -34,6 +34,7 @@ app.use("/messages", messageRouter);
 app.use("/jobs", jobRouter);
 app.use("/company", companyRouter);
 app.use("/upload", uploadRouter);
+app.use("/search", searchRouter);
 
 app.use(
   "/api-docs",

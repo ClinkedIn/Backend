@@ -1,6 +1,7 @@
 const commentModel = require('../models/commentModel');
 const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
+const impressionModel = require('../models/impressionModel');
 const { uploadFile, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const addComment = async (req, res) => {
     try {
@@ -364,10 +365,276 @@ const deleteComment = async (req, res) => {
     }
 };
 
+const getCommentReplies = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skipIndex = (page - 1) * limit;
+        
+        // Validate comment ID
+        if (!commentId) {
+            return res.status(400).json({ message: "Comment ID is required" });
+        }
+        
+        // Check if parent comment exists and is active
+        const parentComment = await commentModel.findById(commentId);
+        if (!parentComment || !parentComment.isActive) {
+            return res.status(404).json({ message: "Comment not found" });
+        }
+        
+        // Get total count of active replies for this comment
+        const totalReplies = await commentModel.countDocuments({ 
+            parentComment: commentId, 
+            isActive: true 
+        });
+        
+        // Find replies for the comment with pagination
+        const replies = await commentModel.find({ 
+            parentComment: commentId, 
+            isActive: true 
+        })
+        .sort({ createdAt: -1 }) // Most recent first
+        .skip(skipIndex)
+        .limit(limit);
+        
+        // Enhance replies with user information
+        const repliesWithUserInfo = await Promise.all(replies.map(async (reply) => {
+            const user = await userModel.findById(reply.userId, 'firstName lastName headline profilePicture');
+            
+            return {
+                ...reply.toObject(),
+                firstName: user?.firstName,
+                lastName: user?.lastName,
+                headline: user?.headline,
+                profilePicture: user?.profilePicture
+            };
+        }));
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalReplies / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+        
+        res.status(200).json({
+            message: "Replies retrieved successfully",
+            replies: repliesWithUserInfo,
+            pagination: {
+                totalReplies,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+    } catch (error) {
+        console.error('Error getting comment replies:', error);
+        res.status(500).json({
+            message: 'Failed to get replies',
+            error: error.message
+        });
+    }
+};
+
+const likeComment = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const userId = req.user.id;
+        const { impressionType = 'like' } = req.body; // Default to 'like' if not specified
+        
+        // Validate input
+        if (!commentId) {
+            return res.status(400).json({ message: 'Comment ID is required' });
+        }
+        
+        // Validate impression type
+        const validImpressionTypes = ['like', 'support', 'celebrate', 'love', 'insightful', 'funny'];
+        if (!validImpressionTypes.includes(impressionType)) {
+            return res.status(400).json({ 
+                message: 'Invalid impression type',
+                validTypes: validImpressionTypes
+            });
+        }
+        
+        // Check if comment exists and is active
+        const comment = await commentModel.findOne({ 
+            _id: commentId, 
+            isActive: true 
+        });
+        
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found or inactive' });
+        }
+        
+        // Check if user has already impressed this comment
+        const existingImpression = await impressionModel.findOne({
+            targetId: commentId,
+            userId: userId,
+            targetType: "Comment"
+        });
+        
+        if (existingImpression) {
+            // If the user already has an active impression on this comment
+            if (existingImpression.type === impressionType) {
+                return res.status(400).json({ 
+                    message: `You have already ${impressionType}d this comment` 
+                });
+            } else {
+                // Store the old type before updating
+                const oldType = existingImpression.type;
+                
+                // If they're changing their impression type, update it
+                existingImpression.type = impressionType;
+                await existingImpression.save();
+                
+                // Initialize impression counts if needed
+                const impressionCounts = comment.impressionCounts || {};
+                
+                // Calculate new counts
+                const oldTypeCount = Math.max(0, (impressionCounts[oldType] || 1) - 1);
+                const newTypeCount = (impressionCounts[impressionType] || 0) + 1;
+                
+                // Use findByIdAndUpdate with specific field updates to avoid validation issues
+                const updatedComment = await commentModel.findByIdAndUpdate(
+                    commentId,
+                    { 
+                        [`impressionCounts.${oldType}`]: oldTypeCount,
+                        [`impressionCounts.${impressionType}`]: newTypeCount
+                    },
+                    { new: true }
+                );
+                
+                return res.status(200).json({ 
+                    message: `Impression changed from ${oldType} to ${impressionType}`,
+                    impressionCounts: updatedComment.impressionCounts
+                });
+            }
+        }
+        
+        // Create new impression
+        const newImpression = await impressionModel.create({
+            targetId: commentId,
+            targetType: "Comment",
+            userId,
+            type: impressionType,
+            isActive: true
+        });
+        
+        // Initialize impression counts if needed
+        const impressionCounts = comment.impressionCounts || {};
+        const typeCount = (impressionCounts[impressionType] || 0) + 1;
+        const totalCount = (impressionCounts.total || 0) + 1;
+        
+        // Add to impressions array if not already tracking
+        let impressions = comment.impressions || [];
+        if (!impressions.includes(newImpression._id)) {
+            impressions.push(newImpression._id);
+        }
+        
+        // Use findByIdAndUpdate with specific field updates to avoid validation issues
+        const updatedComment = await commentModel.findByIdAndUpdate(
+            commentId,
+            { 
+                [`impressionCounts.${impressionType}`]: typeCount,
+                'impressionCounts.total': totalCount,
+                impressions: impressions
+            },
+            { new: true }
+        );
+        
+        res.status(200).json({ 
+            message: `Comment ${impressionType}d successfully`,
+            impressionCounts: updatedComment.impressionCounts
+        });
+        
+    } catch (error) {
+        console.error(`Error ${req.body.impressionType || 'like'}ing comment:`, error);
+        res.status(500).json({
+            message: `Failed to ${req.body.impressionType || 'like'} comment`,
+            error: error.message
+        });
+    }
+};
+
+const unlikeComment = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!commentId) {
+            return res.status(400).json({ message: 'Comment ID is required' });
+        }
+        
+        // Check if comment exists and is active
+        const comment = await commentModel.findOne({ 
+            _id: commentId, 
+            isActive: true 
+        });
+        
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found or inactive' });
+        }
+        
+        // Check if user has an active impression on this comment
+        const existingImpression = await impressionModel.findOne({
+            targetId: commentId,
+            userId,
+            targetType: "Comment"
+        });
+        
+        if (!existingImpression) {
+            return res.status(400).json({ message: 'You have not reacted to this comment' });
+        }
+        
+        // Get the impression type before deleting
+        const impressionType = existingImpression.type;
+        
+        // Hard delete the impression
+        await impressionModel.findByIdAndDelete(existingImpression._id);
+        
+        // Initialize impression counts if needed
+        const impressionCounts = comment.impressionCounts || {};
+        const typeCount = Math.max(0, (impressionCounts[impressionType] || 0) - 1);
+        const totalCount = Math.max(0, (impressionCounts.total || 0) - 1);
+        
+        // Remove from impressions array
+        let impressions = comment.impressions || [];
+        impressions = impressions.filter(id => id.toString() !== existingImpression._id.toString());
+        
+        // Use findByIdAndUpdate with specific field updates to avoid validation issues
+        const updatedComment = await commentModel.findByIdAndUpdate(
+            commentId,
+            { 
+                [`impressionCounts.${impressionType}`]: typeCount,
+                'impressionCounts.total': totalCount,
+                impressions: impressions
+            },
+            { new: true }
+        );
+        
+        res.status(200).json({
+            message: `Comment ${impressionType} removed successfully`,
+            impressionCounts: updatedComment.impressionCounts
+        });
+        
+    } catch (error) {
+        console.error('Error removing comment impression:', error);
+        res.status(500).json({
+            message: 'Failed to remove comment impression',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     addComment,
     updateComment,
     getComment,
     getPostComments,
-    deleteComment
+    deleteComment,
+    getCommentReplies,
+    likeComment,
+    unlikeComment
 };
