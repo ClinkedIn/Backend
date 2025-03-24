@@ -461,14 +461,17 @@ const getAllPosts = async (req, res) => {
                 })
             };
         });
-        
+        const hasNextPage = parseInt(pageNumber) < total;
+        const hasPrevPage = parseInt(pageNumber) > 1;
         res.status(200).json({
             posts: formattedPosts,
             pagination: {
                 total,
                 page: parseInt(pageNumber),
                 limit: parseInt(limit),
-                pages: Math.ceil(total / parseInt(limit))
+                pages: Math.ceil(total / parseInt(limit)),
+                hasNextPage,
+                hasPrevPage
             }
         });
         
@@ -1105,7 +1108,8 @@ const getPostReposts = async (req, res) => {
         const post = await postModel.findOne({ 
             _id: postId, 
             isActive: true 
-        });
+        }).populate('userId', 'firstName lastName headline profilePicture')
+        .lean();
         
         if (!post) {
             return res.status(404).json({ message: 'Post not found or inactive' });
@@ -1130,42 +1134,41 @@ const getPostReposts = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skipIndex)
             .limit(limitNum)
-            .populate('userId', 'firstName lastName headline profilePicture');
+            .populate('userId', 'firstName lastName headline profilePicture')
+            .lean();
         
         // Get current user's saved posts for checking if this post is saved
         const currentUser = await userModel.findById(userId).select('savedPosts');
         const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
         const isSaved = savedPostsSet.has(postId.toString());
         
-        // Format reposts to match the user feed format
+        // Format reposts exactly like in getAllPosts
         const formattedReposts = reposts.map(repost => {
             return {
-                repostId: repost._id,
-                postId: repost.postId,
-                userId: repost.userId._id,
-                firstName: repost.userId.firstName,
-                lastName: repost.userId.lastName,
-                headline: repost.userId.headline || "",
-                profilePicture: repost.userId.profilePicture,
-                repostDescription: repost.description || "",
-                createdAt: repost.createdAt,
-                // Include original post details
-                isRepost: true,
-                isSaved: isSaved,
-                // Original post details
-                originalPostId: post._id,
+                postId: post._id,
+                userId: post.userId._id,
+                firstName: post.userId.firstName,
+                lastName: post.userId.lastName,
+                headline: post.userId.headline || "",
+                profilePicture: post.userId.profilePicture,
                 postDescription: post.description,
                 attachments: post.attachments,
                 impressionCounts: post.impressionCounts,
                 commentCount: post.commentCount || 0,
                 repostCount: post.repostCount || 0,
+                createdAt: post.createdAt,
                 taggedUsers: post.taggedUsers,
-                // Original post author details
-                originalAuthorId: post.userId,
-                originalAuthorFirstName: post.userId.firstName,
-                originalAuthorLastName: post.userId.lastName,
-                originalAuthorHeadline: post.userId.headline || "",
-                originalAuthorProfilePicture: post.userId.profilePicture,
+                isRepost: true,
+                isSaved: isSaved,
+                // Repost specific details
+                repostId: repost._id,
+                reposterId: repost.userId._id,
+                reposterFirstName: repost.userId.firstName,
+                reposterLastName: repost.userId.lastName,
+                reposterProfilePicture: repost.userId.profilePicture,
+                reposterHeadline: repost.userId.headline || "",
+                repostDescription: repost.description || "",
+                repostDate: repost.createdAt
             };
         });
         
@@ -1174,15 +1177,14 @@ const getPostReposts = async (req, res) => {
         const hasNextPage = pageNum < totalPages;
         const hasPrevPage = pageNum > 1;
         
-        // Return results with pagination metadata
+        // Return results with pagination metadata in the same format as getAllPosts
         res.status(200).json({
-            message: "Reposts retrieved successfully",
-            reposts: formattedReposts,
+            posts: formattedReposts,
             pagination: {
-                totalReposts,
-                totalPages,
-                currentPage: pageNum,
-                pageSize: limitNum,
+                total: totalReposts,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
                 hasNextPage,
                 hasPrevPage
             }

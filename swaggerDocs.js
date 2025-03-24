@@ -904,23 +904,32 @@
  *                         example: "2024-03-19T10:15:30.123Z"
  *                 pagination:
  *                   type: object
+ *                   description: Pagination metadata
  *                   properties:
  *                     total:
  *                       type: number
- *                       description: Total number of posts matching the criteria
- *                       example: 45
+ *                       example: 25
+ *                       description: Total number of reposts for this post
  *                     page:
  *                       type: number
- *                       description: Current page number
  *                       example: 1
+ *                       description: Current page number
  *                     limit:
  *                       type: number
- *                       description: Number of posts per page
  *                       example: 10
+ *                       description: Number of results per page
  *                     pages:
  *                       type: number
- *                       description: Total number of pages
- *                       example: 5
+ *                       example: 3
+ *                       description: Total number of pages available
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
  *       401:
  *         description: Unauthorized - invalid or missing authentication token
  *         content:
@@ -9384,6 +9393,263 @@
  *                 message:
  *                   type: string
  *                   example: "Failed to get impressions"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}/reposts:
+ *   get:
+ *     summary: Get reposts of a specific post
+ *     tags: [Posts]
+ *     description: |
+ *       Retrieve a paginated list of reposts for a specific post, including user information
+ *       and repost content. Returns data in the same format as the main feed for consistency.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to get reposts for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of reposts formatted like feed posts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: ID of the original post
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456777"
+ *                         description: ID of the original post author
+ *                       firstName:
+ *                         type: string
+ *                         example: "Jane"
+ *                         description: First name of the original post author
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                         description: Last name of the original post author
+ *                       headline:
+ *                         type: string
+ *                         example: "Product Manager"
+ *                         description: Headline of the original post author
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: Profile picture of the original post author
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Original post content here"
+ *                         description: Content of the original post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/post1.jpg"]
+ *                         description: Attachments from the original post
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 42
+ *                           support:
+ *                             type: number
+ *                             example: 15
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 23
+ *                           insightful:
+ *                             type: number
+ *                             example: 19
+ *                           funny:
+ *                             type: number
+ *                             example: 7
+ *                           total:
+ *                             type: number
+ *                             example: 114
+ *                         description: Impression counts from the original post
+ *                       commentCount:
+ *                         type: number
+ *                         example: 12
+ *                         description: Comment count from the original post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 8
+ *                         description: Repost count from the original post
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: When the original post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456700"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Alex"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Johnson"
+ *                             companyName:
+ *                               type: string
+ *                               example: null
+ *                         description: Users tagged in the original post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Flag indicating this is a repost (always true for this endpoint)
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Flag indicating if the current user has saved this post
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the repost
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who reposted
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the reposter
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the reposter
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/reposter.jpg"
+ *                         description: Profile picture of the reposter
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Headline of the reposter
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great post about coding best practices!"
+ *                         description: Comment added by the reposter
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-21T09:15:30.123Z"
+ *                         description: When the repost was created
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of reposts for this post
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     pages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages available
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get reposts"
  *                 error:
  *                   type: string
  *                   example: "Error details"
