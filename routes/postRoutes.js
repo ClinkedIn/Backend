@@ -23,7 +23,8 @@ router.route('/:postId/like')
     .get(protect,postController.getPostImpressions);
 
 router.route('/:postId/repost')
-    .post(protect,postController.repostPost);
+    .post(protect,postController.repostPost)
+    .get(protect,postController.getPostReposts);
 
 router.route('/:repostId/repost')
     .delete(protect,postController.deleteRepost);
@@ -31,6 +32,7 @@ router.route('/:repostId/repost')
 
 router.route('/:postId/report')
     .post(protect,postController.reportPost);
+
 
 
 

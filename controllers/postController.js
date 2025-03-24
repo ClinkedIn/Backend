@@ -867,7 +867,6 @@ const deleteRepost = async (req, res) => {
     }
 };
 
-
 // Report a post
 const reportPost = async (req, res) => {
     try {
@@ -966,6 +965,7 @@ const reportPost = async (req, res) => {
         });
     }
 };
+
 const getPostImpressions = async (req, res) => {
     try {
         const { postId } = req.params;
@@ -1088,6 +1088,114 @@ const getPostImpressions = async (req, res) => {
     }
 };
 
+
+
+const getPostReposts = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination metadata
+        const totalReposts = await repostModel.countDocuments({
+            postId,
+            isActive: true
+        });
+        
+        // Find reposts with pagination
+        const reposts = await repostModel.find({
+            postId,
+            isActive: true
+        })
+            .sort({ createdAt: -1 })
+            .skip(skipIndex)
+            .limit(limitNum)
+            .populate('userId', 'firstName lastName headline profilePicture');
+        
+        // Get current user's saved posts for checking if this post is saved
+        const currentUser = await userModel.findById(userId).select('savedPosts');
+        const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
+        const isSaved = savedPostsSet.has(postId.toString());
+        
+        // Format reposts to match the user feed format
+        const formattedReposts = reposts.map(repost => {
+            return {
+                repostId: repost._id,
+                postId: repost.postId,
+                userId: repost.userId._id,
+                firstName: repost.userId.firstName,
+                lastName: repost.userId.lastName,
+                headline: repost.userId.headline || "",
+                profilePicture: repost.userId.profilePicture,
+                repostDescription: repost.description || "",
+                createdAt: repost.createdAt,
+                // Include original post details
+                isRepost: true,
+                isSaved: isSaved,
+                // Original post details
+                originalPostId: post._id,
+                postDescription: post.description,
+                attachments: post.attachments,
+                impressionCounts: post.impressionCounts,
+                commentCount: post.commentCount || 0,
+                repostCount: post.repostCount || 0,
+                taggedUsers: post.taggedUsers,
+                // Original post author details
+                originalAuthorId: post.userId,
+                originalAuthorFirstName: post.userId.firstName,
+                originalAuthorLastName: post.userId.lastName,
+                originalAuthorHeadline: post.userId.headline || "",
+                originalAuthorProfilePicture: post.userId.profilePicture,
+            };
+        });
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalReposts / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+        
+        // Return results with pagination metadata
+        res.status(200).json({
+            message: "Reposts retrieved successfully",
+            reposts: formattedReposts,
+            pagination: {
+                totalReposts,
+                totalPages,
+                currentPage: pageNum,
+                pageSize: limitNum,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting post reposts:', error);
+        res.status(500).json({
+            message: 'Failed to get reposts',
+            error: error.message
+        });
+    }
+};
 module.exports = {
     createPost,
     getAllPosts,
@@ -1101,5 +1209,6 @@ module.exports = {
     getPost,
     deletePost,
     updatePost,
-    getPostImpressions
+    getPostImpressions,
+    getPostReposts
 };
