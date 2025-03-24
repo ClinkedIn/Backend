@@ -8856,3 +8856,125 @@
  *                   type: string
  *                   example: "Error message details"
  */
+
+/**
+ * @swagger
+ * /search/users:
+ *   get:
+ *     summary: Search for users by name
+ *     tags: [Search]
+ *     description: Search for users by first or last name and return a paginated list of matching users with their basic profile information. Useful for finding users to tag in comments or posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Name or partial name to search for (minimum 2 characters)
+ *         example: "john"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of users per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Users found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Users found successfully"
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                       example: 25
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - search term too short (less than 2 characters)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Search term must be at least 2 characters"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search users"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
