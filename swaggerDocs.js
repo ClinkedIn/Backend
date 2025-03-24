@@ -2044,32 +2044,237 @@
 /**
  * @swagger
  * /comments:
- *  post:
- *      summary: Add comment
- *      tags: [Comments]
- *      security:
- *          - BearerAuth: []
- *      requestBody:
- *          $ref: '#/components/requestBodies/CreateCommentRequest'
- *      responses:
- *          201:
- *              description: Comment added successfully
- *              content:
- *                  application/json:
- *                      schema:
- *                          $ref: '#/components/schemas/Comment'
- *          400:
- *              description: Bad request, invalid input
- *          401:
- *              description: Unauthorized, invalid or missing token
- *          500:
- *              description: Internal server error
- *
- * /comments/{commentId}:
- *  put:
- *     summary: Edit comment
+ *   post:
+ *     summary: Add a new comment or reply to a post
  *     tags: [Comments]
- *     description: Edit a specific comment with its ID
+ *     description: Create a new comment on a post or reply to an existing comment with optional image attachment and user tagging
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - postId
+ *             properties:
+ *               postId:
+ *                 type: string
+ *                 description: ID of the post being commented on
+ *                 example: "65fb2a8e7c5721f123456789"
+ *               commentContent:
+ *                 type: string
+ *                 description: Text content of the comment
+ *                 example: "This is a great post! Thanks for sharing."
+ *               commentAttachment:
+ *                 type: string
+ *                 description: URL of an image (alternative to file upload)
+ *                 example: "https://example.com/image.jpg"
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to attach to the comment (only images allowed)
+ *               taggedUsers:
+ *                 type: array
+ *                 description: Array of users tagged in the comment
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       description: ID of the tagged user
+ *                       example: "65fb2a8e7c5721f987654321"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       default: "User"
+ *                       description: Type of the tagged entity
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       description: First name of the tagged user
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       description: Last name of the tagged user
+ *                       example: "Doe"
+ *                     companyName:
+ *                       type: string
+ *                       description: Name of the tagged company (if userType is Company)
+ *                       example: "Acme Corporation"
+ *               parentComment:
+ *                 type: string
+ *                 description: ID of the parent comment if this is a reply
+ *                 example: "65fb2a8e7c5721f123456790"
+ *     responses:
+ *       201:
+ *         description: Comment added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment added successfully"
+ *                 id:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456791"
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456791"
+ *                     userId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456788"
+ *                     postId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     commentContent:
+ *                       type: string
+ *                       example: "This is a great post! Thanks for sharing."
+ *                     commentAttachment:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f987654321"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 0
+ *                         support:
+ *                           type: number
+ *                           example: 0
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 0
+ *                         insightful:
+ *                           type: number
+ *                           example: 0
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 0
+ *                     impressions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     replies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     replyCount:
+ *                       type: number
+ *                       example: 0
+ *                     parentComment:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "65fb2a8e7c5721f123456790"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *       400:
+ *         description: Bad request - missing required fields or invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID and comment content are required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to add comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
+ *   put:
+ *     summary: Update an existing comment
+ *     tags: [Comments]
+ *     description: Edit a comment's content and/or tagged users. Only the comment owner can edit their own comments.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -2078,24 +2283,225 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The comment ID
+ *         description: ID of the comment to update
+ *         example: "65fb2a8e7c5721f123456791"
  *     requestBody:
- *      $ref: '#/components/requestBodies/CreateCommentRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               commentContent:
+ *                 type: string
+ *                 description: Updated text content of the comment
+ *                 example: "Updated comment content with additional thoughts."
+ *               taggedUsers:
+ *                 type: array
+ *                 description: Updated array of users tagged in the comment
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       description: ID of the tagged user
+ *                       example: "65fb2a8e7c5721f987654321"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       default: "User"
+ *                       description: Type of the tagged entity
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       description: First name of the tagged user
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       description: Last name of the tagged user
+ *                       example: "Smith"
+ *                     companyName:
+ *                       type: string
+ *                       description: Name of the tagged company (if userType is Company)
+ *                       example: null
  *     responses:
  *       200:
  *         description: Comment updated successfully
  *         content:
- *          application/json:
- *              schema:
- *                  $ref: '#/components/schemas/Comment'
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment updated successfully"
+ *                 id:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456791"
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456791"
+ *                     userId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456788"
+ *                     postId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     commentContent:
+ *                       type: string
+ *                       example: "Updated comment content with additional thoughts."
+ *                     commentAttachment:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f987654321"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 2
+ *                         support:
+ *                           type: number
+ *                           example: 1
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 3
+ *                         insightful:
+ *                           type: number
+ *                           example: 1
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 7
+ *                     impressions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456792", "65fb2a8e7c5721f123456793"]
+ *                     replies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456794"]
+ *                     replyCount:
+ *                       type: number
+ *                       example: 1
+ *                     parentComment:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T14:45:20.456Z"
+ *       400:
+ *         description: Bad request - missing required fields or invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No changes provided for update"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only edit your own comments"
  *       404:
  *         description: Comment not found
- *  delete:
- *     summary: Delete comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment
  *     tags: [Comments]
- *     description: Delete a specific comment by its ID
+ *     description: Soft delete a comment by setting isActive to false. Only the comment owner can delete their own comments.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -2104,15 +2510,77 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The comment ID
+ *         description: ID of the comment to delete
+ *         example: "65fb2a8e7c5721f123456791"
  *     responses:
  *       200:
  *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment deleted successfully"
+ *       400:
+ *         description: Bad request - missing comment ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own comments"
  *       404:
  *         description: Comment not found
- *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
  *  get:
  *     summary: Get a specific comment
  *     tags: [Comments]

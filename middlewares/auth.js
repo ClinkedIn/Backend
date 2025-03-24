@@ -11,6 +11,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "10s" }
@@ -23,6 +25,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "10m" }
