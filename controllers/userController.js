@@ -298,14 +298,12 @@ const forgotPassword = async (req, res) => {
     const email = req.body.email;
     if (!email) {
       return res.status(400).json({
-        success: false,
         message: "Please fill all required fields",
       });
     }
 
     if (!validateEmail(email)) {
       return res.status(422).json({
-        success: false,
         message: "Please enter a valid email",
       });
     }
@@ -316,7 +314,6 @@ const forgotPassword = async (req, res) => {
     });
     if (!user) {
       return res.status(404).json({
-        success: false,
         message: "This email is not registerd",
       });
     }
@@ -334,7 +331,7 @@ const forgotPassword = async (req, res) => {
       "host"
     )}/user/reset-password/${resetToken} `;
     const emailSent = await sendForgotPasswordEmail(resetURL, user.email);
-
+    console.log("email sent", emailSent);
     if (emailSent.success) {
       return res.status(200).json({
         success: true,
@@ -343,13 +340,11 @@ const forgotPassword = async (req, res) => {
       });
     }
     return res.status(500).json({
-      success: false,
       message: emailSent.error,
     });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
-      success: false,
       message: "Internal server error",
     });
   }
@@ -388,7 +383,7 @@ const resetPassword = async (req, res) => {
     user.passwordResetExpiresAt = undefined;
     await user.save();
 
-    createSendToken(user, 200, res, "Password restted successfully");
+    createSendToken(user, 200, res, "Password reseted successfully");
   } catch (error) {
     console.log(error);
     return res.status(500).json({
