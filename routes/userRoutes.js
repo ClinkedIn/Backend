@@ -4,7 +4,6 @@ const { protect } = require("../middlewares/auth");
 
 const userController = require("../controllers/userController");
 
-// router.post('/register', userController.registerUser)
 router
   .route("/")
   .post(userController.registerUser)
@@ -14,7 +13,6 @@ router
   .route("/confirm-email")
   .get(protect, userController.resendConfirmationEmail);
 
-// router.route('/confirm-email').patch(mockVerifyToken , userController.confirmEmail)
 router
   .route("/confirm-email/:emailVerificationToken")
   .patch(userController.confirmEmail);
