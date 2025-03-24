@@ -9,28 +9,32 @@ router.route('/')
 
 
 router.route('/:postId')
-    .get(postController.getPost)
-    .put(postController.updatePost)
-    .delete(postController.deletePost);
+    .get(protect,postController.getPost)
+    .put(protect,postController.updatePost)
+    .delete(protect,postController.deletePost);
 
 router.route('/:postId/save')
-    .post(postController.savePost)
-    .delete(postController.unsavePost);
+    .post(protect,postController.savePost)
+    .delete(protect,postController.unsavePost);
 
 router.route('/:postId/like')
-    .post(postController.likePost)
-    .delete(postController.unlikePost); 
+    .post(protect,postController.likePost)
+    .delete(protect,postController.unlikePost)
+    .get(protect,postController.getPostImpressions);
 
 router.route('/:postId/repost')
-    .post(postController.repostPost);
+    .post(protect,postController.repostPost)
+    .get(protect,postController.getPostReposts);
 
-router.route('/:postId/repost/:repostId')
-    .delete(postController.deleteRepost);
+router.route('/:repostId/repost')
+    .delete(protect,postController.deleteRepost);
 
 
 router.route('/:postId/report')
-    .post(postController.reportPost);
-    
+    .post(protect,postController.reportPost);
+
+
+
 
 module.exports = router;
 

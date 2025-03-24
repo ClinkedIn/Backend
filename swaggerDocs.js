@@ -871,6 +871,9 @@
  *                             lastName:
  *                               type: string
  *                               example: "Smith"
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -901,23 +904,32 @@
  *                         example: "2024-03-19T10:15:30.123Z"
  *                 pagination:
  *                   type: object
+ *                   description: Pagination metadata
  *                   properties:
  *                     total:
  *                       type: number
- *                       description: Total number of posts matching the criteria
- *                       example: 45
+ *                       example: 25
+ *                       description: Total number of reposts for this post
  *                     page:
  *                       type: number
- *                       description: Current page number
  *                       example: 1
+ *                       description: Current page number
  *                     limit:
  *                       type: number
- *                       description: Number of posts per page
  *                       example: 10
+ *                       description: Number of results per page
  *                     pages:
  *                       type: number
- *                       description: Total number of pages
- *                       example: 5
+ *                       example: 3
+ *                       description: Total number of pages available
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
  *       401:
  *         description: Unauthorized - invalid or missing authentication token
  *         content:
@@ -959,7 +971,7 @@
  *   get:
  *     summary: Get a single post
  *     tags: [Posts]
- *     description: Retrieve a specific post by its ID
+ *     description: Retrieve a specific post by its ID. Honors post privacy settings and includes saved status.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -968,44 +980,203 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to retrieve
  *     responses:
  *       200:
  *         description: Post retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post retrieved successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Excited to share my latest project!"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["https://res.cloudinary.com/example/image/upload/image.jpg"]
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                     whoCanSee:
+ *                       type: string
+ *                       enum: [anyone, connections]
+ *                       example: "anyone"
+ *                     whoCanComment:
+ *                       type: string
+ *                       enum: [anyone, connections, noOne]
+ *                       example: "anyone"
+ *                     isSaved:
+ *                       type: boolean
+ *                       example: true
+ *                     isRepost:
+ *                       type: boolean
+ *                       example: true
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c87"
+ *                     reposterId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c88"
+ *                     reposterFirstName:
+ *                       type: string
+ *                       example: "Robert"
+ *                     reposterLastName:
+ *                       type: string
+ *                       example: "Johnson"
+ *                     reposterProfilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile2.jpg"
+ *                     reposterHeadline:
+ *                       type: string
+ *                       example: "Marketing Manager at Company XYZ"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "Great insights in this post!"
+ *                     repostDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T10:15:30.123Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have access to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This post is only visible to the author's connections"
  *       404:
  *         description: Post not found
- *   put:
- *     summary: Update a post
- *     tags: [Posts]
- *     description: Modify an existing post by ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreatePostRequest'
- *     responses:
- *       200:
- *         description: Post updated successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
  *   delete:
  *     summary: Delete a post
  *     tags: [Posts]
- *     description: Remove a post by its ID
+ *     description: Performs a soft delete of a post by marking it as inactive. Only the post owner can delete their posts.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1014,14 +1185,250 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to delete
  *     responses:
  *       200:
  *         description: Post deleted successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post deleted successfully"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own posts"
+ *       404:
+ *         description: Post not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}:
+ *   put:
+ *     summary: Update a post
+ *     tags: [Posts]
+ *     description: Updates a post's description and/or tagged users. Only the post owner can update their posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the post to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: The updated text content of the post
+ *                 example: "Updated post description with new information"
+ *               taggedUsers:
+ *                 type: array
+ *                 description: List of users tagged in the post
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c86"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Smith"
+ *                     companyName:
+ *                       type: string
+ *                       example: null
+ *     responses:
+ *       200:
+ *         description: Post updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post updated successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c84"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "Updated post description with new information"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/image.jpg"
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 3
+ *                         love:
+ *                           type: number
+ *                           example: 1
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     commentCount:
+ *                       type: number
+ *                       example: 3
+ *                     repostCount:
+ *                       type: number
+ *                       example: 1
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-15T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-19T14:45:30.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "60d21b4667d0d8992e610c86"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *       400:
+ *         description: Bad request - invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post description cannot be empty"
+ *       403:
+ *         description: Forbidden - user is not the post owner
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only update your own posts"
  *       404:
  *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1030,7 +1437,7 @@
  *   post:
  *     summary: Save a post
  *     tags: [Posts]
- *     description: Save a post to a user's collection
+ *     description: Save a post to the user's saved posts collection
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1039,39 +1446,70 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: ID of the post to save
  *     responses:
  *       200:
  *         description: Post saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post saved successfully"
+ *       400:
+ *         description: Bad request - missing post ID or post already saved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *   delete:
- *     summary: Unsave a post
- *     tags: [Posts]
- *     description: Remove a post from a user's saved list
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
- *     responses:
- *       200:
- *         description: Post unsaved successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to save post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
  * /posts/{postId}/like:
  *   post:
- *     summary: Like a post
+ *     summary: Like or react to a post
  *     tags: [Posts]
- *     description: Add a like to a post
+ *     description: Add a reaction to a post (like, support, celebrate, etc.)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1080,19 +1518,107 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to like
  *     requestBody:
- *
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               impressionType:
+ *                 type: string
+ *                 enum: [like, support, celebrate, love, insightful, funny]
+ *                 default: like
+ *                 description: Type of reaction to add to the post
  *     responses:
  *       200:
- *         description: Post liked successfully
+ *         description: Post liked successfully or impression changed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post liked successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 5
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 15
+ *       400:
+ *         description: Bad request - missing post ID, invalid impression type, or user already liked this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have already liked this post"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to like post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  *
  *   delete:
- *     summary: Unlike a post
+ *     summary: Unlike or remove reaction from a post
  *     tags: [Posts]
- *     description: Remove a like from a post
+ *     description: Remove a user's reaction from a post
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1101,12 +1627,85 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to unlike
  *     responses:
  *       200:
- *         description: Post unliked successfully
+ *         description: Reaction removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post like removed successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 4
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                     love:
+ *                       type: number
+ *                       example: 1
+ *                     insightful:
+ *                       type: number
+ *                       example: 4
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 14
+ *       400:
+ *         description: Bad request - missing post ID or user hasn't reacted to this post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have not reacted to this post"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove post impression"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1115,7 +1714,7 @@
  *   post:
  *     summary: Repost a post
  *     tags: [Posts]
- *     description: Repost an existing post
+ *     description: Create a repost of an existing post with optional description
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1124,50 +1723,193 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to repost
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: Optional description to add to the repost
  *     responses:
- *       200:
+ *       201:
  *         description: Post reposted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reposted successfully"
+ *                 repost:
+ *                   type: object
+ *                   properties:
+ *                     repostId:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     originalPostId:
+ *                       type: string
+ *                       example: "60d21b1c67d0d8992e610c83"
+ *                     userId:
+ *                       type: string
+ *                       example: "60d0fe4677975f4ae0329ea4"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at XYZ Corp"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1624420422/profile/user123.jpg"
+ *                     repostDescription:
+ *                       type: string
+ *                       example: "This is a great post that I wanted to share!"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-03-22T14:30:00.000Z"
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to repost post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
- * /posts/{postId}/repost/{repostId}:
+ * /posts/{repostId}/repost:
  *   delete:
  *     summary: Delete a repost
  *     tags: [Posts]
- *     description: Remove a repost from a user's profile
+ *     description: Remove a repost from the user's profile by setting it to inactive. Only the owner of the repost can delete it.
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: The post ID
  *       - in: path
  *         name: repostId
  *         required: true
  *         schema:
  *           type: string
- *         description: The repost ID
+ *         description: The ID of the repost to delete
  *     responses:
  *       200:
  *         description: Repost deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost deleted successfully"
+ *       400:
+ *         description: Bad request - missing repost ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the repost
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own reposts"
+ *       404:
+ *         description: Repost not found or already deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Repost not found or already deleted"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete repost"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
  * @swagger
  * /posts/{postId}/report:
  *   post:
- *     summary: Report a post
+ *     summary: Report a post for policy violations
  *     tags: [Posts]
- *     description: Report a post for inappropriate content
+ *     description: Report a post for violating platform policies. Users can specify a policy violation reason and optionally indicate why they don't want to see similar content.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1176,12 +1918,129 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The post ID
+ *         description: The ID of the post to report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement",
+ *                   "This person is impersonating someone", 
+ *                   "This account has been hacked", 
+ *                   "This account is not a real person"
+ *                 ]
+ *                 description: Reason for reporting the post (policy violation type)
+ *                 example: "Misinformation"
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author", 
+ *                   "I'm not interested in this topic", 
+ *                   "I've seen too many posts on this topic", 
+ *                   "I've seen this post before", 
+ *                   "This post is old", 
+ *                   "It's something else"
+ *                 ]
+ *                 description: Optional reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
  *     responses:
- *       200:
+ *       201:
  *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully"
+ *                 reportId:
+ *                   type: string
+ *                   example: "60d21b4667d0d8992e610c85"
+ *       400:
+ *         description: Bad request - missing required fields or invalid reason
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid report reason"
+ *                 validReasons:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child
+ * exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy violation reason
+ *                 value:
+ *                   message: "Invalid report reason"
+ *                   validReasons: ["Harassment", "Fraud or scam", "Spam", "Misinformation", "Hateful speech", "Threats or violence", "Self-harm", "Graphic content", "Dangerous or extremist organizations", "Sexual content", "Fake account", "Child exploitation", "Illegal goods and services", "Infringement", "This person is impersonating someone", "This account has been hacked", "This account is not a real person"]
+ *               invalidDontWantToSee:
+ *                 summary: Invalid "don't want to see" reason
+ *                 value:
+ *                   message: "Invalid \"don't want to see\" reason"
+ *                   validReasons: ["I'm not interested in the author", "I'm not interested in this topic", "I've seen too many posts on this topic", "I've seen this post before", "This post is old", "It's something else"]
+ *               missingPolicy:
+ *                 summary: Missing policy violation reason
+ *                 value:
+ *                   message: "Report reason (policy) is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to report post"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -1194,32 +2053,237 @@
 /**
  * @swagger
  * /comments:
- *  post:
- *      summary: Add comment
- *      tags: [Comments]
- *      security:
- *          - BearerAuth: []
- *      requestBody:
- *          $ref: '#/components/requestBodies/CreateCommentRequest'
- *      responses:
- *          201:
- *              description: Comment added successfully
- *              content:
- *                  application/json:
- *                      schema:
- *                          $ref: '#/components/schemas/Comment'
- *          400:
- *              description: Bad request, invalid input
- *          401:
- *              description: Unauthorized, invalid or missing token
- *          500:
- *              description: Internal server error
- *
- * /comments/{commentId}:
- *  put:
- *     summary: Edit comment
+ *   post:
+ *     summary: Add a new comment or reply to a post
  *     tags: [Comments]
- *     description: Edit a specific comment with its ID
+ *     description: Create a new comment on a post or reply to an existing comment with optional image attachment and user tagging
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - postId
+ *             properties:
+ *               postId:
+ *                 type: string
+ *                 description: ID of the post being commented on
+ *                 example: "65fb2a8e7c5721f123456789"
+ *               commentContent:
+ *                 type: string
+ *                 description: Text content of the comment
+ *                 example: "This is a great post! Thanks for sharing."
+ *               commentAttachment:
+ *                 type: string
+ *                 description: URL of an image (alternative to file upload)
+ *                 example: "https://example.com/image.jpg"
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to attach to the comment (only images allowed)
+ *               taggedUsers:
+ *                 type: array
+ *                 description: Array of users tagged in the comment
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       description: ID of the tagged user
+ *                       example: "65fb2a8e7c5721f987654321"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       default: "User"
+ *                       description: Type of the tagged entity
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       description: First name of the tagged user
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       description: Last name of the tagged user
+ *                       example: "Doe"
+ *                     companyName:
+ *                       type: string
+ *                       description: Name of the tagged company (if userType is Company)
+ *                       example: "Acme Corporation"
+ *               parentComment:
+ *                 type: string
+ *                 description: ID of the parent comment if this is a reply
+ *                 example: "65fb2a8e7c5721f123456790"
+ *     responses:
+ *       201:
+ *         description: Comment added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment added successfully"
+ *                 id:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456791"
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456791"
+ *                     userId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456788"
+ *                     postId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     commentContent:
+ *                       type: string
+ *                       example: "This is a great post! Thanks for sharing."
+ *                     commentAttachment:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f987654321"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 0
+ *                         support:
+ *                           type: number
+ *                           example: 0
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 0
+ *                         insightful:
+ *                           type: number
+ *                           example: 0
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 0
+ *                     impressions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     replies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     replyCount:
+ *                       type: number
+ *                       example: 0
+ *                     parentComment:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "65fb2a8e7c5721f123456790"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *       400:
+ *         description: Bad request - missing required fields or invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID and comment content are required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to add comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
+ *   put:
+ *     summary: Update an existing comment
+ *     tags: [Comments]
+ *     description: Edit a comment's content and/or tagged users. Only the comment owner can edit their own comments.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1228,24 +2292,225 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The comment ID
+ *         description: ID of the comment to update
+ *         example: "65fb2a8e7c5721f123456791"
  *     requestBody:
- *      $ref: '#/components/requestBodies/CreateCommentRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               commentContent:
+ *                 type: string
+ *                 description: Updated text content of the comment
+ *                 example: "Updated comment content with additional thoughts."
+ *               taggedUsers:
+ *                 type: array
+ *                 description: Updated array of users tagged in the comment
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       description: ID of the tagged user
+ *                       example: "65fb2a8e7c5721f987654321"
+ *                     userType:
+ *                       type: string
+ *                       enum: ["User", "Company"]
+ *                       default: "User"
+ *                       description: Type of the tagged entity
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       description: First name of the tagged user
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       description: Last name of the tagged user
+ *                       example: "Smith"
+ *                     companyName:
+ *                       type: string
+ *                       description: Name of the tagged company (if userType is Company)
+ *                       example: null
  *     responses:
  *       200:
  *         description: Comment updated successfully
  *         content:
- *          application/json:
- *              schema:
- *                  $ref: '#/components/schemas/Comment'
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment updated successfully"
+ *                 id:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456791"
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456791"
+ *                     userId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456788"
+ *                     postId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     commentContent:
+ *                       type: string
+ *                       example: "Updated comment content with additional thoughts."
+ *                     commentAttachment:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f987654321"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 2
+ *                         support:
+ *                           type: number
+ *                           example: 1
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 3
+ *                         insightful:
+ *                           type: number
+ *                           example: 1
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 7
+ *                     impressions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456792", "65fb2a8e7c5721f123456793"]
+ *                     replies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456794"]
+ *                     replyCount:
+ *                       type: number
+ *                       example: 1
+ *                     parentComment:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T14:45:20.456Z"
+ *       400:
+ *         description: Bad request - missing required fields or invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No changes provided for update"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only edit your own comments"
  *       404:
  *         description: Comment not found
- *  delete:
- *     summary: Delete comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to update comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
+ *   delete:
+ *     summary: Delete a comment
  *     tags: [Comments]
- *     description: Delete a specific comment by its ID
+ *     description: Soft delete a comment by setting isActive to false. Only the comment owner can delete their own comments.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1254,19 +2519,81 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The comment ID
+ *         description: ID of the comment to delete
+ *         example: "65fb2a8e7c5721f123456791"
  *     responses:
  *       200:
  *         description: Comment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment deleted successfully"
+ *       400:
+ *         description: Bad request - missing comment ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not the owner of the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own comments"
  *       404:
  *         description: Comment not found
- *
- *  get:
- *     summary: Get a specific comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to delete comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}:
+ *   get:
+ *     summary: Get a single comment by ID
  *     tags: [Comments]
- *     description: Retrieve a specific comment by its ID
+ *     description: Retrieve a specific comment by its ID with enhanced user information
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1275,18 +2602,645 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The comment ID
+ *         description: ID of the comment to retrieve
+ *         example: "65fb2a8e7c5721f123456791"
  *     responses:
  *       200:
- *         description: Post retrieved successfully
+ *         description: Comment retrieved successfully
  *         content:
- *          application/json:
- *              schema:
- *                  $ref: '#/components/schemas/Comment'
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment retrieved successfully"
+ *                 comment:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456791"
+ *                     userId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456788"
+ *                     postId:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     commentContent:
+ *                       type: string
+ *                       example: "This is a detailed comment about this interesting post."
+ *                     commentAttachment:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     headline:
+ *                       type: string
+ *                       example: "Software Engineer at Tech Company"
+ *                     profilePicture:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f987654321"
+ *                           userType:
+ *                             type: string
+ *                             example: "User"
+ *                           firstName:
+ *                             type: string
+ *                             example: "Jane"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Smith"
+ *                           companyName:
+ *                             type: string
+ *                             example: null
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 5
+ *                         support:
+ *                           type: number
+ *                           example: 2
+ *                         celebrate:
+ *                           type: number
+ *                           example: 1
+ *                         love:
+ *                           type: number
+ *                           example: 3
+ *                         insightful:
+ *                           type: number
+ *                           example: 4
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 15
+ *                     impressions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456792", "65fb2a8e7c5721f123456793"]
+ *                     replies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["65fb2a8e7c5721f123456794", "65fb2a8e7c5721f123456795"]
+ *                     replyCount:
+ *                       type: number
+ *                       example: 2
+ *                     parentComment:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-03-18T12:30:45.123Z"
+ *       400:
+ *         description: Bad request - missing comment ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}/like:
+ *   post:
+ *     summary: Add an impression (like, celebrate, etc.) to a comment
+ *     tags: [Comments]
+ *     description: Add or change an impression on a comment. Users can add various types of impressions (like, celebrate, support, etc.) to express their reaction to a comment.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the comment to add an impression to
+ *         example: "65fb2a8e7c5721f123456791"
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               impressionType:
+ *                 type: string
+ *                 enum: [like, support, celebrate, love, insightful, funny]
+ *                 default: like
+ *                 description: Type of impression to add to the comment
+ *                 example: "love"
+ *           examples:
+ *             like:
+ *               summary: Default like impression
+ *               value:
+ *                 impressionType: "like"
+ *             celebrate:
+ *               summary: Celebrate impression
+ *               value:
+ *                 impressionType: "celebrate"
+ *             love:
+ *               summary: Love impression
+ *               value:
+ *                 impressionType: "love"
+ *     responses:
+ *       200:
+ *         description: Impression added or changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment loved successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 5
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 1
+ *                     love:
+ *                       type: number
+ *                       example: 4
+ *                     insightful:
+ *                       type: number
+ *                       example: 3
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 15
+ *             examples:
+ *               newImpression:
+ *                 summary: New impression added
+ *                 value:
+ *                   message: "Comment loved successfully"
+ *                   impressionCounts:
+ *                     like: 5
+ *                     support: 2
+ *                     celebrate: 1
+ *                     love: 4
+ *                     insightful: 3
+ *                     funny: 0
+ *                     total: 15
+ *               changedImpression:
+ *                 summary: Impression type changed
+ *                 value:
+ *                   message: "Impression changed from like to love"
+ *                   impressionCounts:
+ *                     like: 4
+ *                     support: 2
+ *                     celebrate: 1
+ *                     love: 4
+ *                     insightful: 3
+ *                     funny: 0
+ *                     total: 14
+ *       400:
+ *         description: Bad request - invalid input, duplicate impression, or invalid impression type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have already liked this comment"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *             examples:
+ *               duplicateImpression:
+ *                 summary: User has already added this impression type
+ *                 value:
+ *                   message: "You have already liked this comment"
+ *               invalidImpressionType:
+ *                 summary: Invalid impression type provided
+ *                 value:
+ *                   message: "Invalid impression type"
+ *                   validTypes: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *               missingCommentId:
+ *                 summary: Missing comment ID
+ *                 value:
+ *                   message: "Comment ID is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to like comment"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ * 
+ *   delete:
+ *     summary: Remove an impression from a comment
+ *     tags: [Comments]
+ *     description: Remove a user's impression (like, celebrate, etc.) from a comment
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the comment to remove the impression from
+ *         example: "65fb2a8e7c5721f123456791"
+ *     responses:
+ *       200:
+ *         description: Impression removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment like removed successfully"
+ *                 impressionCounts:
+ *                   type: object
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 4
+ *                     support:
+ *                       type: number
+ *                       example: 2
+ *                     celebrate:
+ *                       type: number
+ *                       example: 1
+ *                     love:
+ *                       type: number
+ *                       example: 3
+ *                     insightful:
+ *                       type: number
+ *                       example: 3
+ *                     funny:
+ *                       type: number
+ *                       example: 0
+ *                     total:
+ *                       type: number
+ *                       example: 13
+ *       400:
+ *         description: Bad request - missing comment ID or no impression found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               noImpression:
+ *                 summary: User has no impression on this comment
+ *                 value:
+ *                   message: "You have not reacted to this comment"
+ *               missingCommentId:
+ *                 summary: Missing comment ID
+ *                 value:
+ *                   message: "Comment ID is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove comment impression"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /comments/{postId}/post:
+ *   get:
+ *     summary: Get comments for a specific post
+ *     tags: [Comments]
+ *     description: Retrieve paginated top-level comments for a post (excluding replies). Results include user information and pagination metadata.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to get comments for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination (defaults to 1)
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *         description: Number of comments per page (defaults to 10)
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Comments retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comments retrieved successfully"
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456791"
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       commentContent:
+ *                         type: string
+ *                         example: "This is a great post! Thanks for sharing."
+ *                       commentAttachment:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1625148732/attachments/image.jpg"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f987654321"
+ *                             userType:
+ *                               type: string
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Jane"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Smith"
+ *                             companyName:
+ *                               type: string
+ *                               example: null
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 5
+ *                           support:
+ *                             type: number
+ *                             example: 2
+ *                           celebrate:
+ *                             type: number
+ *                             example: 1
+ *                           love:
+ *                             type: number
+ *                             example: 3
+ *                           insightful:
+ *                             type: number
+ *                             example: 4
+ *                           funny:
+ *                             type: number
+ *                             example: 0
+ *                           total:
+ *                             type: number
+ *                             example: 15
+ *                       impressions:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["65fb2a8e7c5721f123456792", "65fb2a8e7c5721f123456793"]
+ *                       replies:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["65fb2a8e7c5721f123456794", "65fb2a8e7c5721f123456795"]
+ *                       replyCount:
+ *                         type: number
+ *                         example: 2
+ *                       parentComment:
+ *                         type: string
+ *                         nullable: true
+ *                         example: null
+ *                       isActive:
+ *                         type: boolean
+ *                         example: true
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-18T12:30:45.123Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-18T12:30:45.123Z"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalComments:
+ *                       type: number
+ *                       example: 25
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
  *       404:
  *         description: Post not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get comments"
+ *                 error:
+ *                   type: string
+ *                   example: "Error message details"
  */
 
 //************************************ Messages APIs ******************************************//
@@ -2882,6 +4836,195 @@
  *         description: ID of the user whose profile to retrieve
  *         schema:
  *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User profile retrieved successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: 5a96ecd7fc5c55fee3eab5fe
+ *                     firstName:
+ *                       type: string
+ *                       example: Torrance
+ *                     lastName:
+ *                       type: string
+ *                       example: Willms
+ *                     email:
+ *                       type: string
+ *                       example: Cyril.Wunsch62@yahoo.com
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/81.jpg
+ *                     coverPicture:
+ *                       type: string
+ *                       example: https://picsum.photos/seed/MFzbMCDqC/675/1424
+ *                     resume:
+ *                       type: string
+ *                       example: https://content-cutlet.info
+ *                     bio:
+ *                       type: string
+ *                       example: Stipes conatus creber sit.
+ *                     location:
+ *                       type: string
+ *                       example: Kalebchester
+ *                     lastJobTitle:
+ *                       type: string
+ *                       example: Global Response Planner
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                     mainEducation:
+ *                       type: string
+ *                       nullable: true
+ *                     profilePrivacySettings:
+ *                       type: string
+ *                       enum: [public, private, connectionsOnly]
+ *                       example: public
+ *                     workExperience:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           jobTitle:
+ *                             type: string
+ *                           companyName:
+ *                             type: string
+ *                           fromDate:
+ *                             type: string
+ *                             format: date-time
+ *                           toDate:
+ *                             type: string
+ *                             format: date-time
+ *                           employmentType:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           locationType:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     skills:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           skillName:
+ *                             type: string
+ *                           endorsements:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     education:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                           degree:
+ *                             type: string
+ *                           fieldOfStudy:
+ *                             type: string
+ *                           startDate:
+ *                             type: string
+ *                             format: date-time
+ *                           endDate:
+ *                             type: string
+ *                             format: date-time
+ *                           grade:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           skills:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           entity:
+ *                             type: string
+ *                           entityType:
+ *                             type: string
+ *                           followedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     connectionList:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       403:
+ *         description: Access denied due to privacy settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: This profile is private
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve user profile
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * /user/me:
+ *   get:
+ *     summary: Get logged in user profile
+ *     tags: [Users]
+ *     description: Retrieves a user's profile
+ *     operationId: getMe
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -6721,4 +8864,793 @@
  *                 details:
  *                   type: string
  *                   example: "Error message details"
+ */
+
+/**
+ * @swagger
+ * /search/users:
+ *   get:
+ *     summary: Search for users by name
+ *     tags: [Search]
+ *     description: Search for users by first or last name and return a paginated list of matching users with their basic profile information. Useful for finding users to tag in comments or posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Name or partial name to search for (minimum 2 characters)
+ *         example: "john"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of users per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Users found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Users found successfully"
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                       example: 25
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - search term too short (less than 2 characters)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Search term must be at least 2 characters"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search users"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}/like:
+ *   get:
+ *     summary: Get users who reacted to a post
+ *     tags: [Posts]
+ *     description: |
+ *       Retrieve a paginated list of users who reacted to a specific post, with optional filtering by impression type.
+ *       This endpoint provides similar functionality to LinkedIn's reaction panel, offering the ability to view all reactions
+ *       or filter by specific types (like, celebrate, support, etc.). Results include user profile information and
+ *       are sorted by most recent first.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to get impressions for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [like, support, celebrate, love, insightful, funny]
+ *         description: Filter by impression type (optional). Omit to get all types (equivalent to the "All" tab)
+ *         example: "love"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of users who reacted to the post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Impressions retrieved successfully"
+ *                 impressions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       impressionId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for this impression/reaction
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who created this impression
+ *                       type:
+ *                         type: string
+ *                         enum: [like, support, celebrate, love, insightful, funny]
+ *                         example: "love"
+ *                         description: Type of impression/reaction
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: Timestamp when the impression was created
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the user
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the user
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Professional headline of the user
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the user's profile picture
+ *                 counts:
+ *                   type: object
+ *                   description: Count of each impression type for this post
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 42
+ *                       description: Number of "like" impressions
+ *                     support:
+ *                       type: number
+ *                       example: 15
+ *                       description: Number of "support" impressions
+ *                     celebrate:
+ *                       type: number
+ *                       example: 8
+ *                       description: Number of "celebrate" impressions
+ *                     love:
+ *                       type: number
+ *                       example: 23
+ *                       description: Number of "love" impressions
+ *                     insightful:
+ *                       type: number
+ *                       example: 19
+ *                       description: Number of "insightful" impressions
+ *                     funny:
+ *                       type: number
+ *                       example: 7
+ *                       description: Number of "funny" impressions
+ *                     total:
+ *                       type: number
+ *                       example: 114
+ *                       description: Total number of impressions across all types
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     totalImpressions:
+ *                       type: number
+ *                       example: 114
+ *                       description: Total number of impressions (filtered by type if applicable)
+ *                     totalPages:
+ *                       type: number
+ *                       example: 12
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing post ID or invalid impression type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get impressions"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /comments/{commentId}/like:
+ *   get:
+ *     summary: Get users who reacted to a comment
+ *     tags: [Comments]
+ *     description: |
+ *       Retrieve a paginated list of users who reacted to a specific comment, with optional filtering by impression type.
+ *       This endpoint provides similar functionality to LinkedIn's reaction panel, offering the ability to view all reactions
+ *       or filter by specific types (like, celebrate, support, etc.). Results include user profile information and
+ *       are sorted by most recent first.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the comment to get impressions for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [like, support, celebrate, love, insightful, funny]
+ *         description: Filter by impression type (optional). Omit to get all types (equivalent to the "All" tab)
+ *         example: "love"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of users who reacted to the comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Impressions retrieved successfully"
+ *                 impressions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       impressionId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for this impression/reaction
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who created this impression
+ *                       type:
+ *                         type: string
+ *                         enum: [like, support, celebrate, love, insightful, funny]
+ *                         example: "love"
+ *                         description: Type of impression/reaction
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: Timestamp when the impression was created
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the user
+ *                       lastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the user
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Professional headline of the user
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the user's profile picture
+ *                 counts:
+ *                   type: object
+ *                   description: Count of each impression type for this comment
+ *                   properties:
+ *                     like:
+ *                       type: number
+ *                       example: 12
+ *                       description: Number of "like" impressions
+ *                     support:
+ *                       type: number
+ *                       example: 5
+ *                       description: Number of "support" impressions
+ *                     celebrate:
+ *                       type: number
+ *                       example: 3
+ *                       description: Number of "celebrate" impressions
+ *                     love:
+ *                       type: number
+ *                       example: 7
+ *                       description: Number of "love" impressions
+ *                     insightful:
+ *                       type: number
+ *                       example: 8
+ *                       description: Number of "insightful" impressions
+ *                     funny:
+ *                       type: number
+ *                       example: 4
+ *                       description: Number of "funny" impressions
+ *                     total:
+ *                       type: number
+ *                       example: 39
+ *                       description: Total number of impressions across all types
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     totalImpressions:
+ *                       type: number
+ *                       example: 39
+ *                       description: Total number of impressions (filtered by type if applicable)
+ *                     totalPages:
+ *                       type: number
+ *                       example: 4
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing comment ID or invalid impression type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
+ *                 validTypes:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["like", "support", "celebrate", "love", "insightful", "funny"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get impressions"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /posts/{postId}/reposts:
+ *   get:
+ *     summary: Get reposts of a specific post
+ *     tags: [Posts]
+ *     description: |
+ *       Retrieve a paginated list of reposts for a specific post, including user information
+ *       and repost content. Returns data in the same format as the main feed for consistency.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to get reposts for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of reposts formatted like feed posts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: ID of the original post
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456777"
+ *                         description: ID of the original post author
+ *                       firstName:
+ *                         type: string
+ *                         example: "Jane"
+ *                         description: First name of the original post author
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                         description: Last name of the original post author
+ *                       headline:
+ *                         type: string
+ *                         example: "Product Manager"
+ *                         description: Headline of the original post author
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: Profile picture of the original post author
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Original post content here"
+ *                         description: Content of the original post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/post1.jpg"]
+ *                         description: Attachments from the original post
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 42
+ *                           support:
+ *                             type: number
+ *                             example: 15
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 23
+ *                           insightful:
+ *                             type: number
+ *                             example: 19
+ *                           funny:
+ *                             type: number
+ *                             example: 7
+ *                           total:
+ *                             type: number
+ *                             example: 114
+ *                         description: Impression counts from the original post
+ *                       commentCount:
+ *                         type: number
+ *                         example: 12
+ *                         description: Comment count from the original post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 8
+ *                         description: Repost count from the original post
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: When the original post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456700"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Alex"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Johnson"
+ *                             companyName:
+ *                               type: string
+ *                               example: null
+ *                         description: Users tagged in the original post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Flag indicating this is a repost (always true for this endpoint)
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Flag indicating if the current user has saved this post
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the repost
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456788"
+ *                         description: ID of the user who reposted
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the reposter
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the reposter
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/reposter.jpg"
+ *                         description: Profile picture of the reposter
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Headline of the reposter
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great post about coding best practices!"
+ *                         description: Comment added by the reposter
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-21T09:15:30.123Z"
+ *                         description: When the repost was created
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of reposts for this post
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     pages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages available
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing post ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post ID is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post not found or inactive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found or inactive"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get reposts"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */

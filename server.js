@@ -9,17 +9,16 @@ const userRouter = require("./routes/userRoutes");
 const userProfileRouter = require("./routes/userProfileRouter");
 const postRouter = require("./routes/postRoutes");
 const reportRouter = require("./routes/reportRoutes");
-const repostRouter = require("./routes/repostRoutes");
 const commentRouter = require("./routes/commentRoutes");
 const chatRouter = require("./routes/chatRoutes");
 const messageRouter = require("./routes/messageRoutes");
 const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
+const searchRouter = require("./routes/searchRoutes");
 //to be removed
 const uploadRouter = require("./routes/uploadRoutes");
 const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
-
 const app = express();
 connectDB();
 app.use(express.json());
@@ -29,13 +28,13 @@ app.use("/user", userRouter);
 app.use("/user", userProfileRouter);
 app.use("/posts", postRouter);
 app.use("/report", reportRouter);
-app.use("/repost", repostRouter);
 app.use("/comments", commentRouter);
 app.use("/chats", chatRouter);
 app.use("/messages", messageRouter);
 app.use("/jobs", jobRouter);
 app.use("/company", companyRouter);
 app.use("/upload", uploadRouter);
+app.use("/search", searchRouter);
 
 app.use(
   "/api-docs",

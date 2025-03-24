@@ -1,9 +1,7 @@
 const jwt = require("jsonwebtoken");
-const axios = require("axios");
 const { promisify } = require("util");
 
 const userModel = require("./../models/userModel");
-const { refreshToken } = require("firebase-admin/app");
 
 const generateTokens = (userInfo, res) => {
   // Generate Access Token (short-lived)
@@ -13,6 +11,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "10s" }
@@ -25,6 +25,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "10m" }
@@ -88,7 +90,7 @@ const protect = async (req, res, next) => {
         process.env.ACCESS_TOKEN_SECRET
       );
       return decryptToken(req, res, decoded, next);
-    } catch (error) {
+    } catch (err) {
       return tryRefreshToken(req, res, refreshToken, next);
     }
   } catch (error) {

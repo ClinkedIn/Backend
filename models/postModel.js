@@ -33,5 +33,5 @@ const postSchema = new mongoose.Schema({
   whoCanComment: { type: String, enum: ["anyone", "connections", "noOne"], default: "anyone" },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true }); // Adds createdAt & updatedAt automatically
-
+postSchema.index({ userId: 1});
 module.exports = mongoose.model("Post", postSchema);
