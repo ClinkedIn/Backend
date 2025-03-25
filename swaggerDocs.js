@@ -9654,3 +9654,342 @@
  *                   type: string
  *                   example: "Error details"
  */
+
+/**
+ * @swagger
+ * /user/{userId}/activity:
+ *   get:
+ *     summary: Get posts that a user has posted, reposted, or commented on
+ *     tags: [Users, Posts]
+ *     description: |
+ *       Retrieve a paginated list of posts that a user has created, reposted, or commented on.
+ *       Results include all post details in the same format as the main feed for consistency,
+ *       with additional activity information to indicate what action the user took.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user whose activity to retrieve
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [all, posts, reposts, comments]
+ *           default: all
+ *         description: Filter to include only specific activity types
+ *         example: "all"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: List of posts the user has interacted with
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the post
+ *                       userId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456777"
+ *                         description: ID of the post author
+ *                       firstName:
+ *                         type: string
+ *                         example: "Jane"
+ *                         description: First name of the post author
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                         description: Last name of the post author
+ *                       headline:
+ *                         type: string
+ *                         example: "Product Manager"
+ *                         description: Headline of the post author
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: Profile picture of the post author
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Post content here"
+ *                         description: Content of the post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/post1.jpg"]
+ *                         description: Post attachments
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 42
+ *                           support:
+ *                             type: number
+ *                             example: 15
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 23
+ *                           insightful:
+ *                             type: number
+ *                             example: 19
+ *                           funny:
+ *                             type: number
+ *                             example: 7
+ *                           total:
+ *                             type: number
+ *                             example: 114
+ *                         description: Counts of different impression types
+ *                       commentCount:
+ *                         type: number
+ *                         example: 12
+ *                         description: Number of comments on this post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 8
+ *                         description: Number of reposts of this post
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: When the post was created
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-21T09:15:30.123Z"
+ *                         description: When the post was last updated
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456700"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Alex"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Johnson"
+ *                             companyName:
+ *                               type: string
+ *                               example: null
+ *                         description: Users tagged in the post
+ *                       whoCanSee:
+ *                         type: string
+ *                         enum: [anyone, connections, group]
+ *                         example: "anyone"
+ *                         description: Privacy setting for post visibility
+ *                       whoCanComment:
+ *                         type: string
+ *                         enum: [anyone, connections]
+ *                         example: "anyone" 
+ *                         description: Setting for who can comment on the post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether this post is a repost
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the current user has saved this post
+ *                       activityType:
+ *                         type: string
+ *                         enum: [post, repost, comment]
+ *                         example: "post"
+ *                         description: Type of activity the user performed on this post
+ *                       activityDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-20T14:30:45.123Z"
+ *                         description: When the user performed this activity
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456795"
+ *                         description: ID of the repost (if activityType is repost)
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: ID of the user who reposted (if activityType is repost)
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the reposter (if activityType is repost)
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the reposter (if activityType is repost)
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/reposter.jpg"
+ *                         description: Profile picture of the reposter (if activityType is repost)
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Software Developer"
+ *                         description: Headline of the reposter (if activityType is repost)
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great insights in this post!"
+ *                         description: Description added when reposting (if activityType is repost)
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-21T09:15:30.123Z"
+ *                         description: When the repost was created (if activityType is repost)
+ *                       commentId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456799"
+ *                         description: ID of the comment (if activityType is comment)
+ *                       commentText:
+ *                         type: string
+ *                         example: "This is a very insightful post. Thanks for sharing!"
+ *                         description: Text of the comment (if activityType is comment)
+ *                       commentDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2024-03-21T10:45:20.123Z"
+ *                         description: When the comment was created (if activityType is comment)
+ *                       commenterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: ID of the user who commented (if activityType is comment)
+ *                       commenterFirstName:
+ *                         type: string
+ *                         example: "John"
+ *                         description: First name of the commenter (if activityType is comment)
+ *                       commenterLastName:
+ *                         type: string
+ *                         example: "Smith"
+ *                         description: Last name of the commenter (if activityType is comment)
+ *                       commenterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/commenter.jpg"
+ *                         description: Profile picture of the commenter (if activityType is comment)
+ *                       commenterHeadline:
+ *                         type: string
+ *                         example: "Software Developer"
+ *                         description: Headline of the commenter (if activityType is comment)
+ *                 pagination:
+ *                   type: object
+ *                   description: Pagination metadata
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 35
+ *                       description: Total number of activities matching the filter
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     pages:
+ *                       type: number
+ *                       example: 4
+ *                       description: Total number of pages available
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page available
+ *       400:
+ *         description: Bad request - missing user ID or invalid filter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User ID is required"
+ *                 validFilters:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["all", "posts", "reposts", "comments"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have permission to access this user's activity
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not connected with this user"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get user activity"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */

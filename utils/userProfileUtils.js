@@ -116,4 +116,134 @@ const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], 
   };
 
 
-module.exports = { sortWorkExperience, validateSkillName, updateSkillExperienceReferences };
+
+// Validation Functions
+const validateFileType = async (ALLOWED_MIME_TYPES, mimeType, ERROR_MESSAGE) => {
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+        throw new Error(ERROR_MESSAGE);
+    }
+};
+
+const validateFileSize = async (maxSize, fileSize) => {
+    if (fileSize > maxSize) {
+        throw new Error('File size too large. Maximum allowed size is 5MB.');
+    }
+};
+
+const validateFile = async (mimeType, fileSize) => {
+    await Promise.all([
+        validateFileType(ALLOWED_PICTURE_MIME_TYPES, mimeType, INVALID_PICTURE_TYPE_MESSAGE),
+        validateFileSize(MAX_PICTURE_SIZE, fileSize)
+    ]);
+};
+
+// File Upload Logic
+const uploadPicture = async (fileBuffer, mimeType, fileSize) => {
+    await validateFile(mimeType, fileSize);
+    return await uploadFile(fileBuffer); // Assuming uploadFile() uploads and returns a file URL
+};
+
+// Unified User Picture Handling
+const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
+    try {
+        const userId = req.user.id;
+        
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        let updateData = {};
+        if (isDelete) {
+            updateData[fieldName] = null;
+        } else {
+            if (!req.file) {
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+
+            const { buffer, mimetype, size } = req.file;
+
+            try {
+                await validateFile(mimetype, size); // Validate before uploading
+            } catch (validationError) {
+                return res.status(400).json({ message: validationError.message });
+            }
+
+            const uploadResult = await uploadPicture(buffer, mimetype, size);
+            updateData[fieldName] = uploadResult.url;
+        }
+
+        const updatedUser = await userModel.findByIdAndUpdate(userId, updateData, { new: true });
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({
+            message: `${fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${isDelete ? 'deleted' : 'updated'} successfully`,
+            ...(isDelete ? {} : { [fieldName]: updateData[fieldName] })
+        });
+    } catch (error) {
+        console.error(`Error ${isDelete ? 'deleting' : 'uploading'} ${fieldName}:`, error);
+        res.status(500).json({ 
+            message: 'Internal server error', 
+            error: error.message || 'Unexpected failure' 
+        });
+    }
+};
+
+const checkUserAccessPermission = async (user, requesterId, requester = null, accessType = 'view') => {
+  try {
+      // If user is accessing their own data, always allow
+      if (user._id.toString() === requesterId) {
+          return { hasAccess: true };
+      }
+      
+      // If requester object wasn't provided, fetch it
+      if (!requester) {
+          requester = await userModel.findById(requesterId).select('connectionList blockedUsers');
+          if (!requester) {
+              return { hasAccess: false, message: 'Requester not found', statusCode: 404 };
+          }
+      }
+      
+      // Check if either user has blocked the other
+      if (user.blockedUsers && user.blockedUsers.includes(requesterId)) {
+          return { hasAccess: false, message: 'You are blocked by this user', statusCode: 403 };
+      }
+      
+      if (requester.blockedUsers && requester.blockedUsers.includes(user._id.toString())) {
+          return { hasAccess: false, message: 'You have blocked this user', statusCode: 403 };
+      }
+      
+      // Check privacy settings
+      // if (user.profilePrivacySettings === 'private') {
+      //     return { hasAccess: false, message: 'This user has a private profile', statusCode: 403 };
+      // }
+      
+      // if (user.profilePrivacySettings === 'connectionsOnly') {
+      //     // Check if requester is in user's connections
+      //     const isConnected = requester.connectionList && 
+      //                        requester.connectionList.some(conn => 
+      //                          conn.toString() === user._id.toString());
+          
+      //     if (!isConnected) {
+      //         return { hasAccess: false, message: 'You are not connected with this user', statusCode: 403 };
+      //     }
+      // }
+      
+      // If we get here, access is allowed
+      return { hasAccess: true };
+      
+  } catch (error) {
+      console.error('Error checking user access permission:', error);
+      return { 
+          hasAccess: false, 
+          message: 'Error checking access permission', 
+          statusCode: 500,
+          error 
+      };
+  }
+};
+
+module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName,  uploadPicture, handleUserPicture
+};

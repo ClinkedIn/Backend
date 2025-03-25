@@ -3,6 +3,7 @@ const userModel = require('../models/userModel');
 const repostModel = require('../models/repostModel');
 const reportModel = require('../models/reportModel');
 const cloudinary = require('../utils/cloudinary');
+const commentModel = require('../models/commentModel');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
@@ -1091,8 +1092,6 @@ const getPostImpressions = async (req, res) => {
     }
 };
 
-
-
 const getPostReposts = async (req, res) => {
     try {
         const { postId } = req.params;
@@ -1198,6 +1197,7 @@ const getPostReposts = async (req, res) => {
         });
     }
 };
+
 module.exports = {
     createPost,
     getAllPosts,
@@ -1212,5 +1212,5 @@ module.exports = {
     deletePost,
     updatePost,
     getPostImpressions,
-    getPostReposts
+    getPostReposts,
 };

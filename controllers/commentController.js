@@ -16,13 +16,30 @@ const addComment = async (req, res) => {
         if (!postId || !(commentContent||req.file)) {
             return res.status(400).json({ message: "Post ID and comment content are required" });
         }
-
         // Check if post exists
         const post = await postModel.findById(postId);
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
-
+        const postOwner = await userModel.findById(post.userId)
+        // Check if the post comments is set to connections only and the user is not connected
+        if (post.commentSetting === 'connections' && !req.user.connections.includes(post.userId)) {
+            return res.status(403).json({ message: "You can only comment on posts from your connections" });
+        }
+        // Check if the user is blocked by the post owner
+        if (postOwner.blockedUsers.includes(userId)) {
+            return res.status(403).json({ message: "You can't comment on this post" });
+        }
+        //Check if the user blocked the post owner
+        const user = await userModel.findById(userId);
+        if (user.blockedUsers.includes(post.userId)) {
+            return res.status(403).json({ message: "You can't comment on this post" });
+        }
+        //check if comments is disabled
+        if (post.commentSetting === 'noOne' || post.commentSetting === 'connections' && !req.user.connections.includes(post.userId)) {
+            return res.status(403).json({ message: "Comments are disabled for this post" });
+        }
+        //Check
         // Handle comment attachment if provided
         let attachmentUrl = null;
         if (req.file) {
@@ -254,7 +271,20 @@ const getPostComments = async (req, res) => {
             isActive: true,
             parentComment: null // Ensuring we only count top-level comments
         });
-        
+        // Check if post is set to connections only and the user is not connected
+        const user = await userModel.findById(req.user.id)
+        if (post.commentSetting === 'connections' && !user.connections.includes(post.userId)) {
+            return res.status(403).json({ message: "You can only view comments on posts from your connections" });
+        }
+        //c check if the user is blocked by the post owner
+        const postOwner = await userModel.findById(post.userId)
+        if (postOwner.blockedUsers.includes(req.user.id)) {
+            return res.status(403).json({ message: "You can't view comments on this post" });
+        }
+        //Check if the user blocked the post owner
+        if (user.blockedUsers.includes(post.userId)) {
+            return res.status(403).json({ message: "You can't view comments on this post" });
+        }
         // Find comments for the post with pagination
         // Only get top-level comments (not replies)
         const comments = await commentModel.find({ 
