@@ -33,6 +33,7 @@ const validateSkillName = (skillName) => {
 };
 
 // Helper function to validate endorsements
+/*
 const validateEndorsements = async (endorsements, userId) => {
     if (!Array.isArray(endorsements)) {
         throw new Error('Endorsements must be an array');
@@ -75,51 +76,9 @@ const validateEndorsements = async (endorsements, userId) => {
         throw new Error('Error fetching endorsements from MongoDB');
     }
 };
-
-
-  const formatExperienceDate = (date) => {
-    return date instanceof Date ? date.toISOString().split('T')[0] : date;
-  };
+*/
   
-  const formatExperienceResponse = (experience) => {
-    const expObj = experience.toObject ? experience.toObject() : experience;
-    return {
-      ...expObj,
-      fromDate: formatExperienceDate(expObj.fromDate),
-      toDate: formatExperienceDate(expObj.toDate)
-    };
-  };
-  
-  const validateExperienceData = (data) => {
-    if (!data.jobTitle) {
-      throw { status: 400, message: 'Job Title is required' };
-    }
-    if (!data.companyName) {
-      throw { status: 400, message: 'Company Name is required' };
-    }
-    if (!data.fromDate) {
-      throw { status: 400, message: 'Start Date is required' };
-    }
-    
-    // Validate date formats
-    const fromDate = new Date(data.fromDate);
-    if (isNaN(fromDate.getTime())) {
-      throw { status: 400, message: 'Invalid Start Date' };
-    }
-    
-    if (!data.currentlyWorking && !data.toDate) {
-      throw { status: 400, message: 'End Date is required' };
-    }
-    
-    if (!data.currentlyWorking && data.toDate) {
-      const toDate = new Date(data.toDate);
-      if (isNaN(toDate.getTime())) {
-        throw { status: 400, message: 'Invalid End Date' };
-      }
-    }
-  };
-  
-  const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
+const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
     // Remove experienceIndex from skills that are no longer associated
     for (const skillName of oldSkills) {
       if (!newSkills.includes(skillName)) {
@@ -137,58 +96,25 @@ const validateEndorsements = async (endorsements, userId) => {
   
     // Add experienceIndex to newly added skills
     for (const skillName of newSkills) {
-      if (!oldSkills.includes(skillName)) {
-        const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
-        if (skillIndex !== -1) {
-          // If skill exists, add experience index if not already present
-          if (!user.skills[skillIndex].experience.includes(experienceIndex)) {
-            user.skills[skillIndex].experience.push(experienceIndex);
+      let skill = user.skills.find(s => s.skillName === skillName);
+      
+      if (skill) {
+          // If skill exists, ensure experience index is present
+          if (!skill.experience.includes(experienceIndex)) {
+              skill.experience.push(experienceIndex);
           }
-        } else {
+      } else {
           // If skill does not exist, create a new entry
           user.skills.push({
-            skillName,
-            experience: [experienceIndex],
-            education: [],
-            endorsements: []
+              skillName,
+              experience: [experienceIndex],
+              education: [],
+              endorsements: []
           });
-        }
       }
-    }
-  };
-  
-  // Modified error handler to match test expectations
-  const handleControllerError = (error, res, operation) => {
-    console.error(`Error ${operation} experience:`, error);
-    const status = error.status || 500;
-    
-    // Match the expected error messages in the tests
-    if (status === 500) {
-      if (operation === 'adding') {
-        return res.status(status).json({
-          error: 'Failed to add experience',
-          details: error.message
-        });
-      } else {
-        return res.status(status).json({
-          message: 'Server error'
-        });
-      }
-    } else {
-      // For 4xx errors, maintain expected test format
-      return res.status(status).json({
-        error: error.message
-      });
-    }
+  }
   };
 
-// PICTURE CONSTANTS
-const ALLOWED_PICTURE_MIME_TYPES = Object.freeze([
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
-    'image/heic', 'image/heif', 'image/bmp', 'image/tiff', 'image/svg+xml'
-]);
-const MAX_PICTURE_SIZE = 5 * 1024 * 1024; // 5MB
-const INVALID_PICTURE_TYPE_MESSAGE = "Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed."
 
 
 // Validation Functions
@@ -319,5 +245,5 @@ const checkUserAccessPermission = async (user, requesterId, requester = null, ac
   }
 };
 
-module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName, validateEndorsements,  uploadPicture, handleUserPicture
+module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName,  uploadPicture, handleUserPicture
 };
