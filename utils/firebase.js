@@ -1,5 +1,5 @@
-var admin = require("firebase-admin");
-var serviceAccount = require("../LockedIn firebase admin.json");
+const admin = require("firebase-admin");
+const serviceAccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
