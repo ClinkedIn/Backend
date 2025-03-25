@@ -70,4 +70,7 @@ router.route('/contact-info')
 //    .post(protect, user.endorseSkill);
 router.route('/about')
     .patch(protect, user.editAbout);
+
+router.route('/:userId/user-activity')
+    .get(protect, user.getUserActivity);
 module.exports = router;

@@ -265,5 +265,59 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
     }
 };
 
-module.exports = { sortWorkExperience, validateSkillName, validateEndorsements,  uploadPicture, handleUserPicture
+const checkUserAccessPermission = async (user, requesterId, requester = null, accessType = 'view') => {
+  try {
+      // If user is accessing their own data, always allow
+      if (user._id.toString() === requesterId) {
+          return { hasAccess: true };
+      }
+      
+      // If requester object wasn't provided, fetch it
+      if (!requester) {
+          requester = await userModel.findById(requesterId).select('connectionList blockedUsers');
+          if (!requester) {
+              return { hasAccess: false, message: 'Requester not found', statusCode: 404 };
+          }
+      }
+      
+      // Check if either user has blocked the other
+      if (user.blockedUsers && user.blockedUsers.includes(requesterId)) {
+          return { hasAccess: false, message: 'You are blocked by this user', statusCode: 403 };
+      }
+      
+      if (requester.blockedUsers && requester.blockedUsers.includes(user._id.toString())) {
+          return { hasAccess: false, message: 'You have blocked this user', statusCode: 403 };
+      }
+      
+      // Check privacy settings
+      // if (user.profilePrivacySettings === 'private') {
+      //     return { hasAccess: false, message: 'This user has a private profile', statusCode: 403 };
+      // }
+      
+      // if (user.profilePrivacySettings === 'connectionsOnly') {
+      //     // Check if requester is in user's connections
+      //     const isConnected = requester.connectionList && 
+      //                        requester.connectionList.some(conn => 
+      //                          conn.toString() === user._id.toString());
+          
+      //     if (!isConnected) {
+      //         return { hasAccess: false, message: 'You are not connected with this user', statusCode: 403 };
+      //     }
+      // }
+      
+      // If we get here, access is allowed
+      return { hasAccess: true };
+      
+  } catch (error) {
+      console.error('Error checking user access permission:', error);
+      return { 
+          hasAccess: false, 
+          message: 'Error checking access permission', 
+          statusCode: 500,
+          error 
+      };
+  }
+};
+
+module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName, validateEndorsements,  uploadPicture, handleUserPicture
 };
