@@ -16,15 +16,12 @@ const jobController = require('../controllers/jobController');
 router.route('/')
     .post(jobController.createJob)
     .get(jobController.getAllJobs);
-
+router.route('/saved')
+    .get(protect,jobController.getSavedJobs)
 router.route('/:jobId')
     .get(jobController.getJob)
     .put(jobController.updateJob)
     .delete(jobController.deleteJob);
-
-// Allow a user to apply for the job.
-router.route('/:jobId/apply')
-    .post(jobController.applyForJob);
 
 // Mark an applicant as accepted for the job.
 router.route('/jobId/applications/:userId/accept')
@@ -44,5 +41,9 @@ router.route('/company/:companyId')
 router.route('/:jobId/save')
     .post(protect,jobController.saveJob)
     .delete(protect,jobController.unsaveJob)
-    .get(protect,jobController.getSavedJobs);
+
+router.route('/:jobId/apply')
+    .post(protect,jobController.applyForJob)
+    .get(protect,jobController.getJobApplications)
+
     module.exports = router;

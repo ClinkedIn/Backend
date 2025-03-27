@@ -198,20 +198,6 @@ const userSchema = new mongoose.Schema(
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
     isConfirmed: { type: Boolean, default: false },
-    appliedJobs: [
-      {
-        jobId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Job",
-          required: true,
-        },
-        status: {
-          type: String,
-          enum: ["pending", "viewed", "rejected", "accepted"],
-          default: "pending",
-        },
-      },
-    ],
     sentConnectionRequests: [
       { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     ],
