@@ -102,17 +102,13 @@ async function createRandomJobs() {
         const questionCount = faker.number.int({ min: 0, max: 5 });
         const screeningQuestions = Array.from({ length: questionCount }, () => ({
             question: faker.helpers.arrayElement([
-                'Do you have experience with React?',
-                'Are you familiar with AWS services?',
-                'Do you have a Bachelor\'s degree or higher?',
-                'Are you authorized to work in this country?',
-                'Do you have experience managing teams?',
-                'Are you willing to relocate?',
-                'Can you work weekends occasionally?',
-                'Do you have experience with agile development?',
-                'Are you proficient in SQL?',
-                'Do you have experience in the healthcare industry?'
-            ]),
+                "Background Check", "Driver's License", "Drug Test", "Education",
+                "Expertise with Skill", "Hybrid Work", "Industry Experience", "Language",
+                "Location", "Onsite Work", "Remote Work", "Urgent Hiring Need",
+                "Visa Status", "Work Authorization", "Work Experience", "Custom Question"
+              ]),
+            specification: faker.lorem.word(),
+            idealAnswer: faker.lorem.word(),
             mustHave: faker.datatype.boolean(0.3) // 30% chance of being a must-have
         }));
 

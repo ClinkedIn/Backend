@@ -19,7 +19,18 @@ const jobSchema = new mongoose.Schema({
   applicationEmail: { type: String, required: true }, // Email for job applications
   screeningQuestions: [
     {
-      question: { type: String, required: true }, // Screening question
+      question: {
+        type: String,
+        required: true,
+        enum: [
+          "Background Check", "Driver's License", "Drug Test", "Education",
+          "Expertise with Skill", "Hybrid Work", "Industry Experience", "Language",
+          "Location", "Onsite Work", "Remote Work", "Urgent Hiring Need",
+          "Visa Status", "Work Authorization", "Work Experience", "Custom Question"
+        ],
+      }, // Screening question
+      specification: { type: String }, // Includes jobFunction/Skill name etc... depending on the question
+      idealAnswer: { type: String }, // Ideal(minimum) answer for the question
       mustHave: { type: Boolean, default: false }, // Must-have requirement
     },
   ],

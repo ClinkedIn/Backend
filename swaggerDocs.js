@@ -9993,3 +9993,252 @@
  *                   type: string
  *                   example: "Error details"
  */
+
+/**
+ * @swagger
+ * /search/jobs:
+ *   get:
+ *     summary: Search for jobs with advanced filters
+ *     tags: [Search]
+ *     description: |
+ *       Search for jobs using multiple filter criteria including keyword search, location,
+ *       industry, company, and minimum work experience requirements. Results are sorted
+ *       by newest first and include company details.
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: |
+ *           General search term that matches against job title, description, industry, 
+ *           workplace type, job type, or company industry
+ *         example: "developer"
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Location search term to filter jobs by location
+ *         example: "New York"
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter jobs by specific industry (exact match)
+ *         example: "Technology"
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: MongoDB ObjectId of company to filter jobs by
+ *         example: "65fb2a8e7c5721f123456700"
+ *       - in: query
+ *         name: minExperience
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum years of work experience required
+ *         example: 3
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Jobs found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Jobs found successfully"
+ *                   description: Success message or no results message
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier for the job
+ *                       company:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456700"
+ *                             description: Company ID
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Corp"
+ *                             description: Company name
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                             description: Company logo URL
+ *                           industry:
+ *                             type: string
+ *                             example: "Technology"
+ *                             description: Company industry
+ *                           location:
+ *                             type: string
+ *                             example: "San Francisco, CA"
+ *                             description: Company location
+ *                       title:
+ *                         type: string
+ *                         example: "Senior Software Engineer"
+ *                         description: Job title
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                         description: Job industry
+ *                       workplaceType:
+ *                         type: string
+ *                         enum: ["Onsite", "Hybrid", "Remote"]
+ *                         example: "Hybrid"
+ *                         description: Job workplace type
+ *                       jobLocation:
+ *                         type: string
+ *                         example: "New York, NY"
+ *                         description: Job location
+ *                       jobType:
+ *                         type: string
+ *                         enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                         example: "Full Time"
+ *                         description: Job type
+ *                       description:
+ *                         type: string
+ *                         example: "We are seeking an experienced software engineer..."
+ *                         description: Job description
+ *                       applicationEmail:
+ *                         type: string
+ *                         example: "jobs@techcorp.com"
+ *                         description: Email for job applications
+ *                       screeningQuestions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question title
+ *                             specification:
+ *                               type: string
+ *                               example: "Years of experience in software development"
+ *                               description: Additional details about the question
+ *                             mustHave:
+ *                               type: boolean
+ *                               example: true
+ *                               description: Whether this is a required qualification
+ *                         description: Job screening questions (without ideal answers)
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: Job posting date
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: Last update date
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalJobs:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of jobs matching the search criteria
+ *                     totalPages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     q:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "developer"
+ *                       description: General search term used
+ *                     location:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "New York"
+ *                       description: Location filter used
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Technology"
+ *                       description: Industry filter used
+ *                     companyId:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "65fb2a8e7c5721f123456700"
+ *                       description: Company filter used
+ *                     minExperience:
+ *                       type: number
+ *                       nullable: true
+ *                       example: 3
+ *                       description: Minimum experience filter used
+ *       400:
+ *         description: Bad request - invalid search parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid companyId format"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */

@@ -1,6 +1,7 @@
 const userModel = require('../models/userModel');
 const jobModel = require('../models/jobModel');
 const companyModel = require('../models/companyModel');
+const mongoose = require('mongoose');
 const searchUsers = async (req, res) => {
     try {
         const { name, page = 1, limit = 10 } = req.query;
@@ -70,11 +71,11 @@ const searchUsers = async (req, res) => {
 const searchJobs = async (req, res) => {
     try {
         const { 
-            keyword, 
-            location, 
-            industry, 
-            workplaceType,
-            jobType,
+            q,              // General query for title, description, etc.
+            location,       // Specific location query
+            industry,       // Industry filter
+            companyId,      // Company filter
+            minExperience,  // Minimum work experience filter
             page = 1, 
             limit = 10 
         } = req.query;
@@ -84,66 +85,134 @@ const searchJobs = async (req, res) => {
         const limitNum = parseInt(limit);
         const skipIndex = (pageNum - 1) * limitNum;
         
-        // Build the query object
-        const query = {};
+        // Build the match stage for aggregation pipeline
+        const matchStage = {};
         
-        // Main search criteria group (keyword OR industry OR workplace type OR job type)
-        const searchCriteria = [];
-        
-        // Add keyword search (searches in job description)
-        if (keyword && keyword.trim().length >= 2) {
-            const keywordRegex = new RegExp(keyword, 'i');
-            searchCriteria.push({ description: keywordRegex });
-        }
-        
-        // For industry search, we need to find companies in that industry
-        if (industry && industry.trim()) {
-            const industryRegex = new RegExp(industry, 'i');
+        // Add general search criteria (searches across multiple fields)
+        if (q && q.trim().length >= 2) {
+            const searchRegex = new RegExp(q, 'i');
             
-            // Find companies in the specified industry
-            const companies = await companyModel.find({ industry: industryRegex })
+            // Search across job title, description, industry, workplace type, and job type
+            matchStage.$or = [
+                { title: searchRegex },
+                { description: searchRegex },
+                { industry: searchRegex },
+                { workplaceType: searchRegex },
+                { jobType: searchRegex }
+            ];
+            
+            // Also include companies matching the industry search
+            const relevantCompanies = await companyModel.find({ industry: searchRegex })
                 .select('_id')
                 .lean();
-            
-            const companyIds = companies.map(company => company._id);
-            
-            // If companies found in this industry, add to search criteria
-            if (companyIds.length > 0) {
-                searchCriteria.push({ companyId: { $in: companyIds } });
+                
+            if (relevantCompanies.length > 0) {
+                const companyIds = relevantCompanies.map(company => company._id);
+                matchStage.$or.push({ companyId: { $in: companyIds } });
             }
         }
         
-        // Add workplace type to search criteria
-        if (workplaceType && workplaceType.trim()) {
-            searchCriteria.push({ workplaceType: workplaceType });
+        // Add location filter (always treated as an AND condition)
+        if (location && location.trim().length >= 2) {
+            matchStage.jobLocation = new RegExp(location, 'i');
         }
         
-        // Add job type to search criteria
-        if (jobType && jobType.trim()) {
-            searchCriteria.push({ jobType: jobType });
+        // Add industry filter (exact match)
+        if (industry && industry.trim()) {
+            matchStage.industry = industry.trim();
         }
         
-        // If any search criteria were provided, add them as an OR condition
-        if (searchCriteria.length > 0) {
-            query.$or = searchCriteria;
+        // Add company filter (exact match)
+        if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+            matchStage.companyId = new mongoose.Types.ObjectId(companyId);
         }
         
-        // Add location filter (separate from the main search group)
-        if (location && location.trim()) {
-            query.jobLocation = new RegExp(location, 'i');
-        }
-        
-        // Get total count for pagination metadata
-        const totalJobs = await jobModel.countDocuments(query);
-        
-        // Execute search with pagination
-        const jobs = await jobModel.find(query)
-            .populate('companyId', 'name logo industry location')
-            .skip(skipIndex)
-            .limit(limitNum)
-            .sort({ createdAt: -1 }) // Sort by newest first
-            .lean();
+        // Add work experience filter using aggregation
+        let workExpFilter = {};
+        if (minExperience !== undefined && !isNaN(minExperience) && minExperience >= 0) {
+            // Add filter for screening questions with Work Experience that meets minimum requirement
+            workExpFilter = {
+                screeningQuestions: {
+                    $elemMatch: {
+                        question: "Work Experience",
+                        idealAnswer: { $exists: true }
+                    }
+                }
+            };
             
+            Object.assign(matchStage, workExpFilter);
+        }
+        
+        // Build the aggregation pipeline
+        const pipeline = [
+            { $match: matchStage },
+        ];
+        
+        // If we have a minExperience filter, add a specialized filter stage
+        if (minExperience !== undefined && !isNaN(minExperience)) {
+            pipeline.push({
+                $addFields: {
+                    workExpQuestion: {
+                        $filter: {
+                            input: "$screeningQuestions",
+                            as: "question",
+                            cond: { $eq: ["$$question.question", "Work Experience"] }
+                        }
+                    }
+                }
+            });
+            
+            // Convert work experience value to a number and filter
+            pipeline.push({
+                $addFields: {
+                    experienceValue: {
+                        $let: {
+                            vars: {
+                                expAnswer: { $arrayElemAt: ["$workExpQuestion.idealAnswer", 0] }
+                            },
+                            in: { $toDouble: "$$expAnswer" }
+                        }
+                    }
+                }
+            });
+            
+            // Filter by minimum experience
+            pipeline.push({
+                $match: {
+                    experienceValue: { $gte: parseFloat(minExperience) }
+                }
+            });
+        }
+        
+        // Count total jobs before pagination
+        const countPipeline = [...pipeline];
+        countPipeline.push({ $count: "total" });
+        const countResult = await jobModel.aggregate(countPipeline);
+        const totalJobs = countResult.length > 0 ? countResult[0].total : 0;
+        
+        // Add sorting, pagination, and populate company info
+        pipeline.push(
+            { $sort: { createdAt: -1 } },
+            { $skip: skipIndex },
+            { $limit: limitNum },
+            {
+                $lookup: {
+                    from: "companies",
+                    localField: "companyId",
+                    foreignField: "_id",
+                    as: "company"
+                }
+            },
+            {
+                $addFields: {
+                    company: { $arrayElemAt: ["$company", 0] }
+                }
+            }
+        );
+        
+        // Execute the pipeline
+        const jobs = await jobModel.aggregate(pipeline);
+        
         // Calculate pagination metadata
         const totalPages = Math.ceil(totalJobs / limitNum);
         const hasNextPage = pageNum < totalPages;
@@ -152,18 +221,25 @@ const searchJobs = async (req, res) => {
         // Format the response
         const formattedJobs = jobs.map(job => ({
             jobId: job._id,
-            company: {
-                id: job.companyId._id,
-                name: job.companyId.name,
-                logo: job.companyId.logo,
-                industry: job.companyId.industry,
-                location: job.companyId.location,
-            },
+            company: job.company ? {
+                id: job.company._id,
+                name: job.company.name,
+                logo: job.company.logo,
+                industry: job.company.industry,
+                location: job.company.location,
+            } : null,
+            title: job.title,
+            industry: job.industry,
             workplaceType: job.workplaceType,
             jobLocation: job.jobLocation,
             jobType: job.jobType,
             description: job.description,
             applicationEmail: job.applicationEmail,
+            screeningQuestions: job.screeningQuestions?.map(q => ({
+                question: q.question,
+                specification: q.specification,
+                mustHave: q.mustHave
+            })),
             createdAt: job.createdAt,
             updatedAt: job.updatedAt
         }));
@@ -181,11 +257,11 @@ const searchJobs = async (req, res) => {
                 hasPrevPage
             },
             filters: {
-                keyword: keyword || null,
-                location: location || null, 
+                q: q || null,
+                location: location || null,
                 industry: industry || null,
-                workplaceType: workplaceType || null,
-                jobType: jobType || null
+                companyId: companyId || null,
+                minExperience: minExperience !== undefined ? Number(minExperience) : null
             }
         });
         
