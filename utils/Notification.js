@@ -6,10 +6,9 @@ const admin = require("./firebase");
 const { getMessaging } = require("firebase-admin/messaging");
 
 const notificationTemplate = {
-  like: (user) => `${user.name} liked your post`,
-  comment: (user) => `${user.name} commented on your post`,
-  connectionRequest: (user) => `${user.name} sent you a connection request`,
-  message: (user) => `You have a new message from ${user.name}`,
+  reaction: (sendingUser) => {
+    const message = {};
+  },
 };
 
 const sendNotification = async (sendingUser, recievingUser, subject, text) => {
