@@ -116,45 +116,191 @@ async function createRandomCompanies() {
     }
 }
 
-// Update user documents to link them with companies
+// Update user documents to link them with companies and sync followers/following
+// Update user documents to link them with companies and sync followers/following
 async function updateUserCompanyRelationships() {
     // Create maps for efficient lookups
     const companyCreatorMap = new Map();
     const companyAdminMap = new Map();
+    const userFollowingMap = new Map();
+    const userFollowedByMap = new Map();
     
-    // Fill maps with relationships
+    // Initialize maps for each user
+    userIds.forEach(userId => {
+        companyCreatorMap.set(userId.toString(), []);
+        companyAdminMap.set(userId.toString(), []);
+        userFollowingMap.set(userId.toString(), []);
+        userFollowedByMap.set(userId.toString(), []);
+    });
+    
+    // Fill maps with relationships from company data
     companies.forEach(company => {
+        const companyId = company._id.toString();
+        
         // Creator relationship
-        if (!companyCreatorMap.has(company.userId.toString())) {
-            companyCreatorMap.set(company.userId.toString(), []);
-        }
         companyCreatorMap.get(company.userId.toString()).push(company._id);
         
         // Admin relationships
         company.admins.forEach(adminId => {
-            if (!companyAdminMap.has(adminId.toString())) {
-                companyAdminMap.set(adminId.toString(), []);
-            }
             companyAdminMap.get(adminId.toString()).push(company._id);
+        });
+        
+        // User follows company relationships
+        company.followers.forEach(follower => {
+            if (follower.entityType === 'User') {
+                const userId = follower.entity.toString();
+                
+                // Add company to user's following list
+                userFollowingMap.get(userId).push({
+                    entity: company._id,
+                    entityType: 'Company',
+                    followedAt: follower.followedAt
+                });
+            }
+        });
+        
+        // Company follows user relationships
+        company.following.forEach(followed => {
+            if (followed.entityType === 'User') {
+                const userId = followed.entity.toString();
+                
+                // Add company to users's followers list
+                userFollowedByMap.get(userId).push({
+                    entity: company._id,
+                    entityType: 'Company',
+                    followedAt: followed.followedAt
+                });
+            }
         });
     });
     
     // Process all users and update their company relationships
     for (const userId of userIds) {
-        const userCompanies = companyCreatorMap.get(userId.toString()) || [];
-        const adminCompanies = companyAdminMap.get(userId.toString()) || [];
+        const userIdStr = userId.toString();
+        const userCompanies = companyCreatorMap.get(userIdStr);
+        const adminCompanies = companyAdminMap.get(userIdStr);
+        const companyFollowing = userFollowingMap.get(userIdStr);
+        const companyFollowers = userFollowedByMap.get(userIdStr);
+        
+        // Get existing user data (to maintain other relationships like user-to-user following)
+        const user = await UserModel.findById(userId);
+        
+        // Filter out company relationships from existing following/followers
+        // and add the newly generated company relationships
+        const updatedFollowing = [
+            ...(user.following || []).filter(f => f.entityType !== 'Company'),
+            ...companyFollowing
+        ];
+        
+        const updatedFollowers = [
+            ...(user.followers || []).filter(f => f.entityType !== 'Company'),
+            ...companyFollowers
+        ];
         
         await UserModel.findByIdAndUpdate(userId, {
-            companies: userCompanies,
-            adminInCompanies: adminCompanies
+            companies: userCompanies,            // Companies created by user
+            adminInCompanies: adminCompanies,    // Companies where user is admin
+            following: updatedFollowing,         // Both users and companies user follows
+            followers: updatedFollowers          // Both users and companies following user
         });
     }
+    
+    console.log(`Updated company relationships for ${userIds.length} users`);
+}
+
+// Ensure bidirectional consistency in company-to-company follows
+async function synchronizeCompanyFollowRelationships() {
+    console.log('Synchronizing company-to-company relationships...');
+    
+    // Create a map to track all company following relationships for quick lookup
+    const companyFollowsMap = new Map();
+    
+    // First pass: build the map of all company-to-company follows
+    for (const company of companies) {
+        const companyId = company._id.toString();
+        
+        // Extract companies this company follows
+        const followingCompanies = company.following
+            .filter(f => f.entityType === 'Company')
+            .map(f => ({
+                entityId: f.entity.toString(),
+                followedAt: f.followedAt
+            }));
+            
+        companyFollowsMap.set(companyId, followingCompanies);
+    }
+    
+    // Second pass: ensure bidirectional consistency
+    let relationshipsFixed = 0;
+    
+    for (const company of companies) {
+        const companyId = company._id.toString();
+        const followingCompanies = companyFollowsMap.get(companyId) || [];
+        
+        // For each company this company follows
+        for (const following of followingCompanies) {
+            const followedCompanyId = following.entityId;
+            const followedCompany = companies.find(c => c._id.toString() === followedCompanyId);
+            
+            if (followedCompany) {
+                // Check if the followed company has this company in its followers list
+                const hasFollowerEntry = followedCompany.followers.some(
+                    f => f.entityType === 'Company' && f.entity.toString() === companyId
+                );
+                
+                if (!hasFollowerEntry) {
+                    // Add missing follower entry
+                    followedCompany.followers.push({
+                        entity: company._id,
+                        entityType: 'Company',
+                        followedAt: following.followedAt
+                    });
+                    relationshipsFixed++;
+                }
+            }
+        }
+        
+        // For each company following this company
+        const followerCompanies = company.followers
+            .filter(f => f.entityType === 'Company')
+            .map(f => f.entity.toString());
+            
+        for (const followerCompanyId of followerCompanies) {
+            const followerCompany = companies.find(c => c._id.toString() === followerCompanyId);
+            
+            if (followerCompany) {
+                // Check if the follower company has this company in its following list
+                const hasFollowingEntry = followerCompany.following.some(
+                    f => f.entityType === 'Company' && f.entity.toString() === companyId
+                );
+                
+                if (!hasFollowingEntry) {
+                    // Add missing following entry
+                    const followedAt = company.followers.find(
+                        f => f.entityType === 'Company' && f.entity.toString() === followerCompanyId
+                    ).followedAt;
+                    
+                    followerCompany.following.push({
+                        entity: company._id,
+                        entityType: 'Company',
+                        followedAt: followedAt
+                    });
+                    relationshipsFixed++;
+                }
+            }
+        }
+    }
+    
+    console.log(`Fixed ${relationshipsFixed} inconsistent company relationships`);
 }
 
 async function companySeeder() {
     try {
         await createRandomCompanies();
         console.log(`Generated ${companies.length} companies`);
+        
+        // Fix company-to-company relationship inconsistencies before inserting
+        await synchronizeCompanyFollowRelationships();
 
         const deleteResult = await CompanyModel.deleteMany({});
         console.log(`Deleted ${deleteResult.deletedCount} companies`);
@@ -165,23 +311,82 @@ async function companySeeder() {
         await updateUserCompanyRelationships();
         console.log('Updated user-company relationships');
 
+        // Verify company-to-company following relationships
+        await verifyCompanyToCompanyRelationships();
+
         // Verify a sample company
         const sampleCompany = await CompanyModel.findById(companyIds[0]);
         console.log('Sample company:', {
             name: sampleCompany.name,
             industry: sampleCompany.industry,
             followersCount: sampleCompany.followers.length,
+            followingCount: sampleCompany.following.length,
             jobsCount: sampleCompany.jobs.length
         });
         
         // Verify a sample user's company relationships
         const sampleUser = await UserModel.findById(userIds[0]);
         console.log('Sample user company relationships:', {
-            ownedCompanies: sampleUser.companies.length,
-            adminInCompanies: sampleUser.adminInCompanies.length
+            ownedCompanies: sampleUser.companies?.length || 0,
+            adminInCompanies: sampleUser.adminInCompanies?.length || 0,
+            companiesFollowing: sampleUser.following?.filter(f => f.entityType === 'Company').length || 0,
+            followedByCompanies: sampleUser.followers?.filter(f => f.entityType === 'Company').length || 0
         });
     } catch (error) {
         console.error('Error seeding companies:', error);
+    }
+}
+
+// Helper function to verify company-to-company relationships are properly set
+async function verifyCompanyToCompanyRelationships() {
+    // Check a few random companies to ensure their company-to-company follows are consistent
+    const sampleSize = Math.min(5, companyIds.length);
+    const sampleCompanyIds = faker.helpers.arrayElements(companyIds, sampleSize);
+    
+    let inconsistenciesFound = 0;
+    
+    for (const companyId of sampleCompanyIds) {
+        const company = await CompanyModel.findById(companyId);
+        
+        // Check companies this company follows
+        const followingCompanies = company.following.filter(f => f.entityType === 'Company');
+        
+        for (const followedCompany of followingCompanies) {
+            const followed = await CompanyModel.findById(followedCompany.entity);
+            
+            // Check if the followed company has this company in its followers
+            const isInFollowers = followed.followers.some(
+                f => f.entityType === 'Company' && f.entity.toString() === companyId.toString()
+            );
+            
+            if (!isInFollowers) {
+                console.warn(`Inconsistency: ${company.name} follows ${followed.name}, but is not in its followers list`);
+                inconsistenciesFound++;
+            }
+        }
+        
+        // Check companies following this company
+        const followerCompanies = company.followers.filter(f => f.entityType === 'Company');
+        
+        for (const followerCompany of followerCompanies) {
+            const follower = await CompanyModel.findById(followerCompany.entity);
+            
+            // Check if the follower company has this company in its following
+            const isInFollowing = follower.following.some(
+                f => f.entityType === 'Company' && f.entity.toString() === companyId.toString()
+            );
+            
+            if (!isInFollowing) {
+                console.warn(`Inconsistency: ${follower.name} is in ${company.name}'s followers, but doesn't follow it`);
+                inconsistenciesFound++;
+            }
+        }
+    }
+    
+    if (inconsistenciesFound > 0) {
+        console.warn(`Found ${inconsistenciesFound} inconsistencies in company relationships`);
+    } else {
+        console.log(`Verified company relationships for ${sampleSize} sample companies - no inconsistencies found`);
     }
 }
 

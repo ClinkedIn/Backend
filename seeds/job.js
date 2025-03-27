@@ -176,28 +176,15 @@ async function updateCompanyJobRelationships() {
 async function jobSeeder() {
     try {
         await createRandomJobs();
-        console.log(`Generated ${jobs.length} jobs`);
 
         const deleteResult = await JobModel.deleteMany({});
-        console.log(`Deleted ${deleteResult.deletedCount} jobs`);
 
         const insertResult = await JobModel.insertMany(jobs);
-        console.log(`Inserted ${insertResult.length} jobs`);
 
         await updateCompanyJobRelationships();
-        console.log('Updated company-job relationships');
 
         // Verify a sample job
         const sampleJob = await JobModel.findById(jobIds[0]);
-        console.log('Sample job:', {
-            title: sampleJob.title,
-            workplaceType: sampleJob.workplaceType,
-            jobType: sampleJob.jobType,
-            location: sampleJob.jobLocation,
-            applicantsCount: sampleJob.applicants?.length || 0,
-            acceptedCount: sampleJob.accepted?.length || 0,
-            rejectedCount: sampleJob.rejected?.length || 0
-        });
         
         // Verify a sample company's job relationships
         const companyWithJobs = await CompanyModel.findById(jobs[0].companyId);
