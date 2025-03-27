@@ -212,7 +212,7 @@ const googleLogin = async (req, res) => {
 
     createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
-    console.error("Error verifying Firebase token:", error);
+    console.log("Error verifying Firebase token:", error);
     return res.status(401).json({ message: "Unauthorized" });
   }
 };
