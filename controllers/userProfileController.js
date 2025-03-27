@@ -2,7 +2,7 @@ const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements, checkUserAccessPermission} = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, validateEndorsements, checkUserAccessPermission, updateSkillExperienceReferences} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
@@ -11,7 +11,6 @@ const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
 const customError = require('../utils/customError');
-
 
 const getUserProfile = async (req, res) => {
     try {
@@ -28,18 +27,22 @@ const getUserProfile = async (req, res) => {
         const requesterId = req.user.id; // Current authenticated user
         
         // If not requesting own profile and profile is private
-        if (userId !== requesterId && user.profilePrivacySettings === 'private') {
-            return res.status(403).json({ message: 'This profile is private' });
-        }
+        // if (userId !== requesterId && user.profilePrivacySettings === 'private') {
+        //     return res.status(403).json({ message: 'This profile is private' });
+        // }
         
-        // If profile is set to connections only, check if they're connected
-        if (userId !== requesterId && 
-            user.profilePrivacySettings === 'connectionsOnly' &&
-            !user.connectionList.includes(requesterId)) {
-            return res.status(403).json({ message: 'This profile is only visible to connections' });
-        }
-        if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
-            return res.status(403).json({ message: 'This profile is not available' });
+        // // If profile is set to connections only, check if they're connected
+        // if (userId !== requesterId && 
+        //     user.profilePrivacySettings === 'connectionsOnly' &&
+        //     !user.connectionList.includes(requesterId)) {
+        //     return res.status(403).json({ message: 'This profile is only visible to connections' });
+        // }
+        // if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
+        //     return res.status(403).json({ message: 'This profile is not available' });
+        // }
+        const accessCheck = await checkUserAccessPermission(user, requesterId);
+        if (!accessCheck.hasAccess) {
+            return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
         }
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
