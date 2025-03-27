@@ -19,3 +19,17 @@ Module 1: Authentication & User Management
 ●	Users receive a confirmation email upon registration.🆗✅
 ●	Login is available via email/password or Google social login.
 ●	Password reset requests can be made via email.
+
+
+
+ Module 3: Connections & Networking
+●	Search for users by name, company, or industry
+●	Send connection requests to other users
+●	Accept/Decline connection requests
+●	Remove a connection
+●	Follow users (without connecting)
+●	Get a list of connections
+●	Get a list of pending connection requests
+●	Block/Unblock users
+●	Manage blocked users list
+●	Messaging requests for non-connections
