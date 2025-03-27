@@ -8,7 +8,7 @@
 // tags
 // endpoints  /impressions/{id}:
 // security: * - BearerAuth: [];
-
+const { protect, mockVerifyToken } = require('../middlewares/auth');
 const express = require('express')
 const router = express.Router();
 const jobController = require('../controllers/jobController');
@@ -16,7 +16,6 @@ const jobController = require('../controllers/jobController');
 router.route('/')
     .post(jobController.createJob)
     .get(jobController.getAllJobs);
-
 
 router.route('/:jobId')
     .get(jobController.getJob)
@@ -42,5 +41,8 @@ router.route('/company/:companyId')
     // get/search , Provide filtering/search capabilities (e.g., by workplace type, job location, job type).
     // Request: A GET request where query parameters (like ?workplace_type=Remote&job_type=full time) are used to filter jobs.
     // Response: A list of jobs that match the search criteria.
-    
+router.route('/:jobId/save')
+    .post(protect,jobController.saveJob)
+    .delete(protect,jobController.unsaveJob)
+    .get(protect,jobController.getSavedJobs);
     module.exports = router;

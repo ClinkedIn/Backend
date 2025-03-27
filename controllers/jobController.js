@@ -1,6 +1,7 @@
 // fuctions implementation is a placeholder
 const jobModel = require('../models/jobModel');
-
+const mongoose = require('mongoose');
+const userModel = require('../models/userModel');
 // Create a new job
 const createJob = async (req, res) => {
     try {
@@ -168,6 +169,182 @@ const getJobsByCompany = async (req, res) => {
     }
 };
 
+const saveJob = async (req, res) => {
+    try {
+        const jobId = req.params.jobId;
+        const userId = req.user.id; // This comes from auth middleware
+        
+        // Validate job ID
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+            return res.status(400).json({ message: 'Invalid job ID format' });
+        }
+        
+        // Check if job exists
+        const job = await jobModel.findById(jobId);
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+        
+        // Get the user document from the database
+        const userModel = require('../models/userModel');
+        const user = await userModel.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if the job is already saved
+        if (user.savedJobs && user.savedJobs.includes(jobId)) {
+            return res.status(400).json({ 
+                message: 'This job is already in your saved list',
+                alreadySaved: true
+            });
+        }
+        
+        // Add the job to the user's savedJobs array
+        if (!user.savedJobs) {
+            user.savedJobs = [];
+        }
+        
+        user.savedJobs.push(jobId);
+        await user.save();
+        
+        return res.status(200).json({
+            message: 'Job saved successfully',
+            savedJobId: jobId
+        });
+    } catch (error) {
+        console.error('Error saving job:', error);
+        res.status(500).json({ 
+            message: 'Failed to save job',
+            error: error.message 
+        });
+    }
+};
+const unsaveJob = async (req, res) => {
+    try {
+        const jobId = req.params.jobId;
+        const userId = req.user.id; // This comes from auth middleware
+        
+        // Validate job ID
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+            return res.status(400).json({ message: 'Invalid job ID format' });
+        }
+        
+        // Get the user document from the database
+        const userModel = require('../models/userModel');
+        const user = await userModel.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if the job is in the saved list
+        if (!user.savedJobs || !user.savedJobs.includes(jobId)) {
+            return res.status(400).json({ 
+                message: 'This job is not in your saved list',
+                alreadyRemoved: true
+            });
+        }
+        
+        // Remove the job from the savedJobs array
+        user.savedJobs = user.savedJobs.filter(
+            savedJobId => savedJobId.toString() !== jobId
+        );
+        
+        await user.save();
+        
+        return res.status(200).json({
+            message: 'Job removed from saved list successfully',
+            removedJobId: jobId
+        });
+    } catch (error) {
+        console.error('Error unsaving job:', error);
+        res.status(500).json({ 
+            message: 'Failed to remove job from saved list',
+            error: error.message 
+        });
+    }
+};
+
+const getSavedJobs = async (req, res) => {
+    try {
+        const userId = req.user.id; // This comes from auth middleware
+        
+        // Parse pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skipIndex = (page - 1) * limit;
+        
+        // Get the user with populated savedJobs
+        const user = await userModel.findById(userId)
+            .populate({
+                path: 'savedJobs',
+                populate: {
+                    path: 'companyId',
+                    select: 'name logo industry location'
+                },
+                options: {
+                    sort: { createdAt: -1 },
+                    skip: skipIndex,
+                    limit: limit
+                }
+            })
+            .select('savedJobs');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Get total count for pagination
+        const totalJobs = user.savedJobs ? user.savedJobs.length : 0;
+        const totalPages = Math.ceil(totalJobs / limit);
+        
+        // Format the saved jobs for the response
+        const formattedJobs = user.savedJobs.map(job => ({
+            jobId: job._id,
+            title: job.title,
+            company: job.companyId ? {
+                id: job.companyId._id,
+                name: job.companyId.name,
+                logo: job.companyId.logo,
+                industry: job.companyId.industry,
+                location: job.companyId.location
+            } : null,
+            industry: job.industry,
+            workplaceType: job.workplaceType,
+            jobLocation: job.jobLocation,
+            jobType: job.jobType,
+            description: job.description,
+            createdAt: job.createdAt,
+            updatedAt: job.updatedAt
+        }));
+        
+        return res.status(200).json({
+            message: formattedJobs.length > 0 ? 
+                'Saved jobs retrieved successfully' : 
+                'No saved jobs found',
+            jobs: formattedJobs,
+            pagination: {
+                totalJobs,
+                totalPages,
+                currentPage: page,
+                pageSize: limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
+    } catch (error) {
+        console.error('Error getting saved jobs:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve saved jobs',
+            error: error.message 
+        });
+    }
+};
+
+// DON't Review this code it is made by ali abdelghani
+
 module.exports = {
     createJob,
     getAllJobs,
@@ -177,5 +354,8 @@ module.exports = {
     applyForJob,
     acceptApplicant,
     rejectApplicant,
-    getJobsByCompany
+    getJobsByCompany,
+    saveJob,
+    unsaveJob,
+    getSavedJobs
 };
