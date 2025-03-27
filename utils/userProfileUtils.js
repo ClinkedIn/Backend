@@ -215,21 +215,21 @@ const checkUserAccessPermission = async (user, requesterId, requester = null, ac
           return { hasAccess: false, message: 'You have blocked this user', statusCode: 403 };
       }
       
-      // Check privacy settings
-      // if (user.profilePrivacySettings === 'private') {
-      //     return { hasAccess: false, message: 'This user has a private profile', statusCode: 403 };
-      // }
+      //Check privacy settings
+      if (user.profilePrivacySettings === 'private') {
+          return { hasAccess: false, message: 'This user has a private profile', statusCode: 403 };
+      }
       
-      // if (user.profilePrivacySettings === 'connectionsOnly') {
-      //     // Check if requester is in user's connections
-      //     const isConnected = requester.connectionList && 
-      //                        requester.connectionList.some(conn => 
-      //                          conn.toString() === user._id.toString());
+      if (user.profilePrivacySettings === 'connectionsOnly') {
+          // Check if requester is in user's connections
+          const isConnected = requester.connectionList && 
+                             requester.connectionList.some(conn => 
+                               conn.toString() === user._id.toString());
           
-      //     if (!isConnected) {
-      //         return { hasAccess: false, message: 'You are not connected with this user', statusCode: 403 };
-      //     }
-      // }
+          if (!isConnected) {
+              return { hasAccess: false, message: 'You are not connected with this user', statusCode: 403 };
+          }
+      }
       
       // If we get here, access is allowed
       return { hasAccess: true };
