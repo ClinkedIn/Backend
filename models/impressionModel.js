@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const impressionSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // User who interacted
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true}, // User who interacted
   targetId: { type: mongoose.Schema.Types.ObjectId, required: true }, // Can be post or comment
   targetType: { 
     type: String, 
@@ -10,7 +10,7 @@ const impressionSchema = new mongoose.Schema({
   }, // Specifies the target type (post or comment)
   type: {
     type: String,
-    enum: ["view", "like", "share", "comment"], // Define interaction types
+    enum: ["like", "support", "celebrate", "love", "insightful","funny"], // Define interaction types
     required: true,
   },
 }, { timestamps: true });
@@ -22,5 +22,7 @@ const impressionSchema = new mongoose.Schema({
 //   foreignField: "_id",
 //   justOne: true,
 // });
-
+impressionSchema.index({ userId: 1, targetId: 1 });
+impressionSchema.index({userId:1});
+impressionSchema.index({targetId:1});
 module.exports = mongoose.model("Impression", impressionSchema);

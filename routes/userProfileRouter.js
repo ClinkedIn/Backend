@@ -1,12 +1,76 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken, isLoggedIn, verifyGoogleToken, mockVerifyToken } = require('../middlewares/auth');
+const { protect, mockVerifyToken } = require('../middlewares/auth');
+const upload = require('../middlewares/multer');
 
 const user = require('../controllers/userProfileController');
-
+router.route('/me')
+    .get(protect, user.getMe);
+router.route('/:userId')
+    .get(protect, user.getUserProfile);
+router.route('/')
+    .get(protect, user.getAllUsers);
 router.route('/education')
-    .patch(mockVerifyToken,user.addEducation)
+    .post(protect, upload.single('file'), user.addEducation)
+    .get(protect,user.getEducations);
 
+router.route('/education/:index')
+    .get(protect,user.getEducation)
+    .patch(protect, upload.single('file'), user.editEducation)
+    .delete(protect,user.deleteEducation);
 router.route('/profile')
-    .patch(mockVerifyToken,user.editIntro)
+    .patch(protect,user.editIntro);
+
+router.route('/experience')
+    .post(mockVerifyToken, upload.single('file'), user.addExperience)
+    .get(mockVerifyToken, user.getAllExperiences);
+
+router.route('/experience/:index')
+    .get(mockVerifyToken, user.getExperience)
+    .patch(mockVerifyToken,  upload.single('file'), user.updateExperience)
+    .delete(mockVerifyToken, user.deleteExperience);
+    
+router.route('/skills')
+    .get(mockVerifyToken, user.getAllSkills)
+    .post(mockVerifyToken, user.addSkill);
+
+router.route('/skills/:skillName')
+    .get(mockVerifyToken, user.getSkill)
+    .patch(mockVerifyToken, user.updateSkill)
+    .delete(mockVerifyToken, user.deleteSkill);
+
+router.route('/skills/endorsements/add-endorsement')
+    .post(mockVerifyToken, user.addEndorsement);
+
+router.route('/skills/endorsements/remove-endorsement/:skillName')
+    .delete(mockVerifyToken, user.deleteEndorsement);
+
+router.route('/pictures/profile-picture')
+    .post(mockVerifyToken, upload.single('file'), user.uploadProfilePicture)
+    .get(mockVerifyToken, user.getProfilePicture)
+    .delete(mockVerifyToken, user.deleteProfilePicture);
+
+router.route('/pictures/cover-picture')
+    .get(mockVerifyToken, user.getCoverPicture)
+    .post(mockVerifyToken, upload.single('file'), user.uploadCoverPicture)
+    .delete(mockVerifyToken, user.deleteCoverPicture);
+
+router.route('/resume')
+    .get(protect, user.getResume)
+    .post(protect, upload.single('resume'), user.uploadResume)
+    .delete(protect, user.deleteResume);
+router.route('/privacy-settings')
+    .patch(protect, user.updatePrivacySettings);
+router.route('/follow/:userId')
+    .post(protect, user.followEntity)
+    .delete(protect, user.unfollowEntity);
+router.route('/contact-info')
+    .patch(protect, user.editContactInfo);
+//router.route('/skills/endorse')
+//    .post(protect, user.endorseSkill);
+router.route('/about')
+    .patch(protect, user.editAbout);
+
+router.route('/:userId/user-activity')
+    .get(protect, user.getUserActivity);
 module.exports = router;
