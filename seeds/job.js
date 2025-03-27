@@ -7,7 +7,50 @@ const {
 
 const jobs = [];
 
+// Cache for company industries to avoid repeated database calls
+const companyIndustryCache = new Map();
+
+// Helper function to get company industry
+async function getCompanyIndustry(companyId) {
+    // Check cache first
+    const cachedIndustry = companyIndustryCache.get(companyId.toString());
+    if (cachedIndustry) return cachedIndustry;
+    
+    // If not in cache, fetch from database
+    try {
+        const company = await CompanyModel.findById(companyId).select('industry');
+        if (company && company.industry) {
+            // Store in cache for future use
+            companyIndustryCache.set(companyId.toString(), company.industry);
+            return company.industry;
+        }
+    } catch (err) {
+        console.error(`Error fetching industry for company ${companyId}:`, err);
+    }
+    
+    // Fallback to a random industry
+    const randomIndustry = faker.helpers.arrayElement([
+        'Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing',
+        'Retail', 'Media & Entertainment', 'Hospitality', 'Construction',
+        'Transportation', 'Agriculture', 'Energy', 'Professional Services',
+        'Real Estate', 'Telecommunications', 'Aerospace', 'Automotive',
+        'Biotechnology', 'Consumer Goods', 'Defense'
+    ]);
+    
+    // Cache this fallback value
+    companyIndustryCache.set(companyId.toString(), randomIndustry);
+    return randomIndustry;
+}
+
 async function createRandomJobs() {
+    // Pre-populate company industry cache to minimize database calls
+    console.log('Fetching company industries...');
+    const companies = await CompanyModel.find({}).select('_id industry').lean();
+    companies.forEach(company => {
+        companyIndustryCache.set(company._id.toString(), company.industry);
+    });
+    console.log(`Cached ${companyIndustryCache.size} company industries`);
+
     // Job locations for more realistic data
     const jobLocations = [
         'New York, NY', 'San Francisco, CA', 'Los Angeles, CA', 'Chicago, IL',
@@ -31,11 +74,15 @@ async function createRandomJobs() {
         'Graphic Designer', 'Operations Manager'
     ];
 
+    // Create all job documents
     for (let i = 0; i < jobIds.length; i++) {
         const jobId = jobIds[i];
         
         // Each job belongs to a random company
         const companyId = faker.helpers.arrayElement(companyIds);
+        
+        // Get the company's industry
+        const industry = await getCompanyIndustry(companyId);
         
         // Generate applicants (0-15 applicants per job)
         const applicantsCount = faker.number.int({ min: 0, max: 15 });
@@ -109,9 +156,11 @@ ${Array.from({ length: faker.number.int({ min: 3, max: 5 }) }, () => '- ' + fake
 ${faker.lorem.paragraph()}
 `;
         
+        // Add the job to our array
         jobs.push({
             _id: jobId,
             title: jobTitle,
+            industry: industry,
             companyId,
             workplaceType: faker.helpers.arrayElement(["Onsite", "Hybrid", "Remote"]),
             jobLocation: faker.helpers.arrayElement(jobLocations),
@@ -129,26 +178,14 @@ ${faker.lorem.paragraph()}
             applicants,
             accepted,
             rejected,
-            salary: faker.datatype.boolean(0.7) // 70% chance to include salary
-                ? {
-                    min: faker.number.int({ min: 30000, max: 80000 }),
-                    max: faker.number.int({ min: 80001, max: 200000 }),
-                    currency: faker.helpers.arrayElement(['USD', 'EUR', 'GBP', 'CAD'])
-                }
-                : undefined,
-            skills: faker.helpers.arrayElements(
-                ['JavaScript', 'React', 'Python', 'Java', 'C#', 'Node.js', 'AWS', 'Docker',
-                'Kubernetes', 'SQL', 'MongoDB', 'GraphQL', 'React Native', 'Swift', 'Kotlin',
-                'PHP', 'Ruby', 'Go', 'TypeScript', 'Machine Learning', 'Data Analysis',
-                'Project Management', 'Sales', 'Marketing', 'UX/UI Design', 'Product Management'],
-                faker.number.int({ min: 3, max: 8 })
-            ),
-            experienceLevel: faker.helpers.arrayElement([
-                'Entry-level', 'Junior', 'Mid-level', 'Senior', 'Lead', 'Manager', 'Director', 'Executive'
-            ]),
             createdAt: faker.date.past({ months: 3 }),
             updatedAt: faker.date.recent()
         });
+        
+        // Log progress
+        if ((i + 1) % 10 === 0 || i === jobIds.length - 1) {
+            console.log(`Created ${i + 1}/${jobIds.length} job documents`);
+        }
     }
 }
 
@@ -175,23 +212,34 @@ async function updateCompanyJobRelationships() {
 
 async function jobSeeder() {
     try {
+        console.log('Starting job seeding process...');
         await createRandomJobs();
+        console.log(`Generated ${jobs.length} jobs`);
 
         const deleteResult = await JobModel.deleteMany({});
+        console.log(`Deleted ${deleteResult.deletedCount} existing jobs`);
 
         const insertResult = await JobModel.insertMany(jobs);
+        console.log(`Inserted ${insertResult.length} jobs into database`);
 
         await updateCompanyJobRelationships();
+        console.log('Updated company-job relationships');
 
         // Verify a sample job
         const sampleJob = await JobModel.findById(jobIds[0]);
+        console.log('Sample job:', {
+            title: sampleJob.title,
+            industry: sampleJob.industry,
+            workplaceType: sampleJob.workplaceType,
+            jobType: sampleJob.jobType,
+            location: sampleJob.jobLocation,
+            applicantsCount: sampleJob.applicants?.length || 0
+        });
         
         // Verify a sample company's job relationships
         const companyWithJobs = await CompanyModel.findById(jobs[0].companyId);
-        console.log('Sample company job relationships:', {
-            companyName: companyWithJobs.name,
-            jobsCount: companyWithJobs.jobs?.length || 0
-        });
+        
+        console.log('Job seeding completed successfully!');
     } catch (error) {
         console.error('Error seeding jobs:', error);
     }
