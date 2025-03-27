@@ -1,62 +1,63 @@
-// // userController.test.js
-// /* eslint-disable no-undef */
-// /* eslint-disable no-unused-vars */
+// userController.test.js
+/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 
-// const userController = require("../controllers/userController.js");
-// const userModel = require("../models/userModel");
-// const {
-//   sendEmailConfirmation,
-//   sendForgotPasswordEmail,
-// } = require("../utils/emailService");
-// const {
-//   validateEmail,
-//   validatePassword,
-// } = require("../utils/validateEmailPassword");
-// const { verifyCaptcha } = require("../utils/verifyCaptcha");
-// const { generateTokens } = require("./../middlewares/auth");
-// const firebaseAdmin = require("../utils/firebase");
-// const crypto = require("crypto");
+const userController = require("../controllers/userController.js");
+const userModel = require("../models/userModel");
+const {
+  sendEmailConfirmation,
+  sendForgotPasswordEmail,
+} = require("../utils/emailService");
+const {
+  validateEmail,
+  validatePassword,
+} = require("../utils/validateEmailPassword");
+const { verifyCaptcha } = require("../utils/verifyCaptcha");
+const { generateTokens } = require("./../middlewares/auth");
+const firebaseAdmin = require("../utils/firebase");
+const crypto = require("crypto");
 
-// // Create a simple mock response object
-// const mockRes = () => {
-//   const res = {};
-//   res.status = jest.fn().mockReturnValue(res);
-//   res.json = jest.fn().mockReturnValue(res);
-//   res.get = jest.fn();
-//   return res;
-// };
+// Create a simple mock response object
+const mockRes = () => {
+  const res = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  res.get = jest.fn();
+  return res;
+};
 
-// // Reset all mocks before each test
-// beforeEach(() => {
-//   jest.clearAllMocks();
-// });
+// Reset all mocks before each test
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
-// // --- Mocks ---
-// jest.mock("../models/userModel");
-// jest.mock("../utils/emailService");
-// jest.mock("../utils/validateEmailPassword");
-// jest.mock("../utils/verifyCaptcha");
-// jest.mock("./../middlewares/auth");
-// jest.mock("../utils/firebase");
+// --- Mocks ---
+jest.mock("../models/userModel");
+jest.mock("../utils/emailService");
+jest.mock("../utils/validateEmailPassword");
+jest.mock("../utils/verifyCaptcha");
+jest.mock("./../middlewares/auth");
+jest.mock("../utils/firebase");
 
-// // =======================
-// // Tests for registerUser
-// // =======================
-// // describe("registerUser", () => {
-// //   let req, res;
-// //   beforeEach(() => {
-// //     req = { body: {} };
-// //     res = mockRes();
-// //   });
+// =======================
+// Tests for registerUser
+// =======================
+describe("registerUser", () => {
+  let req, res;
+  beforeEach(() => {
+    req = { body: {} };
+    res = mockRes();
+  });
 
-// //   it("should return 400 if required fields are missing", async () => {
-// //     req.body = {}; // no fields provided
-// //     await userController.registerUser(req, res);
-// //     expect(res.status).toHaveBeenCalledWith(400);
-// //     expect(res.json).toHaveBeenCalledWith({
-// //       message: "all fields are required",
-// //     });
-// //   });
+  it("should return 400 if required fields are missing", async () => {
+    req.body = {}; // no fields provided
+    await userController.registerUser(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "all fields are required",
+    });
+  });
+});
 
 // //   it("should return 400 for invalid email", async () => {
 // //     req.body = {
@@ -518,7 +519,7 @@
 //       })
 //     );
 //   });
-// });
+//});
 
 // // ==============================
 // // Tests for resendConfirmationEmail
