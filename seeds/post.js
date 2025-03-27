@@ -13,7 +13,6 @@ function createRandomPosts() {
         
         const userId = faker.helpers.arrayElement(userIds);    
 
-        const taggedUsers = faker.helpers.arrayElements(userIds, faker.number.int({ min: 0, max: userIds.length }));
 
         const impressions = faker.helpers.arrayElements(impressionIds, faker.number.int({ min: 0, max: impressionIds.length }));
 
@@ -24,7 +23,6 @@ function createRandomPosts() {
             userId: userId,
             description: faker.lorem.paragraph(),
             attachments: attachments,
-            taggedUsers: taggedUsers,
             impressions: impressions,
             comments: [],
             reposts: reposts,

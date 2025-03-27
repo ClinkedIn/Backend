@@ -63,11 +63,13 @@ jest.mock('../controllers/userProfileController', () => {
     };
 });
 
-
 jest.mock('../utils/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
     validateEndorsements: jest.requireActual('../utils/userProfileUtils').validateEndorsements,
-    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience
+    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience,
+    uploadPicture: jest.requireActual('../utils/filesHandler').uploadPicture,
+    validatePicture: jest.requireActual('../utils/filesHandler').validatePicture,
+    updateSkillExperienceReferences: jest.requireActual('../utils/userProfileUtils').updateSkillExperienceReferences
   }));
 
 jest.mock('../models/userModel');
@@ -565,7 +567,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -584,7 +586,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -646,6 +648,7 @@ describe('POST /experience - addExperience', () => {
             .field('companyName', 'Tech Corp')
             .field('fromDate', '2022-01-01')
             .field('currentlyWorking', true)
+            .field('employmentType', 'Full Time')
             .attach('file', Buffer.from('mockFileContent'), { filename: 'photo.png', contentType: 'image/jpeg' });
 
         expect(response.status).toBe(400);
@@ -2041,7 +2044,6 @@ describe('POST /add-profile-picture', () => {
         );
     });
 
-
     test('should return 400 if no file is uploaded', async () => {
         const response = await request(app)
             .post('/add-profile-picture')
@@ -2051,14 +2053,13 @@ describe('POST /add-profile-picture', () => {
         expect(response.body.message).toBe('No file uploaded');
     });
 
-
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
 
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-
+        
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });

@@ -3,6 +3,7 @@ const userModel = require('../models/userModel');
 const repostModel = require('../models/repostModel');
 const reportModel = require('../models/reportModel');
 const cloudinary = require('../utils/cloudinary');
+const commentModel = require('../models/commentModel');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
@@ -461,14 +462,17 @@ const getAllPosts = async (req, res) => {
                 })
             };
         });
-        
+        const hasNextPage = parseInt(pageNumber) < total;
+        const hasPrevPage = parseInt(pageNumber) > 1;
         res.status(200).json({
             posts: formattedPosts,
             pagination: {
                 total,
                 page: parseInt(pageNumber),
                 limit: parseInt(limit),
-                pages: Math.ceil(total / parseInt(limit))
+                pages: Math.ceil(total / parseInt(limit)),
+                hasNextPage,
+                hasPrevPage
             }
         });
         
@@ -867,7 +871,6 @@ const deleteRepost = async (req, res) => {
     }
 };
 
-
 // Report a post
 const reportPost = async (req, res) => {
     try {
@@ -967,6 +970,233 @@ const reportPost = async (req, res) => {
     }
 };
 
+const getPostImpressions = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { type, page = 1, limit = 10 } = req.query;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        });
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Build query for impressions
+        const query = {
+            targetId: postId,
+            targetType: "Post"
+        };
+        
+        // Add type filter if provided
+        if (type) {
+            const validImpressionTypes = ['like', 'support', 'celebrate', 'love', 'insightful', 'funny'];
+            if (!validImpressionTypes.includes(type)) {
+                return res.status(400).json({ 
+                    message: 'Invalid impression type',
+                    validTypes: validImpressionTypes
+                });
+            }
+            query.type = type;
+        }
+        
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination metadata
+        const totalImpressions = await impressionModel.countDocuments(query);
+        
+        // Find impressions with pagination
+        const impressions = await impressionModel.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skipIndex)
+            .limit(limitNum);
+            
+        // Get user details for each impression
+        const userIds = impressions.map(impression => impression.userId);
+        const users = await userModel.find(
+            { _id: { $in: userIds } },
+            'firstName lastName headline profilePicture'
+        );
+        
+        // Create a map of user details for quick lookup
+        const userMap = {};
+        users.forEach(user => {
+            userMap[user._id.toString()] = {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                headline: user.headline || "",
+                profilePicture: user.profilePicture
+            };
+        });
+        
+        // Combine impression data with user details
+        const impressionsWithUserInfo = impressions.map(impression => {
+            const user = userMap[impression.userId.toString()] || {};
+            return {
+                impressionId: impression._id,
+                userId: impression.userId,
+                type: impression.type,
+                createdAt: impression.createdAt,
+                ...user
+            };
+        });
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalImpressions / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+        
+        // Get counts for each impression type
+        const impressionCounts = post.impressionCounts || {};
+        
+        // Return results with pagination metadata and counts for each impression type
+        res.status(200).json({
+            message: "Impressions retrieved successfully",
+            impressions: impressionsWithUserInfo,
+            counts: {
+                like: impressionCounts.like || 0,
+                support: impressionCounts.support || 0,
+                celebrate: impressionCounts.celebrate || 0,
+                love: impressionCounts.love || 0,
+                insightful: impressionCounts.insightful || 0,
+                funny: impressionCounts.funny || 0,
+                total: impressionCounts.total || 0
+            },
+            pagination: {
+                totalImpressions,
+                totalPages,
+                currentPage: pageNum,
+                pageSize: limitNum,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting post impressions:', error);
+        res.status(500).json({
+            message: 'Failed to get impressions',
+            error: error.message
+        });
+    }
+};
+
+const getPostReposts = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        
+        // Validate input
+        if (!postId) {
+            return res.status(400).json({ message: 'Post ID is required' });
+        }
+        
+        // Check if post exists and is active
+        const post = await postModel.findOne({ 
+            _id: postId, 
+            isActive: true 
+        }).populate('userId', 'firstName lastName headline profilePicture')
+        .lean();
+        
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found or inactive' });
+        }
+        
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination metadata
+        const totalReposts = await repostModel.countDocuments({
+            postId,
+            isActive: true
+        });
+        
+        // Find reposts with pagination
+        const reposts = await repostModel.find({
+            postId,
+            isActive: true
+        })
+            .sort({ createdAt: -1 })
+            .skip(skipIndex)
+            .limit(limitNum)
+            .populate('userId', 'firstName lastName headline profilePicture')
+            .lean();
+        
+        // Get current user's saved posts for checking if this post is saved
+        const currentUser = await userModel.findById(userId).select('savedPosts');
+        const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
+        const isSaved = savedPostsSet.has(postId.toString());
+        
+        // Format reposts exactly like in getAllPosts
+        const formattedReposts = reposts.map(repost => {
+            return {
+                postId: post._id,
+                userId: post.userId._id,
+                firstName: post.userId.firstName,
+                lastName: post.userId.lastName,
+                headline: post.userId.headline || "",
+                profilePicture: post.userId.profilePicture,
+                postDescription: post.description,
+                attachments: post.attachments,
+                impressionCounts: post.impressionCounts,
+                commentCount: post.commentCount || 0,
+                repostCount: post.repostCount || 0,
+                createdAt: post.createdAt,
+                taggedUsers: post.taggedUsers,
+                isRepost: true,
+                isSaved: isSaved,
+                // Repost specific details
+                repostId: repost._id,
+                reposterId: repost.userId._id,
+                reposterFirstName: repost.userId.firstName,
+                reposterLastName: repost.userId.lastName,
+                reposterProfilePicture: repost.userId.profilePicture,
+                reposterHeadline: repost.userId.headline || "",
+                repostDescription: repost.description || "",
+                repostDate: repost.createdAt
+            };
+        });
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalReposts / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+        
+        // Return results with pagination metadata in the same format as getAllPosts
+        res.status(200).json({
+            posts: formattedReposts,
+            pagination: {
+                total: totalReposts,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting post reposts:', error);
+        res.status(500).json({
+            message: 'Failed to get reposts',
+            error: error.message
+        });
+    }
+};
 
 module.exports = {
     createPost,
@@ -980,5 +1210,7 @@ module.exports = {
     reportPost,
     getPost,
     deletePost,
-    updatePost
+    updatePost,
+    getPostImpressions,
+    getPostReposts,
 };
