@@ -245,5 +245,5 @@ const checkUserAccessPermission = async (user, requesterId, requester = null, ac
   }
 };
 
-module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName,  uploadPicture, handleUserPicture
+module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName,  uploadPicture, handleUserPicture, updateSkillExperienceReferences
 };

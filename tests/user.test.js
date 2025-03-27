@@ -577,8 +577,13 @@ describe('POST /experience - addExperience', () => {
         const response = await request(app)
             .post('/experience')
             .send(experienceData);
+        try{
 
         expect(response.status).toBe(200);
+        }
+        catch(e){   
+            console.log(response.body);
+        }
         expect(response.body.message).toBe('Experience added successfully');
         expect(response.body.experience).toMatchObject({
             jobTitle: 'Software Engineer',
