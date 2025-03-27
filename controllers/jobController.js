@@ -1,4 +1,5 @@
 // fuctions implementation is a placeholder
+const companyModel = require('../models/companyModel');
 const jobModel = require('../models/jobModel');
 const mongoose = require('mongoose');
 const userModel = require('../models/userModel');
@@ -499,20 +500,32 @@ const getJobApplications = async (req, res) => {
     try {
         const { jobId } = req.params;
         const { status, page = 1, limit = 10 } = req.query;
-        
+        const userId = req.user.id; // This comes from auth middleware
         // Validate job ID
         if (!mongoose.Types.ObjectId.isValid(jobId)) {
             return res.status(400).json({ message: 'Invalid job ID format' });
         }
-        
-        // Get the job
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                message: 'Not authorized, no valid user info'
+            });
+        }
         const job = await jobModel.findById(jobId);
+        // Get company details to check authorization
+        const company = await companyModel.findById(job.companyId);
+        
+        if (!company) {
+            return res.status(404).json({
+                message: 'Company not found'
+            });
+        }
+        // Get the job
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
         
-        // Check if user has permission (company representative)
-        if (job.companyId.toString() !== req.user.companyId?.toString()) {
+        //Check if user has permission (company representative)
+        if (!company.admins.includes(userId) && company.userId.toString() !== userId) {
             return res.status(403).json({ 
                 message: 'Unauthorized. You can only view applications for your company\'s jobs.'
             });
@@ -593,6 +606,101 @@ const getJobApplications = async (req, res) => {
     }
 };
 
+const getMyApplications = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { status, page = 1, limit = 10 } = req.query;
+        
+        // Build the query
+        const query = { userId };
+        if (status && ['pending', 'viewed', 'rejected', 'accepted'].includes(status)) {
+            query.status = status;
+        }
+        
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Get total count for pagination
+        const totalApplications = await jobApplicationModel.countDocuments(query);
+        
+        // Get the applications
+        const applications = await jobApplicationModel.find(query)
+            .populate({
+                path: 'jobId',
+                select: 'title industry workplaceType jobLocation jobType companyId',
+                populate: {
+                    path: 'companyId',
+                    select: 'name logo industry location'
+                }
+            })
+            .skip(skipIndex)
+            .limit(limitNum)
+            .sort({ createdAt: -1 }) // Newest first
+            .lean();
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalApplications / limitNum);
+        
+        // Format the response
+        const formattedApplications = applications.map(app => ({
+            applicationId: app._id,
+            status: app.status,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+            job: {
+                jobId: app.jobId._id,
+                title: app.jobId.title,
+                industry: app.jobId.industry,
+                workplaceType: app.jobId.workplaceType,
+                jobLocation: app.jobId.jobLocation,
+                jobType: app.jobId.jobType,
+                company: app.jobId.companyId ? {
+                    id: app.jobId.companyId._id,
+                    name: app.jobId.companyId.name,
+                    logo: app.jobId.companyId.logo,
+                    industry: app.jobId.companyId.industry,
+                    location: app.jobId.companyId.location
+                } : null
+            },
+            contactEmail: app.contactEmail,
+            contactPhone: app.contactPhone,
+            screeningAnswers: app.screeningAnswers.map(answer => ({
+                question: answer.question,
+                answer: answer.answer
+            })),
+            rejectionReason: app.rejectionReason,
+            autoRejected: app.autoRejected
+        }));
+        
+        return res.status(200).json({
+            message: formattedApplications.length > 0 ? 
+                'Applications retrieved successfully' : 
+                'No applications found',
+            applications: formattedApplications,
+            pagination: {
+                totalApplications,
+                totalPages,
+                currentPage: pageNum,
+                pageSize: limitNum,
+                hasNextPage: pageNum < totalPages,
+                hasPrevPage: pageNum > 1
+            },
+            filters: {
+                status: status || 'all'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting user applications:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve job applications',
+            error: error.message 
+        });
+    }
+};
+
 module.exports = {
     createJob,
     getAllJobs,
@@ -606,5 +714,6 @@ module.exports = {
     saveJob,
     unsaveJob,
     getSavedJobs,
-    getJobApplications
+    getJobApplications,
+    getMyApplications
 };

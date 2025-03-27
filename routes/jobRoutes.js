@@ -18,6 +18,10 @@ router.route('/')
     .get(jobController.getAllJobs);
 router.route('/saved')
     .get(protect,jobController.getSavedJobs)
+
+router.route('/my-applications')
+    .get(protect,jobController.getMyApplications)
+
 router.route('/:jobId')
     .get(jobController.getJob)
     .put(jobController.updateJob)

@@ -10652,13 +10652,219 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/applications:
+ * /jobs/my-applications:
  *   get:
- *     summary: Get applications for a specific job
- *     tags: [Jobs]
+ *     summary: Get all job applications for the authenticated user
+ *     tags: [Jobs, Users]
  *     description: |
- *       Retrieves all applications for a job. Accessible only by company representatives
- *       who own the job posting. Returns applications with applicant details and screening answers.
+ *       Retrieve all job applications submitted by the authenticated user, with
+ *       status updates and job details. Applications are sorted by most recent first
+ *       and can be filtered by status.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, viewed, rejected, accepted]
+ *         description: Filter applications by status (optional)
+ *         example: "pending"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User's job applications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications retrieved successfully"
+ *                   description: Success message or no results message
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       applicationId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for the application
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, viewed, rejected, accepted]
+ *                         example: "pending"
+ *                         description: Current status of the application
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: When the application was submitted
+ *                       job:
+ *                         type: object
+ *                         properties:
+ *                           jobId:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456789"
+ *                             description: ID of the job applied to
+ *                           title:
+ *                             type: string
+ *                             example: "Senior Software Engineer"
+ *                             description: Job title
+ *                           workplaceType:
+ *                             type: string
+ *                             enum: [Onsite, Hybrid, Remote]
+ *                             example: "Remote"
+ *                             description: Type of workplace arrangement
+ *                           jobLocation:
+ *                             type: string
+ *                             example: "New York, NY"
+ *                             description: Location of the job
+ *                           jobType:
+ *                             type: string
+ *                             enum: [Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship]
+ *                             example: "Full Time"
+ *                             description: Type of employment
+ *                           company:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: ObjectId
+ *                                 example: "65fb2a8e7c5721f123456700"
+ *                                 description: ID of the company
+ *                               name:
+ *                                 type: string
+ *                                 example: "Tech Corp"
+ *                                 description: Name of the company
+ *                               logo:
+ *                                 type: string
+ *                                 example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                                 description: URL to company logo
+ *                               industry:
+ *                                 type: string
+ *                                 example: "Technology"
+ *                                 description: Industry sector
+ *                               location:
+ *                                 type: string
+ *                                 example: "San Francisco, CA"
+ *                                 description: Company location
+ *                       contactEmail:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                         description: Contact email used for this application
+ *                       screeningAnswers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question
+ *                             answer:
+ *                               type: string
+ *                               example: "5 years"
+ *                               description: Applicant's answer
+ *                         description: Answers provided to screening questions
+ *                       rejectionReason:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "The position has been filled"
+ *                         description: Reason for rejection if application was rejected
+ *                       autoRejected:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the application was automatically rejected
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 12
+ *                       description: Total number of applications matching the filter
+ *                     totalPages:
+ *                       type: number
+ *                       example: 2
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "all"
+ *                       description: Status filter used in the request
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve job applications"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/apply:
+ *   get:
+ *     summary: Get all applications for a specific job
+ *     tags: [Jobs, Applications]
+ *     description: |
+ *       Returns all applications submitted for a specific job. This endpoint is restricted
+ *       to company representatives who own the job posting. Includes applicant information
+ *       and screening answers.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -10738,6 +10944,7 @@
  *                       lastViewed:
  *                         type: string
  *                         format: date-time
+ *                         nullable: true
  *                         example: "2025-03-16T09:45:00Z"
  *                         description: When the application was last viewed by the company
  *                       applicant:
