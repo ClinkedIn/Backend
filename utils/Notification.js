@@ -11,91 +11,91 @@ const { getMessaging } = require("firebase-admin/messaging");
 const notificationTemplate = {
   reaction: (sendingUser, reactionType) => {
     const message = {
-      title: `${sendingUser.name} reacted with ${reactionType} to your post`,
+      title: `${sendingUser.firstName} reacted with ${reactionType} to your post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   comment: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} commented on your post`,
+      title: `${sendingUser.firstName} commented on your post`,
       body: `Tap to view the comment`,
     };
     return message;
   },
   follow: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} started following you`,
+      title: `${sendingUser.firstName} started following you`,
       body: `Tap to view their profile`,
     };
     return message;
   },
   message: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} sent you a message`,
+      title: `${sendingUser.firstName} sent you a message`,
       body: `Tap to view the message`,
     };
     return message;
   },
   chatMessage: (sendingUser, chatMessage) => {
     const message = {
-      title: `${sendingUser.name} sent you a message`,
+      title: `${sendingUser.firstName} sent you a message`,
       body: chatMessage,
     };
     return message;
   },
   mention: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} mentioned you in a comment`,
+      title: `${sendingUser.firstName} mentioned you in a comment`,
       body: `Tap to view the comment`,
     };
     return message;
   },
   tag: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} tagged you in a post`,
+      title: `${sendingUser.firstName} tagged you in a post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   repost: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} shared your post`,
+      title: `${sendingUser.firstName} shared your post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   share: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} shared a post`,
+      title: `${sendingUser.firstName} shared a post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   post: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} created a new post`,
+      title: `${sendingUser.firstName} created a new post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   connectionRequest: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} sent you a connection request`,
+      title: `${sendingUser.firstName} sent you a connection request`,
       body: `Tap to view the request`,
     };
     return message;
   },
   connectionAccepted: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} accepted your connection request`,
+      title: `${sendingUser.firstName} accepted your connection request`,
       body: `Tap to view their profile`,
     };
     return message;
   },
   connectionRejected: (sendingUser) => {
     const message = {
-      title: `${sendingUser.name} rejected your connection request`,
+      title: `${sendingUser.firstName} rejected your connection request`,
       body: `Tap to view their profile`,
     };
     return message;
@@ -132,7 +132,6 @@ const sendNotification = async (
       content: messageStr.body,
       resourceId: resource.id,
     });
-
     const fcmToken = user.fcmToken;
     if (!fcmToken) {
       console.error(

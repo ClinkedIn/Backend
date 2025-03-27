@@ -351,8 +351,6 @@ const applyForJob = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        // Import application model
-        
         // Check if user already applied for this job
         const existingApplication = await jobApplicationModel.findOne({ 
             jobId: jobId,
@@ -365,6 +363,31 @@ const applyForJob = async (req, res) => {
                 alreadyApplied: true,
                 applicationId: existingApplication._id,
                 applicationStatus: existingApplication.status
+            });
+        }
+        
+        // Check if user has reached the monthly application limit (5 per month)
+        const currentDate = new Date();
+        const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        
+        // Count applications made this month
+        const monthlyApplicationCount = await jobApplicationModel.countDocuments({
+            userId: userId,
+            createdAt: {
+                $gte: firstDayOfMonth,
+                $lte: lastDayOfMonth
+            }
+        });
+        
+        // Check if user has reached the monthly limit
+        if (monthlyApplicationCount >= 5) {
+            return res.status(429).json({
+                message: 'Monthly application limit reached. You can apply to a maximum of 5 jobs per month.',
+                limitReached: true,
+                currentCount: monthlyApplicationCount,
+                limit: 5,
+                resetDate: lastDayOfMonth.toISOString()
             });
         }
         
@@ -461,6 +484,9 @@ const applyForJob = async (req, res) => {
         
         await job.save();
         
+        // Get the updated monthly application count after this application
+        const updatedMonthlyCount = monthlyApplicationCount + 1;
+        
         // Construct the response based on application status
         const response = {
             message: applicationStatus === 'pending' ? 
@@ -468,7 +494,13 @@ const applyForJob = async (req, res) => {
                 'Application automatically rejected',
             applicationStatus,
             applicationId: newApplication._id,
-            jobId
+            jobId,
+            applicationLimits: {
+                monthlyLimit: 5,
+                usedThisMonth: updatedMonthlyCount,
+                remaining: 5 - updatedMonthlyCount,
+                resetDate: lastDayOfMonth.toISOString()
+            }
         };
         
         // Include rejection reason if applicable
