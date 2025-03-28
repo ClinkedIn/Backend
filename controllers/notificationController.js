@@ -42,6 +42,20 @@ const getNotifications = async (req, res) => {
   }
 };
 
+const getUnreadNotificationsCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const unreadCount = await Notification.countDocuments({
+      to: userId,
+      isRead: false,
+    });
+
+    return res.status(200).json({ unreadCount });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server Error", error });
+  }
+};
+
 const markRead = async (req, res) => {
   try {
     const notificationId = req.params.id;
@@ -82,4 +96,5 @@ module.exports = {
   getNotifications,
   markRead,
   markUnread,
+  getUnreadNotificationsCount,
 };

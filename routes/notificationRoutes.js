@@ -10,4 +10,8 @@ router.route("/mark-read/:id").patch(protect, notificationController.markRead);
 router
   .route("/mark-unread/:id")
   .patch(protect, notificationController.markUnread);
+
+router
+  .route("/unread-count")
+  .get(protect, notificationController.getUnreadNotificationsCount);
 module.exports = router;
