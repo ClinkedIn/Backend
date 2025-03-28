@@ -16,10 +16,10 @@ const notificationTemplate = {
     };
     return message;
   },
-  comment: (sendingUser) => {
+  comment: (sendingUser, comment) => {
     const message = {
       title: `${sendingUser.firstName} commented on your post`,
-      body: `Tap to view the comment`,
+      body: comment,
     };
     return message;
   },
@@ -117,7 +117,12 @@ const sendNotification = async (
       return;
     }
     let messageStr = {};
-    if (subject === "reaction") {
+    if (subject === "comment") {
+      messageStr = notificationTemplate[subject](
+        sendingUser,
+        resource.commentContent
+      );
+    } else if (subject === "reaction") {
       messageStr = notificationTemplate[subject](sendingUser, reactionType);
     } else if (subject === "chatMessage") {
       messageStr = notificationTemplate[subject](sendingUser, chatMessage);
