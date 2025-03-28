@@ -218,8 +218,7 @@ const userSchema = new mongoose.Schema(
     ],
     defaultMode: { type: String, enum: ["light", "dark"], default: "light" },
     googleId: { type: String, default: null },
-    fcmToken: { type: String },
-
+    fcmToken: { type: [String], default: [] },
     emailVerificationToken: { type: String, default: null },
     emailVerificationExpiresAt: { type: Date },
     passwordResetToken: { type: String, default: null },
