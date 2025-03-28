@@ -11,6 +11,7 @@ const postRouter = require("./routes/postRoutes");
 const reportRouter = require("./routes/reportRoutes");
 const commentRouter = require("./routes/commentRoutes");
 const chatRouter = require("./routes/chatRoutes");
+const notificationRouter = require("./routes/notificationRoutes");
 const messageRouter = require("./routes/messageRoutes");
 const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
@@ -35,6 +36,7 @@ app.use("/jobs", jobRouter);
 app.use("/company", companyRouter);
 app.use("/upload", uploadRouter);
 app.use("/search", searchRouter);
+app.use("/notifications", notificationRouter);
 
 app.use(
   "/api-docs",
