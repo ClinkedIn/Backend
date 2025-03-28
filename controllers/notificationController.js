@@ -3,6 +3,7 @@
 const Notification = require("../models/notificationModel");
 const userModel = require("../models/userModel");
 const APIFeatures = require("./../utils/apiFeatures");
+
 const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -41,6 +42,44 @@ const getNotifications = async (req, res) => {
   }
 };
 
+const markRead = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    notification.isRead = true;
+    await notification.save();
+
+    return res.status(200).json({ message: "Notification marked as read" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server Error", error });
+  }
+};
+
+const markUnread = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    notification.isRead = false;
+    await notification.save();
+
+    return res.status(200).json({ message: "Notification marked as unread" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server Error", error });
+  }
+};
+
 module.exports = {
   getNotifications,
+  markRead,
+  markUnread,
 };
