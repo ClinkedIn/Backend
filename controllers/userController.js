@@ -233,7 +233,12 @@ const googleLogin = async (req, res) => {
     if (user.googleId != googleUid) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
+    const fcmTokens = user.fcmToken;
+    if (fcmToken && !user.fcmToken.includes(fcmToken)) {
+      fcmTokens.push(fcmToken);
+      user.fcmToken = fcmTokens;
+      await user.save();
+    }
     createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
     console.error("Error verifying Firebase token:", error);
