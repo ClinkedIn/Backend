@@ -25,25 +25,31 @@ const getUserProfile = async (req, res) => {
         
         // Check privacy settings
         const requesterId = req.user.id; // Current authenticated user
-        
-        // If not requesting own profile and profile is private
-        // if (userId !== requesterId && user.profilePrivacySettings === 'private') {
-        //     return res.status(403).json({ message: 'This profile is private' });
-        // }
-        
-        // // If profile is set to connections only, check if they're connected
-        // if (userId !== requesterId && 
-        //     user.profilePrivacySettings === 'connectionsOnly' &&
-        //     !user.connectionList.includes(requesterId)) {
-        //     return res.status(403).json({ message: 'This profile is only visible to connections' });
-        // }
-        // if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
-        //     return res.status(403).json({ message: 'This profile is not available' });
-        // }
-        const accessCheck = await checkUserAccessPermission(user, requesterId);
-        if (!accessCheck.hasAccess) {
-            return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
+        const requester = await userModel.findById(requesterId).select('connectionList blockedUsers profilePrivacySettings');
+        //If not requesting own profile and profile is private
+        if (userId !== requesterId && user.profilePrivacySettings === 'private') {
+            return res.status(403).json({ message: 'This profile is private' });
         }
+        
+        // If profile is set to connections only, check if they're connected
+        if (userId !== requesterId && 
+            user.profilePrivacySettings === 'connectionsOnly' &&
+            !user.connectionList.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is only visible to connections' });
+        }
+        if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        if(requester.blockedUsers.includes(userId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        if(userId.isActive === false) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        // const accessCheck = await checkUserAccessPermission(user, requesterId);
+        // if (!accessCheck.hasAccess) {
+        //     return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
+        // }
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
             user

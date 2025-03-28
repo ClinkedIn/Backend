@@ -8,7 +8,24 @@ const { createPost, getPost, getAllPosts } = require('../controllers/postControl
 
 // Mock dependencies
 jest.mock('../models/postModel');
-jest.mock('../models/userModel');
+jest.mock('../models/userModel', () => {
+  // Create a complete mock object with all methods used in your tests
+  return {
+    findById: jest.fn().mockImplementation(() => ({
+      select: jest.fn().mockResolvedValue({
+        _id: 'cc81c18d6b9fc1b83e2bebe3',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        headline: 'Software Engineer'
+      })
+    })),
+    findByIdAndUpdate: jest.fn().mockResolvedValue({}),
+    correctPassword: jest.fn().mockImplementation((candidatePassword, userPassword) => {
+      return Promise.resolve(candidatePassword === userPassword);
+    }),
+    // Add any other methods that your code uses
+  };
+});
 jest.mock('../utils/postUtils');
 jest.mock('mongoose');
 
