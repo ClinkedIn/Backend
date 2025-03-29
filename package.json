@@ -4,12 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "devStart": "nodemon server.js",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch"
-  },
-  "jest": {
-    "testEnvironment": "node"
+    "devStart": "nodemon server.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +18,7 @@
   "homepage": "https://github.com/ClinkedIn/Backend#readme",
   "dependencies": {
     "axios": "^1.8.3",
+    "backend": "file:",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",
