@@ -16,10 +16,10 @@ const notificationTemplate = {
     };
     return message;
   },
-  comment: (sendingUser) => {
+  comment: (sendingUser, comment) => {
     const message = {
       title: `${sendingUser.firstName} commented on your post`,
-      body: `Tap to view the comment`,
+      body: comment,
     };
     return message;
   },
@@ -117,7 +117,12 @@ const sendNotification = async (
       return;
     }
     let messageStr = {};
-    if (subject === "reaction") {
+    if (subject === "comment") {
+      messageStr = notificationTemplate[subject](
+        sendingUser,
+        resource.commentContent
+      );
+    } else if (subject === "reaction") {
       messageStr = notificationTemplate[subject](sendingUser, reactionType);
     } else if (subject === "chatMessage") {
       messageStr = notificationTemplate[subject](sendingUser, chatMessage);
@@ -132,14 +137,16 @@ const sendNotification = async (
       content: messageStr.body,
       resourceId: resource.id,
     });
-    const fcmToken = user.fcmToken;
-    if (!fcmToken) {
+
+    const fcmTokens = user.fcmToken;
+    if (!fcmTokens || fcmTokens.length === 0) {
       console.error(
-        "FCM token not found for user:",
+        "FCM tokens not found for user:",
         recievingUser.firstName + " " + recievingUser.lastName
       );
       return;
     }
+
     const message = {
       notification: {
         title: messageStr.title,
@@ -149,15 +156,24 @@ const sendNotification = async (
         subject: subject,
         resourceId: resource.id,
       },
-      token: fcmToken,
+      tokens: fcmTokens,
     };
+
     getMessaging()
-      .send(message)
+      .sendEachForMulticast(message)
       .then((response) => {
-        console.log("Successfully sent message:", response);
+        if (response.failureCount > 0) {
+          const failedTokens = [];
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              failedTokens.push(fcmTokens[idx]);
+            }
+          });
+          console.log("List of tokens that caused failures:", failedTokens);
+        }
       })
       .catch((error) => {
-        console.error("Error sending message:", error);
+        console.error("Error sending messages:", error);
       });
   } catch (err) {
     console.error("Error creating notification:", err);

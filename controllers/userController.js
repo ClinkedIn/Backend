@@ -24,8 +24,14 @@ const createSendToken = (user, statusCode, res, responseMessage) => {
 const registerUser = async (req, res) => {
   try {
     // get registration data
-    let { firstName, lastName, email, password, recaptchaResponseToken } =
-      req.body;
+    let {
+      firstName,
+      lastName,
+      email,
+      password,
+      recaptchaResponseToken,
+      fcmToken,
+    } = req.body;
     if (
       !firstName ||
       !lastName ||
@@ -73,6 +79,11 @@ const registerUser = async (req, res) => {
       await userModel.deleteOne({ email });
     }
 
+    const fcmTokens = [];
+    if (fcmToken) {
+      fcmTokens.push(fcmToken);
+    }
+
     //Create new User
     const newUser = await userModel.create({
       firstName,
@@ -80,6 +91,7 @@ const registerUser = async (req, res) => {
       email,
       password,
       isConfirmed: false,
+      fcmToken: fcmTokens,
     });
 
     // remove get confirm-email end point and directly send from here ✅
@@ -172,7 +184,7 @@ const confirmEmail = async (req, res) => {
 
 const googleLogin = async (req, res) => {
   const authHeader = req.headers.authorization;
-
+  const { fcmToken } = req.body;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -183,25 +195,37 @@ const googleLogin = async (req, res) => {
     const email = decoded.email;
     const firebaseUid = decoded.uid;
     const name = decoded.name;
+    const firstName = name.split(" ")[0];
+    const lastName = name.split(" ")[1] || "Na";
     const picture = decoded.picture;
     const emailVerified = decoded.email_verified;
     const googleUid = decoded.firebase?.identities?.["google.com"]?.[0];
     let user = await userModel.findOne({ email });
     if (!user || !user.isActive) {
       await userModel.findOneAndDelete({ email });
+      const fcmTokens = [];
+      if (fcmToken) {
+        fcmTokens.push(fcmToken);
+      }
       const newUser = await userModel.create({
-        firstName: name,
-        lastName: name,
+        firstName,
+        lastName,
         email,
         password: undefined,
-        isEmailConfirmed: true,
+        isConfirmed: true,
         googleId: googleUid,
+        fcmToken: fcmTokens,
       });
       return createSendToken(newUser, 201, res, "Account created sucessfully");
     }
 
     if (user.googleId === null) {
       user.googleId = googleUid;
+      const fcmTokens = user.fcmToken;
+      if (fcmToken && !user.fcmToken.includes(fcmToken)) {
+        fcmTokens.push(fcmToken);
+        user.fcmToken = fcmTokens;
+      }
       await user.save();
       return createSendToken(user, 200, res, "Logged in successfully");
     }
@@ -209,7 +233,12 @@ const googleLogin = async (req, res) => {
     if (user.googleId != googleUid) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-
+    const fcmTokens = user.fcmToken;
+    if (fcmToken && !user.fcmToken.includes(fcmToken)) {
+      fcmTokens.push(fcmToken);
+      user.fcmToken = fcmTokens;
+      await user.save();
+    }
     createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
     console.error("Error verifying Firebase token:", error);
@@ -219,7 +248,7 @@ const googleLogin = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
 
     if (!email || !password) {
       return res
@@ -246,6 +275,12 @@ const login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ message: "wrong password" });
     }
+    const fcmTokens = user.fcmToken;
+    if (fcmToken && !fcmTokens.includes(fcmToken)) {
+      fcmTokens.push(fcmToken);
+      user.fcmToken = fcmTokens;
+      await user.save();
+    }
 
     createSendToken(user, 200, res, "Logged in successfully");
   } catch (error) {
@@ -259,6 +294,13 @@ const login = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
+    const user = await userModel.findById(req.user.id);
+    const fcmToken = req.body.fcmToken;
+    if (fcmToken) {
+      const fcmTokens = user.fcmToken.filter((token) => token !== fcmToken);
+      user.fcmToken = fcmTokens;
+      await user.save();
+    }
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: true,
@@ -285,7 +327,10 @@ const logout = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    await userModel.findByIdAndUpdate(req.user.id, { isActive: false });
+    const user = await userModel.findById(req.user.id);
+    user.fcmToken = [];
+    user.isActive = false;
+    await user.save();
     res.status(204).json({ status: "success", data: null });
   } catch (error) {
     console.log(error);
