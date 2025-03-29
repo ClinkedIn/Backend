@@ -1,24 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chatController');
-
+const { protect, mockVerifyToken } = require('../middlewares/auth');
 
 // Routes for creating and getting chats.
 router.route('/direct-chat')
-    .post( chatController.createDirectChat)
+    .post(mockVerifyToken, chatController.createDirectChat)
 
 router.route('/direct-chat/:chatId')
-    .get(chatController.getDirectChat)
-    .put(chatController.updateDirectChat)
+    .get(mockVerifyToken, chatController.getDirectChat)
+    .put(mockVerifyToken, chatController.updateDirectChat)
 
 router.route('/group-chat')
-    .post(chatController.createGroupChat)
+    .post(mockVerifyToken, chatController.createGroupChat)
 
 router.route('group-chat/:groupId')
-    .get(chatController.getGroupChat)
-    .put(chatController.updateGroupChat);
+    .get(mockVerifyToken, chatController.getGroupChat)
+    .put(mockVerifyToken, chatController.updateGroupChat);
+
+router.route('/mark-as-read/:chatId')
+    .patch(mockVerifyToken, chatController.markChatAsRead);
 
 router.route('/all-chats')
-    .get(chatController.getAllChats);
+    .get(mockVerifyToken, chatController.getAllChats);
+
 
 module.exports = router;

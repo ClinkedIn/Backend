@@ -5,12 +5,17 @@ const { protect, mockVerifyToken } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
 router.route('/')
-    .post(mockVerifyToken, upload.array('files', 10), messageController.createMessage);
+    .post(mockVerifyToken, upload.array('files', 10), messageController.sendMessage);
 
 router.route('/:messageId')
-    .get(mockVerifyToken, messageController.getMessage)
     .delete(mockVerifyToken, messageController.deleteMessage)
     .patch(mockVerifyToken, messageController.editMessage);
+
+router.route('/unread-count')
+    .get(mockVerifyToken, messageController.getTotalUnreadCount);
+
+router.route('/block-user/:userId')
+    .patch(mockVerifyToken, messageController.blockUserFromMessaging);
 
 module.exports = router;
 
