@@ -8,8 +8,24 @@ const mongoose = require('mongoose');
 const {validateGroupChatData} = require('../utils/chat');
 
 const createDirectChat = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const userId = req.user.id
+    }
+    catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error creating direct chat:', err);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
 };
+
+/*
+@desc Create a group chat
+@route POST /chats/group-chat
+@access Private
+*/
 
 const createGroupChat = async (req, res) => {
     try {
@@ -45,6 +61,11 @@ const createGroupChat = async (req, res) => {
 };
 
 
+/*
+@desc Get a direct chat by ID
+@route GET /chats/direct-chat/:chatId
+@access Private
+*/
 const getDirectChat = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -202,6 +223,12 @@ const getDirectChat = async (req, res) => {
         }
     }
 };
+
+/*
+@desc Get all chats for a user
+@route GET /chats/all-chats
+@access Private
+*/
 
 const getAllChats = async (req, res) => {
     try {
@@ -435,6 +462,13 @@ const updateGroupChat = async (req, res) => {
     res.status(200).json({ message: 'Dummy data' });
 };
 
+
+/*
+@desc Mark a chat as read
+@route PATCH /chats/mark-as-read/:chatId
+@access Private
+*/
+
 const markChatAsRead = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -468,7 +502,13 @@ const markChatAsRead = async (req, res) => {
     }
 }
 
-const markAsUnread = async (req, res) => {
+/*
+@desc Mark a chat as unread
+@route PATCH /chats/mark-as-unread/:chatId
+@access Private
+*/
+
+const markChatAsUnread = async (req, res) => {
     try {
         const userId = req.user.id;
         const chatId = req.params.chatId;
@@ -513,5 +553,5 @@ module.exports = {
     updateDirectChat,
     updateGroupChat,
     markChatAsRead,
-    markAsUnread
+    markChatAsUnread
 };

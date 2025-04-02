@@ -3379,202 +3379,787 @@
 /**
  * @swagger
  * tags:
- *   - name: Chats
- *     description: API endpoints for managing chats
+ *   name: Chats
+ *   description: Chat management APIs
  */
 
 /**
  * @swagger
- * /chats/direct-chat:
+ * /api/chats/group-chat:
  *   post:
- *     summary: Create a new direct chat
+ *     summary: Create a new group chat
+ *     description: Creates a new group chat with specified members and the authenticated user as admin
  *     tags: [Chats]
- *     description: Create a new direct chat between two users
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - groupName
+ *               - goupMembers
+ *             properties:
+ *               groupName:
+ *                 type: string
+ *                 description: Name of the group chat
+ *               goupMembers:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of user IDs to add to the group
+ *             example:
+ *               groupName: "Project Team"
+ *               goupMembers: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
  *     responses:
  *       201:
- *        description: Direct chat created successfully
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/DirectChat'
+ *         description: Group chat created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group chat created successfully"
+ *                 groupChat:
+ *                   example:
+ *                      _id: "60d21b4667d0d8992e610c87"
+ *                      groupName: "Project Team"
+ *                      members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *                      messages: []
+ *                      isActive: true
+ *                      createdAt: "2023-10-01T12:00:00Z"
+ *                      updatedAt: "2023-10-01T12:00:00Z"
+ *                      
  *       400:
- *         description: Bad request, invalid input
+ *         description: Invalid input data or validation error
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User not found
  *       500:
- *         description: Internal server error
+ *         description: Internal server error or failed to create group chat
  */
 
 /**
  * @swagger
- * /chats/direct-chat/{chatId}:
+ * /api/chats/direct-chat/{chatId}:
  *   get:
- *    summary: Get a direct chat
- *    tags: [Chats]
- *    description: Get a direct chat by its ID
- *    security:
- *      - BearerAuth: []
- *    parameters:
- *      - in: path
- *        name: chatId
- *        required: true
- *        schema:
- *          type: string
- *          description: The direct chat ID
- *    responses:
- *     200:
- *      description: Direct chat retrieved successfully
- *      content:
- *       application/json:
- *        schema:
- *         $ref: '#/components/schemas/DirectChat'
- *    401:
- *     description: Unauthorized, invalid or missing token
- *    404:
- *     description: Chat not found
- *    500:
- *     description: Internal server error
- *
- *   put:
- *     summary: Edit a direct chat
+ *     summary: Get a direct chat by ID
+ *     description: Retrieves a direct chat by its ID, including message history and other user details. Also marks messages as read for the authenticated user.
  *     tags: [Chats]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: chatId
  *         required: true
  *         schema:
  *           type: string
- *           description: The direct chat ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *           format: uuid
+ *         description: ID of the direct chat to retrieve
  *     responses:
  *       200:
- *         description: Chat updated successfully
+ *         description: Direct chat retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DirectChat'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 chat:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the chat
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         format: uuid
+ *                       description: Array of user IDs in the chat
+ *                     conversationHistory:
+ *                       type: array
+ *                       description: Messages grouped by date
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             example: "Mar 15, 2025"
+ *                           messages:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/MessageWithFormatting'
+ *                     rawMessages:
+ *                       type: array
+ *                       description: Flat list of all messages sorted chronologically
+ *                       items:
+ *                         $ref: '#/components/schemas/MessageWithFormatting'
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 otherUser:
+ *                   type: object
+ *                   description: Details of the other user in the chat
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       format: uuid
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     profilePicture:
+ *                       type: string
+ *                       format: uri
+ *                     headLine:
+ *                       type: string
+ *                 chatInfo:
+ *                   type: object
+ *                   properties:
+ *                     chatType:
+ *                       type: string
+ *                       example: "direct"
+ *                     lastActive:
+ *                       type: string
+ *                       format: date-time
+ *                     unreadCount:
+ *                       type: integer
+ *                       example: 0
+ *       400:
+ *         description: Invalid chat ID format
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       403:
+ *         description: Not authorized to access this chat
  *       404:
- *         description: Chat not found
+ *         description: Chat or user not found
+ *       500:
+ *         description: Internal server error or invalid chat structure
  */
 
 /**
  * @swagger
- * /chats/group-chat:
- *   post:
- *     summary: Create a new chat group
+ * /api/chats/all-chats:
+ *   get:
+ *     summary: Get all chats for the authenticated user
+ *     description: Returns all direct and group chats for the authenticated user, with preview information including latest message and unread counts.
  *     tags: [Chats]
- *     description: Create a new chat group between many users
  *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *       - bearerAuth: []
  *     responses:
- *       201:
- *        description: Group chat created successfully
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/GroupChat'
- *       400:
- *         description: Bad request, invalid input
+ *       200:
+ *         description: All chats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 totalChats:
+ *                   type: integer
+ *                   description: Total number of chats
+ *                   example: 5
+ *                 totalUnread:
+ *                   type: integer
+ *                   description: Total number of unread messages across all chats
+ *                   example: 8
+ *                 chats:
+ *                   type: array
+ *                   description: List of all chats sorted by last activity (most recent first)
+ *                   items:
+ *                     oneOf:
+ *                       - $ref: '#/components/schemas/DirectChatPreview'
+ *                       - $ref: '#/components/schemas/GroupChatPreview'
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal server error
  */
 
 /**
  * @swagger
- * /chats/group-chat/{chatId}:
+ * /api/chats/group/{chatId}:
  *   get:
- *    summary: Get a group chat
- *    tags: [Chats]
- *    description: Get a group chat by its ID
- *    security:
- *      - BearerAuth: []
- *    parameters:
- *      - in: path
- *        name: chatId
- *        required: true
- *        schema:
- *          type: string
- *          description: Chat ID
- *    responses:
- *     200:
- *      description: Group chat retrieved successfully
- *      content:
- *       application/json:
- *        schema:
- *         $ref: '#/components/schemas/GroupChat'
- *    401:
- *     description: Unauthorized, invalid or missing token
- *    404:
- *     description: Chat not found
- *    500:
- *     description: Internal server error
- *
- *   put:
- *     summary: Edit a chat group
+ *     summary: Get a group chat by ID
+ *     description: Retrieves a group chat by its ID, including message history and member details
  *     tags: [Chats]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
- *     - in: path
- *       name: chatId
- *       required: true
- *       schema:
- *         type: string
- *         description: The chat group ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the group chat to retrieve
  *     responses:
  *       200:
- *         description: Chat updated successfully
+ *         description: Group chat retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/GroupChat'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Chat not found
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
  */
 
 /**
  * @swagger
- * /chats/all-chats:
- *   get:
- *     summary: Get all chats for a user
+ * /api/chats/direct/{chatId}:
+ *   put:
+ *     summary: Update a direct chat
+ *     description: Updates direct chat settings such as muting, archiving or starring
  *     tags: [Chats]
- *     description: Retrieve all chats for a user
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the direct chat to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               muted:
+ *                 type: boolean
+ *                 description: Whether the chat is muted
+ *               archived:
+ *                 type: boolean
+ *                 description: Whether the chat is archived
+ *               starred:
+ *                 type: boolean
+ *                 description: Whether the chat is starred
  *     responses:
  *       200:
- *         description: List of chats retrieved successfully
+ *         description: Direct chat updated successfully
  *         content:
  *           application/json:
  *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/group/{chatId}:
+ *   put:
+ *     summary: Update a group chat
+ *     description: Updates group chat settings or details such as name, members, or user-specific settings
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the group chat to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: New name for the group
+ *               muted:
+ *                 type: boolean
+ *                 description: Whether the chat is muted for the user
+ *               archived:
+ *                 type: boolean
+ *                 description: Whether the chat is archived for the user
+ *               starred:
+ *                 type: boolean
+ *                 description: Whether the chat is starred for the user
+ *     responses:
+ *       200:
+ *         description: Group chat updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/mark-as-read/{chatId}:
+ *   patch:
+ *     summary: Mark a chat as read
+ *     description: Marks all messages in a chat as read for the authenticated user by setting unread count to zero
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the chat to mark as read
+ *     responses:
+ *       200:
+ *         description: Chat marked as read successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Chat marked as read successfully"
+ *       400:
+ *         description: Invalid chat ID format
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User or chat not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/mark-as-unread/{chatId}:
+ *   patch:
+ *     summary: Mark a chat as unread
+ *     description: Marks a chat as unread for the authenticated user by incrementing the unread count
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the chat to mark as unread
+ *     responses:
+ *       200:
+ *         description: Chat marked as unread successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Chat marked as unread successfully"
+ *       400:
+ *         description: Invalid chat ID format
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User or chat not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DirectChat:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         members:
+ *           type: array
+ *           description: Array of user IDs who are members of this chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         messages:
+ *           type: array
+ *           description: Array of message IDs in this chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c87"
+ *         members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *         messages: ["60d21b4667d0d8992e610c88", "60d21b4667d0d8992e610c89"]
+ *         createdAt: "2025-03-15T10:00:00.000Z"
+ *         updatedAt: "2025-03-15T14:30:00.000Z"
+ *
+ *     GroupChat:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the group chat
+ *         name:
+ *           type: string
+ *           description: Name of the group chat
+ *         members:
+ *           type: array
+ *           description: Array of user IDs who are members of this group
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         messages:
+ *           type: array
+ *           description: Array of message IDs in this group chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the group chat was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the group chat was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c90"
+ *         name: "Project Team"
+ *         members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86", "60d21b4667d0d8992e610c87"]
+ *         messages: ["60d21b4667d0d8992e610c91", "60d21b4667d0d8992e610c92"]
+ *         createdAt: "2025-03-15T10:00:00.000Z"
+ *         updatedAt: "2025-03-15T14:30:00.000Z"
+ *
+ *     Message:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the message
+ *         sender:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             firstName:
+ *               type: string
+ *             lastName:
+ *               type: string
+ *             profilePicture:
+ *               type: string
+ *               format: uri
+ *         messageText:
+ *           type: string
+ *           description: Text content of the message
+ *         messageAttachment:
+ *           type: array
+ *           description: Array of attachment URLs
+ *           items:
+ *             type: string
+ *             format: uri
+ *         replyTo:
+ *           type: object
+ *           description: Reference to the message being replied to (if any)
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             messageText:
+ *               type: string
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the message was sent
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the message was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c88"
+ *         sender:
+ *           _id: "60d21b4667d0d8992e610c85"
+ *           firstName: "John"
+ *           lastName: "Doe"
+ *           profilePicture: "https://example.com/profiles/john.jpg"
+ *         messageText: "Hello, how are you?"
+ *         messageAttachment: []
+ *         createdAt: "2025-03-15T10:05:00.000Z"
+ *         updatedAt: "2025-03-15T10:05:00.000Z"
+ *
+ *     MessageWithFormatting:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Message'
+ *         - type: object
+ *           properties:
+ *             isMine:
+ *               type: boolean
+ *               description: Whether the message was sent by the authenticated user
+ *             formattedTime:
+ *               type: string
+ *               description: Formatted time string (e.g., "10:05 AM")
+ *               example: "10:05 AM"
+ *             formattedDate:
+ *               type: string
+ *               description: Formatted date string (e.g., "Mar 15, 2025")
+ *               example: "Mar 15, 2025"
+ *
+ *     DirectChatPreview:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         chatType:
+ *           type: string
+ *           enum: [direct]
+ *           description: Type of chat
+ *         name:
+ *           type: string
+ *           description: Display name for the chat (other user's name)
+ *         participants:
+ *           type: object
+ *           properties:
+ *             count:
+ *               type: integer
+ *               example: 2
+ *               description: Number of participants (always 2 for direct chats)
+ *             otherUser:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *                 headLine:
+ *                   type: string
+ *         unreadCount:
+ *           type: integer
+ *           description: Number of unread messages in this chat
+ *         lastMessage:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *             messageText:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *             formattedTime:
+ *               type: string
+ *               example: "10:05 AM"
+ *             isMine:
+ *               type: boolean
+ *         lastActive:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last active
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c87"
+ *         chatType: "direct"
+ *         name: "John Doe"
+ *         participants:
+ *           count: 2
+ *           otherUser:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *             headLine: "Software Engineer"
+ *         unreadCount: 3
+ *         lastMessage:
+ *           _id: "60d21b4667d0d8992e610c88"
+ *           sender:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *           messageText: "Hello, how are you?"
+ *           createdAt: "2025-03-15T10:05:00.000Z"
+ *           formattedTime: "10:05 AM"
+ *           isMine: false
+ *         lastActive: "2025-03-15T10:05:00.000Z"
+ *         createdAt: "2025-03-15T09:00:00.000Z"
+ *
+ *     GroupChatPreview:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         chatType:
+ *           type: string
+ *           enum: [group]
+ *           description: Type of chat
+ *         name:
+ *           type: string
+ *           description: Name of the group chat
+ *         participants:
+ *           type: object
+ *           properties:
+ *             count:
+ *               type: integer
+ *               description: Number of participants in the group
+ *             list:
  *               type: array
  *               items:
- *                 oneOf:
- *                   - $ref: '#/components/schemas/DirectChat'
- *                   - $ref: '#/components/schemas/GroupChat'
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: No chats found
- *       500:
- *         description: Internal server error
+ *                 type: string
+ *                 format: uuid
+ *               description: List of participant user IDs
+ *         unreadCount:
+ *           type: integer
+ *           description: Number of unread messages in this chat
+ *         lastMessage:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *             messageText:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *             formattedTime:
+ *               type: string
+ *               example: "10:05 AM"
+ *             isMine:
+ *               type: boolean
+ *         lastActive:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last active
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c90"
+ *         chatType: "group"
+ *         name: "Project Team"
+ *         participants:
+ *           count: 2
+ *           list: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *         unreadCount: 10
+ *         lastMessage:
+ *           _id: "60d21b4667d0d8992e610c91"
+ *           sender:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *           messageText: "Team meeting tomorrow at 10 AM"
+ *           createdAt: "2025-03-15T15:30:00.000Z"
+ *           formattedTime: "3:30 PM"
+ *           isMine: false
+ *         lastActive: "2025-03-15T15:30:00.000Z"
+ *         createdAt: "2025-03-10T09:00:00.000Z"
  */
 
 // *********************************** jobs APIs ***************************************//

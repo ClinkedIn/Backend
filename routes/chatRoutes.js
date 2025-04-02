@@ -21,6 +21,9 @@ router.route('group-chat/:groupId')
 router.route('/mark-as-read/:chatId')
     .patch(mockVerifyToken, chatController.markChatAsRead);
 
+router.route('/mark-as-unread/:chatId')
+    .patch(mockVerifyToken, chatController.markChatAsUnread);
+
 router.route('/all-chats')
     .get(mockVerifyToken, chatController.getAllChats);
 

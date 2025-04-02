@@ -32,52 +32,6 @@ const validateSkillName = (skillName) => {
     return { valid: true };
 };
 
-// Helper function to validate endorsements
-/*
-const validateEndorsements = async (endorsements, userId) => {
-    if (!Array.isArray(endorsements)) {
-        throw new Error('Endorsements must be an array');
-    }
-
-    if (endorsements.includes(userId)) {
-        return { valid: false, message: 'Users cannot endorse themselves' };
-    }
-
-    // Check for duplicate endorsements
-    const duplicates = endorsements.filter((id, index) => endorsements.indexOf(id) !== index);
-    if (duplicates.length > 0) {
-        return { valid: false, message: 'Duplicate endorsements are not allowed', duplicates };
-    }
-
-    const validObjectIds = endorsements.filter(id => mongoose.Types.ObjectId.isValid(id));
-
-    //if (validObjectIds.length === 0) {
-    //    return { valid: false, message: 'No valid MongoDB ObjectIds provided', endorsements };
-    //}
-
-    try {
-        const existingUsers = await userModel.find({ _id: { $in: validObjectIds } }, '_id');
-
-        if (!existingUsers || existingUsers.length === 0) {
-            return { valid: false, message: 'No matching users found in database', endorsements };
-        }
-
-        const existingUserIds = existingUsers.map(user => user._id.toString());
-
-        // Check for invalid user IDs
-        const invalidUserIds = validObjectIds.filter(id => !existingUserIds.includes(id));
-        if (invalidUserIds.length > 0) {
-            return { valid: false, message: 'Some endorsement user IDs are invalid', invalidUserIds };
-        }
-
-        return { valid: true, endorsements: existingUserIds };
-    } catch (error) {
-        console.error('MongoDB Query Error:', error);
-        throw new Error('Error fetching endorsements from MongoDB');
-    }
-};
-*/
-  
 const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
     // Remove experienceIndex from skills that are no longer associated
     for (const skillName of oldSkills) {
