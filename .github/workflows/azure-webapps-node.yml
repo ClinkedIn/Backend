@@ -55,9 +55,6 @@ jobs:
 
     - name: list all files
       run: ls -al
-      
-    - name: List files in Backend directory
-      run: ls -al Backend/Backend/
 
       
     - name: 'Deploy to Azure WebApp'
