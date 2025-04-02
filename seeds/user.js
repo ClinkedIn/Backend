@@ -170,15 +170,6 @@ async function createRandomUsers() {
                 jobIds, 
                 faker.number.int({ min: 0, max: 3 })
             ),
-            appliedJobs: faker.helpers.arrayElements(
-                jobIds, 
-                faker.number.int({ min: 0, max: 2 })
-            ).map(jobId => ({
-                jobId,
-                status: faker.helpers.arrayElement([
-                    "pending", "viewed", "rejected", "accepted"
-                ])
-            })),
             sentConnectionRequests: faker.helpers.arrayElements(
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 3 })

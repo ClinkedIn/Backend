@@ -4305,9 +4305,12 @@
  * @swagger
  * /jobs/{jobId}/apply:
  *   post:
- *     summary: Apply for a job
+ *     summary: Submit an application for a job
  *     tags: [Jobs]
- *     description: Submit an application for a specific job posting
+ *     description: |
+ *       Apply for a job by submitting contact information and answers to screening questions.
+ *       Applications may be automatically accepted or rejected based on screening question
+ *       answers and the job's configuration. Requires user authentication.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -4316,33 +4319,132 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the job to apply for
+ *           format: ObjectId
+ *         description: ID of the job to apply for
+ *         example: "65fb2a8e7c5721f123456789"
  *     requestBody:
- *       description: Applicant's user ID
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - contactEmail
  *             properties:
- *               userId:
+ *               contactEmail:
  *                 type: string
- *                 description: The ID of the user applying for the job
+ *                 format: email
+ *                 description: Email address to use for this application
+ *                 example: "john.doe@example.com"
+ *               contactPhone:
+ *                 type: string
+ *                 description: Phone number to use for this application (optional)
+ *                 example: "+1 (555) 123-4567"
+ *               answers:
+ *                 type: array
+ *                 description: Answers to the job's screening questions
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - question
+ *                     - answer
+ *                   properties:
+ *                     question:
+ *                       type: string
+ *                       description: The exact question text matching one of the job's screening questions
+ *                       example: "Background Check"
+ *                     answer:
+ *                       type: string
+ *                       description: Applicant's answer to the question
+ *                       example: "Yes, I consent to a background check"
  *     responses:
  *       200:
  *         description: Application submitted successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Application submitted successfully"
+ *                   description: Success message or auto-rejection message
+ *                 applicationStatus:
+ *                   type: string
+ *                   enum: [pending, rejected]
+ *                   example: "pending"
+ *                   description: Status of the application after submission
+ *                 applicationId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456795"
+ *                   description: ID of the created application record
+ *                 jobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *                   description: ID of the job applied to
+ *                 reason:
+ *                   type: string
+ *                   example: "Insufficient work experience. Required: 3 years"
+ *                   description: Reason for auto-rejection if application was rejected
  *       400:
- *         description: Bad request, invalid input or user already applied
+ *         description: Bad request - Missing required fields, invalid job ID, or already applied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Contact email is required for job applications"
+ *                   description: Error message explaining the issue
+ *                 alreadyApplied:
+ *                   type: boolean
+ *                   example: true
+ *                   description: Indicator that user has already applied (when applicable)
+ *                 applicationId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456795"
+ *                   description: ID of existing application (when already applied)
+ *                 applicationStatus:
+ *                   type: string
+ *                   example: "pending"
+ *                   description: Status of existing application (when already applied)
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
  *       404:
- *         description: Job not found
+ *         description: Job or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
  *       500:
- *         description: Internal server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to apply for job"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
 
 /**
@@ -10577,4 +10679,1011 @@
  *                 error:
  *                   type: string
  *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /search/jobs:
+ *   get:
+ *     summary: Search for jobs with advanced filters
+ *     tags: [Search]
+ *     description: |
+ *       Search for jobs using multiple filter criteria including keyword search, location,
+ *       industry, company, and minimum work experience requirements. Results are sorted
+ *       by newest first and include company details.
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: |
+ *           General search term that matches against job title, description, industry, 
+ *           workplace type, job type, or company industry
+ *         example: "developer"
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Location search term to filter jobs by location
+ *         example: "New York"
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter jobs by specific industry (exact match)
+ *         example: "Technology"
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: MongoDB ObjectId of company to filter jobs by
+ *         example: "65fb2a8e7c5721f123456700"
+ *       - in: query
+ *         name: minExperience
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum years of work experience required
+ *         example: 3
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Jobs found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Jobs found successfully"
+ *                   description: Success message or no results message
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier for the job
+ *                       company:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456700"
+ *                             description: Company ID
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Corp"
+ *                             description: Company name
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                             description: Company logo URL
+ *                           industry:
+ *                             type: string
+ *                             example: "Technology"
+ *                             description: Company industry
+ *                           location:
+ *                             type: string
+ *                             example: "San Francisco, CA"
+ *                             description: Company location
+ *                       title:
+ *                         type: string
+ *                         example: "Senior Software Engineer"
+ *                         description: Job title
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                         description: Job industry
+ *                       workplaceType:
+ *                         type: string
+ *                         enum: ["Onsite", "Hybrid", "Remote"]
+ *                         example: "Hybrid"
+ *                         description: Job workplace type
+ *                       jobLocation:
+ *                         type: string
+ *                         example: "New York, NY"
+ *                         description: Job location
+ *                       jobType:
+ *                         type: string
+ *                         enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                         example: "Full Time"
+ *                         description: Job type
+ *                       description:
+ *                         type: string
+ *                         example: "We are seeking an experienced software engineer..."
+ *                         description: Job description
+ *                       applicationEmail:
+ *                         type: string
+ *                         example: "jobs@techcorp.com"
+ *                         description: Email for job applications
+ *                       screeningQuestions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question title
+ *                             specification:
+ *                               type: string
+ *                               example: "Years of experience in software development"
+ *                               description: Additional details about the question
+ *                             mustHave:
+ *                               type: boolean
+ *                               example: true
+ *                               description: Whether this is a required qualification
+ *                         description: Job screening questions (without ideal answers)
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: Job posting date
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: Last update date
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalJobs:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of jobs matching the search criteria
+ *                     totalPages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     q:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "developer"
+ *                       description: General search term used
+ *                     location:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "New York"
+ *                       description: Location filter used
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Technology"
+ *                       description: Industry filter used
+ *                     companyId:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "65fb2a8e7c5721f123456700"
+ *                       description: Company filter used
+ *                     minExperience:
+ *                       type: number
+ *                       nullable: true
+ *                       example: 3
+ *                       description: Minimum experience filter used
+ *       400:
+ *         description: Bad request - invalid search parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid companyId format"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/save:
+ *   post:
+ *     summary: Save a job for the authenticated user
+ *     tags: [Jobs]
+ *     description: Adds a job to the user's saved jobs list for easy reference and later application
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: The ID of the job to save
+ *         example: "65fb2a8e7c5721f123456789"
+ *     responses:
+ *       200:
+ *         description: Job saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job saved successfully"
+ *                 savedJobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid job ID format or job already saved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This job is already in your saved list"
+ *                 alreadySaved:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Job or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to save job"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ *   delete:
+ *     summary: Remove a job from saved jobs list
+ *     tags: [Jobs]
+ *     description: Removes a previously saved job from the user's saved jobs list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: The ID of the job to remove from saved list
+ *         example: "65fb2a8e7c5721f123456789"
+ *     responses:
+ *       200:
+ *         description: Job removed from saved list successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job removed from saved list successfully"
+ *                 removedJobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid job ID format or job not in saved list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This job is not in your saved list"
+ *                 alreadyRemoved:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove job from saved list"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ *
+ * /jobs/saved:
+ *   get:
+ *     summary: Get all saved jobs for the authenticated user
+ *     tags: [Jobs, Users]
+ *     description: Retrieves a paginated list of jobs that the authenticated user has saved, including company details
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Saved jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Saved jobs retrieved successfully"
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       title:
+ *                         type: string
+ *                         example: "Senior Software Engineer"
+ *                       company:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456700"
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Corp"
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                           industry:
+ *                             type: string
+ *                             example: "Technology"
+ *                           location:
+ *                             type: string
+ *                             example: "San Francisco, CA"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       workplaceType:
+ *                         type: string
+ *                         enum: ["Onsite", "Hybrid", "Remote"]
+ *                         example: "Hybrid"
+ *                       jobLocation:
+ *                         type: string
+ *                         example: "New York, NY"
+ *                       jobType:
+ *                         type: string
+ *                         enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                         example: "Full Time"
+ *                       description:
+ *                         type: string
+ *                         example: "We are seeking an experienced software engineer..."
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalJobs:
+ *                       type: number
+ *                       example: 25
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve saved jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/my-applications:
+ *   get:
+ *     summary: Get all job applications for the authenticated user
+ *     tags: [Jobs, Users]
+ *     description: |
+ *       Retrieve all job applications submitted by the authenticated user, with
+ *       status updates and job details. Applications are sorted by most recent first
+ *       and can be filtered by status.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, viewed, rejected, accepted]
+ *         description: Filter applications by status (optional)
+ *         example: "pending"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User's job applications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications retrieved successfully"
+ *                   description: Success message or no results message
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       applicationId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for the application
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, viewed, rejected, accepted]
+ *                         example: "pending"
+ *                         description: Current status of the application
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: When the application was submitted
+ *                       job:
+ *                         type: object
+ *                         properties:
+ *                           jobId:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456789"
+ *                             description: ID of the job applied to
+ *                           title:
+ *                             type: string
+ *                             example: "Senior Software Engineer"
+ *                             description: Job title
+ *                           workplaceType:
+ *                             type: string
+ *                             enum: [Onsite, Hybrid, Remote]
+ *                             example: "Remote"
+ *                             description: Type of workplace arrangement
+ *                           jobLocation:
+ *                             type: string
+ *                             example: "New York, NY"
+ *                             description: Location of the job
+ *                           jobType:
+ *                             type: string
+ *                             enum: [Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship]
+ *                             example: "Full Time"
+ *                             description: Type of employment
+ *                           company:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: ObjectId
+ *                                 example: "65fb2a8e7c5721f123456700"
+ *                                 description: ID of the company
+ *                               name:
+ *                                 type: string
+ *                                 example: "Tech Corp"
+ *                                 description: Name of the company
+ *                               logo:
+ *                                 type: string
+ *                                 example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                                 description: URL to company logo
+ *                               industry:
+ *                                 type: string
+ *                                 example: "Technology"
+ *                                 description: Industry sector
+ *                               location:
+ *                                 type: string
+ *                                 example: "San Francisco, CA"
+ *                                 description: Company location
+ *                       contactEmail:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                         description: Contact email used for this application
+ *                       screeningAnswers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question
+ *                             answer:
+ *                               type: string
+ *                               example: "5 years"
+ *                               description: Applicant's answer
+ *                         description: Answers provided to screening questions
+ *                       rejectionReason:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "The position has been filled"
+ *                         description: Reason for rejection if application was rejected
+ *                       autoRejected:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the application was automatically rejected
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 12
+ *                       description: Total number of applications matching the filter
+ *                     totalPages:
+ *                       type: number
+ *                       example: 2
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "all"
+ *                       description: Status filter used in the request
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve job applications"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/apply:
+ *   get:
+ *     summary: Get all applications for a specific job
+ *     tags: [Jobs, Applications]
+ *     description: |
+ *       Returns all applications submitted for a specific job. This endpoint is restricted
+ *       to company representatives who own the job posting. Includes applicant information
+ *       and screening answers.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: ID of the job to get applications for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, viewed, rejected, accepted]
+ *         description: Filter applications by status (optional)
+ *         example: "pending"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Job applications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications retrieved successfully"
+ *                   description: Success message or no results message
+ *                 jobTitle:
+ *                   type: string
+ *                   example: "Senior Software Engineer"
+ *                   description: Title of the job
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       applicationId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for the application
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, viewed, rejected, accepted]
+ *                         example: "pending"
+ *                         description: Current status of the application
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: When the application was submitted
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: When the application was last updated
+ *                       lastViewed:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: When the application was last viewed by the company
+ *                       applicant:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456791"
+ *                             description: Applicant's user ID
+ *                           firstName:
+ *                             type: string
+ *                             example: "John"
+ *                             description: Applicant's first name
+ *                           lastName:
+ *                             type: string
+ *                             example: "Doe"
+ *                             description: Applicant's last name
+ *                           email:
+ *                             type: string
+ *                             example: "john.doe@example.com"
+ *                             description: Applicant's email
+ *                           profilePicture:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                             description: URL to applicant's profile picture
+ *                           headline:
+ *                             type: string
+ *                             example: "Senior Software Engineer"
+ *                             description: Applicant's professional headline
+ *                       contactEmail:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                         description: Email provided for contact in this application
+ *                       contactPhone:
+ *                         type: string
+ *                         example: "+1 (555) 123-4567"
+ *                         description: Phone number provided for contact in this application
+ *                       screeningAnswers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question
+ *                             questionType:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Type of screening question
+ *                             answer:
+ *                               type: string
+ *                               example: "5 years"
+ *                               description: Applicant's answer
+ *                             meetsCriteria:
+ *                               type: boolean
+ *                               nullable: true
+ *                               example: true
+ *                               description: Whether the answer meets the criteria
+ *                       rejectionReason:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Insufficient work experience"
+ *                         description: Reason for rejection if application was rejected
+ *                       autoRejected:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the application was automatically rejected
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of applications matching the criteria
+ *                     totalPages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "all"
+ *                       description: Status filter used in the request
+ *       400:
+ *         description: Bad request - invalid job ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid job ID format"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - User doesn't have permission to view these applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized. You can only view applications for your company's jobs."
+ *       404:
+ *         description: Job not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve job applications"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
