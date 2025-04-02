@@ -52,7 +52,8 @@ jobs:
         
     - name: Print current path
       run: pwd
-      
+    - name: List files in Backend directory
+      run: ls -al ./Backend
     - name: 'Deploy to Azure WebApp'
       id: deploy-to-webapp
       uses: azure/webapps-deploy@v2
