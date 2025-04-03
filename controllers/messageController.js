@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const customError = require('../utils/customError');
 
 const { validateUser, validateChatType, validateChatId, validateMessageContent,
-     validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts, validateMessageOwner, isSenderBlocked} = require('../utils/chat');
+     validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts, validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount} = require('../utils/chat');
 
 
 // Create a new message.
@@ -64,7 +64,7 @@ const sendMessage = async (req, res) => {
         if (type === 'group') {
             await updateGroupUnreadCounts(chatId, sender);
         } else {
-            await updateUnreadCount(receiverId, chatId);
+            await updateUnreadCount(receiverId, chatId, "DirectChat");
         }
 
         // Update the chat with the new message
@@ -113,7 +113,7 @@ const editMessage = async (req, res) => {
             return res.status(404).json({ message: 'Message not found' });
         }
 
-        if (!updatedMessage.isDeleted) {
+        if (updatedMessage.isDeleted) {
             return res.status(400).json({ message: 'Cannot update a deleted message' });
         }
 
@@ -183,7 +183,44 @@ const blockUserFromMessaging = async (req, res) => {
         user.blockedUsers.push(blockedUserId);
         await user.save();
         // return
-        res.status(200).json({ message: 'User blocked successfully', blockedUserId });
+        res.status(200).json({ message: 'User blocked successfully' });
+
+    } catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error blocking user:', err);
+            res.status(500).json({ message: 'Internal server error', error: err.message });
+        }
+    }
+}
+
+const unblockUserFromMessaging = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const blockedUserId = req.params.userId;
+
+        if (!blockedUserId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const blockedUser = userModel.findById(blockedUserId);
+        if (!blockedUser) {
+            return res.status(404).json({ message: 'Blocked user not found' });
+        }
+
+        // Check if the user is already blocked
+        if (!user.blockedUsers.includes(blockedUserId)) {
+            return res.status(400).json({ message: 'User is not blocked' });
+        }
+        // Block the user
+        user.blockedUsers.pull(blockedUserId);
+        await user.save();
+        // return
+        res.status(200).json({ message: 'User unblocked successfully'});
 
     } catch (err) {
         if (err instanceof customError) {
@@ -205,27 +242,8 @@ const getTotalUnreadCount = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
-        // If user has no chats, return 0 as the total unread count
-        const result = await userModel.aggregate([
-            { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-            {
-                $project: {
-                    // If chats array doesn't exist or is empty, use empty array for unwind
-                    chatsForUnwind: { $ifNull: ["$chats", []] }
-                }
-            },
-            { $unwind: { path: "$chatsForUnwind", preserveNullAndEmptyArrays: true } },
-            {
-                $group: {
-                    _id: "$_id",
-                    // If no chats, sum will be 0
-                    totalUnread: { $sum: { $ifNull: ["$chatsForUnwind.unreadCount", 0] } }
-                }
-            }
-        ]);
-        
-        // Get the total unread count (if no chats, will be 0)
-        const totalUnread = result.length > 0 ? result[0].totalUnread : 0;
+        // Use the shared utility function
+        const totalUnread = await calculateTotalUnreadCount(userId);
         
         res.status(200).json({
             message: 'Total unread count fetched successfully',
@@ -247,5 +265,6 @@ module.exports = {
     editMessage,
     deleteMessage,
     blockUserFromMessaging,
+    unblockUserFromMessaging,
     getTotalUnreadCount
 };

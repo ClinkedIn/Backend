@@ -5,11 +5,65 @@ const userModel = require('../models/userModel');
 const customError = require ('../utils/customError');
 const mongoose = require('mongoose');
 
-const {validateGroupChatData} = require('../utils/chat');
+const {validateGroupChatData, calculateTotalUnreadCount} = require('../utils/chat');
 
 const createDirectChat = async (req, res) => {
     try {
         const userId = req.user.id
+        const { otherUserId } = req.body;
+        // Validate user existence
+        const user = await userModel.findById(userId);
+        if (!user) {
+            throw new customError('User not found', 404);
+        }
+        // Validate other user existence
+        const otherUser = await userModel.findById(otherUserId);
+        if (!otherUser) {
+            throw new customError('Other user not found', 404);
+        }
+        // Check if chat already exists
+        const existingChat = await directChatModel.findOne({
+            members: { $all: [userId, otherUserId] }
+        });
+        if (existingChat) {
+            return res.status(200).json({
+                message: 'Chat already exists',
+                chatId: existingChat._id
+            });
+        }
+        // Create new chat
+        const newChat = await directChatModel.create({
+            members: [userId, otherUserId],
+            messages: []
+        });
+        if (!newChat) {
+            throw new customError('Failed to create chat', 500);
+        }
+        // Add chat to both users' chat lists
+        user.chats.push({
+            chatId: newChat._id,
+            chatType: 'DirectChat',
+            unreadCount: 0,
+            lastReadAt: new Date()
+        });
+        await user.save();
+        otherUser.chats.push({
+            chatId: newChat._id,
+            chatType: 'DirectChat',
+            unreadCount: 0,
+            lastReadAt: new Date()
+        });
+        await otherUser.save();
+        // Populate chat members
+        res.status(201).json({
+            message: 'Direct chat created successfully',
+            chat: {
+                _id: newChat._id,
+                members: [userId, otherUserId],
+                createdAt: newChat.createdAt,
+                updatedAt: newChat.updatedAt
+            }
+        });
     }
     catch (err) {
         if (err instanceof customError) {
@@ -29,32 +83,51 @@ const createDirectChat = async (req, res) => {
 
 const createGroupChat = async (req, res) => {
     try {
-        const { groupName, goupMembers } = req.body;
-        const { userId } = req.user.id;
+        const { groupName, groupMembers } = req.body;
+        const userId = req.user.id;
 
-        const user = userModel.findById(userId);
+        const user = await userModel.findById(userId);
         if (!user) {
             throw new customError('User not found', 404);
         }
 
-        validateGroupChatData(groupName, goupMembers);
+        await validateGroupChatData(userId, groupName, groupMembers);
         
-        const groupChat = groupChatModel.create({
+        const groupChat = await groupChatModel.create({
             name: groupName,
-            members: [userId, ...goupMembers],
+            members: [userId, ...groupMembers],
             messages: [],
-        })
+        });
         if (!groupChat) {
             throw new customError('Failed to create group chat', 500);
         }
 
-        res.status(201).json({ message: 'Group chat created successfully', groupChat });
+        // Add chat to all members' chat lists
+        const allMembers = [userId, ...groupMembers];
+        for (const memberId of allMembers) {
+            const member = await userModel.findById(memberId);
+            if (member) {
+                member.chats.push({
+                    chatId: groupChat._id,
+                    chatType: 'ChatGroup', 
+                    unreadCount: 0,
+                    lastReadAt: new Date()
+                });
+                await member.save();
+            }
+        }
+
+        res.status(201).json({ 
+            message: 'Group chat created successfully', 
+            groupChat 
+        });
 
     } catch (err) {
         if (err instanceof customError) {
             res.status(err.statusCode).json({ message: err.message });
         }
         else {
+            console.error('Error creating group chat:', err);  // FIXED: Added error logging
             res.status(500).json({ message: 'Internal server error' });
         }
     }
@@ -232,9 +305,7 @@ const getDirectChat = async (req, res) => {
 
 const getAllChats = async (req, res) => {
     try {
-        console.log("User ID:");
         const userId = req.user.id;
-        console.log("User ID:", userId); // Debug log
         // Find user and validate existence
         const user = await userModel.findById(userId);
         if (!user) {
@@ -243,12 +314,13 @@ const getAllChats = async (req, res) => {
         
         // Get chat references from user model
         const userChats = user.chats || [];
-        console.log("User chats from DB:", userChats); // Debug log
         
         // If user has no chats, return empty array
         if (!userChats || userChats.length === 0) {
             return res.status(200).json({
                 success: true,
+                totalChats: 0,
+                totalUnread: 0,
                 chats: []
             });
         }
@@ -256,7 +328,6 @@ const getAllChats = async (req, res) => {
         // Split chat IDs by type
         const directChatIds = [];
         const groupChatIds = [];
-        console.log("User chat IDs:", userChats); // Debug log
         userChats.forEach(chat => {
             // Make sure chatId is valid before adding to arrays
             if (!chat.chatId) return;
@@ -273,9 +344,6 @@ const getAllChats = async (req, res) => {
             }
         });
         
-        console.log("Direct chat IDs:", directChatIds);
-        console.log("Group chat IDs:", groupChatIds);
-        
         // Query for direct chats
         const directChats = directChatIds.length > 0 ? await directChatModel.find({
             _id: { $in: directChatIds }
@@ -286,7 +354,7 @@ const getAllChats = async (req, res) => {
                 limit: 1 // Only get the latest message for preview
             },
             populate: {
-                path: 'sender', // Ensure this matches your message model field name
+                path: 'sender',
                 select: 'firstName lastName profilePicture'
             }
         }) : [];
@@ -301,25 +369,35 @@ const getAllChats = async (req, res) => {
                 limit: 1 
             },
             populate: {
-                path: 'sender', // Ensure this matches your message model field name
+                path: 'sender',
                 select: 'firstName lastName profilePicture'
             }
         }) : [];
         
-        console.log(`Found ${directChats.length} direct chats and ${groupChats.length} group chats`);
-        
         // Get other users' info for direct chats
         let otherUserIds = [];
         directChats.forEach(chat => {
-            // Safely find other user ID
+            // Check both member structures (new and old)
+            let otherUserId = null;
+            
+            // Handle newer schema with members array
             if (chat.members && Array.isArray(chat.members)) {
-                const otherId = chat.members.find(memberId => 
+                otherUserId = chat.members.find(memberId => 
                     memberId && memberId.toString() !== userId
                 );
-                if (otherId) otherUserIds.push(otherId);
+            }
+            // Handle older schema with firstUser and secondUser
+            else if (chat.firstUser && chat.secondUser) {
+                otherUserId = chat.firstUser.toString() === userId ? 
+                    chat.secondUser : chat.firstUser;
+            }
+            
+            if (otherUserId) {
+                otherUserIds.push(otherUserId);
             }
         });
         
+        // Get other users' details
         const otherUsers = otherUserIds.length > 0 ? 
             await userModel.find({ _id: { $in: otherUserIds } })
                 .select('_id firstName lastName profilePicture headLine') : [];
@@ -333,16 +411,23 @@ const getAllChats = async (req, res) => {
             
             // Find the other user in the chat
             let otherUser = null;
+            let otherUserId = null;
+            
+            // Check both schemas
             if (chat.members && Array.isArray(chat.members)) {
-                const otherUserId = chat.members.find(memberId => 
+                otherUserId = chat.members.find(memberId => 
                     memberId && memberId.toString() !== userId
                 );
-                
-                if (otherUserId) {
-                    otherUser = otherUsers.find(user => 
-                        user._id.toString() === otherUserId.toString()
-                    );
-                }
+            } else if (chat.firstUser && chat.secondUser) {
+                otherUserId = chat.firstUser.toString() === userId ? 
+                    chat.secondUser : chat.firstUser;
+            }
+            
+            if (otherUserId) {
+                otherUser = otherUsers.find(user => 
+                    user && user._id && otherUserId && 
+                    user._id.toString() === otherUserId.toString()
+                );
             }
             
             // Get the latest message (safely)
@@ -380,7 +465,7 @@ const getAllChats = async (req, res) => {
             };
         });
         
-        // Process group chats for response (with similar safe handling)
+        // Process group chats - unchanged
         const processedGroupChats = groupChats.map(chat => {
             const userChatRef = userChats.find(uc => 
                 uc.chatId && chat._id && uc.chatId.toString() === chat._id.toString()
@@ -394,7 +479,6 @@ const getAllChats = async (req, res) => {
                 name: chat.name || 'Group Chat',
                 participants: {
                     count: chat.members ? chat.members.length : 0,
-                    // Just include IDs, not full member objects
                     list: chat.members || [] 
                 },
                 unreadCount: userChatRef ? userChatRef.unreadCount || 0 : 0,
@@ -415,19 +499,16 @@ const getAllChats = async (req, res) => {
             };
         });
         
-        // Combine and safely sort all chats by last activity
         const allChats = [...processedDirectChats, ...processedGroupChats]
-            .filter(chat => chat.lastActive) // Ensure lastActive exists
+            .filter(chat => chat.lastActive)
             .sort((a, b) => {
-                // Safely handle date comparison
                 const dateA = new Date(a.lastActive || 0);
                 const dateB = new Date(b.lastActive || 0);
                 return dateB - dateA;
             });
         
-        // Calculate total unread safely
-        const totalUnread = allChats.reduce((sum, chat) => 
-            sum + (isNaN(chat.unreadCount) ? 0 : chat.unreadCount), 0);
+        // Use the shared utility function instead of client-side calculation
+        const totalUnread = await calculateTotalUnreadCount(userId);
         
         // Return the chats
         res.status(200).json({
@@ -449,7 +530,125 @@ const getAllChats = async (req, res) => {
 
 
 const getGroupChat = async (req, res) => {
-    res.status(200).json({ message: 'Dummy data' });
+    try {
+        const userId = req.user.id;
+        const groupId = req.params.groupId;
+        
+        // Validate groupId format
+        if (!mongoose.Types.ObjectId.isValid(groupId)) {
+            throw new customError('Invalid group ID format', 400);
+        }
+        
+        // Find user
+        const user = await userModel.findById(userId);
+        if (!user) {
+            throw new customError('User not found', 404);
+        }
+        
+        // Find group chat with populated messages
+        const chat = await groupChatModel.findById(groupId)
+            .populate({
+                path: 'messages',
+                options: { sort: { createdAt: -1 }, limit: 50 },
+                populate: [
+                    { path: 'sender', select: 'firstName lastName profilePicture' },
+                    {
+                        path: 'replyTo',
+                        select: 'messageText sender createdAt',
+                        populate: { path: 'sender', select: 'firstName lastName' }
+                    }
+                ]
+            })
+            .populate('members', 'firstName lastName profilePicture headLine');
+            
+        if (!chat) {
+            throw new customError('Group chat not found', 404);
+        }
+        
+        // Check if user is member of the group
+        if (!chat.members.some(m => m._id.toString() === userId)) {
+            throw new customError('Not authorized to access this group', 403);
+        }
+        
+        // Update unread count in user's chat list
+        const userChat = user.chats.find(c => 
+            c.chatId.toString() === groupId && c.chatType === 'ChatGroup'
+        );
+        
+        if (userChat) {
+            userChat.unreadCount = 0;
+            userChat.lastReadAt = new Date();
+            await user.save();
+        }
+        
+        // Process messages similar to direct chat
+        const processedMessages = chat.messages.map(message => {
+            const messageObj = message.toObject ? message.toObject() : message;
+            return {
+                ...messageObj,
+                isMine: message.sender?._id.toString() === userId,
+                formattedTime: new Date(message.createdAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit', minute: '2-digit'
+                }),
+                formattedDate: new Date(message.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                })
+            };
+        });
+        
+        // Group messages by date
+        const groupedMessages = {};
+        processedMessages.forEach(message => {
+            const date = new Date(message.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+            
+            if (!groupedMessages[date]) {
+                groupedMessages[date] = [];
+            }
+            
+            groupedMessages[date].push(message);
+        });
+        
+        // Convert to array and sort
+        const conversationHistory = Object.keys(groupedMessages).map(date => ({
+            date,
+            messages: groupedMessages[date].sort((a, b) => 
+                new Date(a.createdAt) - new Date(b.createdAt))
+        })).sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        res.status(200).json({
+            success: true,
+            chat: {
+                _id: chat._id,
+                name: chat.name,
+                members: chat.members.map(member => ({
+                    _id: member._id,
+                    firstName: member.firstName,
+                    lastName: member.lastName,
+                    profilePicture: member.profilePicture,
+                    headLine: member.headLine
+                })),
+                conversationHistory,
+                createdAt: chat.createdAt,
+                updatedAt: chat.updatedAt
+            },
+            chatInfo: {
+                chatType: 'group',
+                lastActive: chat.updatedAt,
+                unreadCount: 0,
+                memberCount: chat.members.length
+            }
+        });
+        
+    } catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error fetching group chat:', err);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
 };
 
 
@@ -473,9 +672,6 @@ const markChatAsRead = async (req, res) => {
     try {
         const userId = req.user.id;
         const chatId = req.params.chatId;
-       // if (mongoose.Types.ObjectId.isValid(chatId)) {
-      //      throw new customError('Invalid chat ID format', 400);
-       // }
         // decrement unread count for the chat
         const user = await userModel.findById(userId);
         if (!user) {
@@ -512,9 +708,6 @@ const markChatAsUnread = async (req, res) => {
     try {
         const userId = req.user.id;
         const chatId = req.params.chatId;
-        if (mongoose.Types.ObjectId.isValid(chatId)) {
-            throw new customError('Invalid chat ID format', 400);
-        }
         // decrement unread count for the chat
         const user = await userModel.findById(userId);
         if (!user) {

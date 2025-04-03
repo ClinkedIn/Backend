@@ -5,6 +5,8 @@ const directChatModel = require('../models/directChatModel');
 const groupChatModel = require('../models/chatGroupModel');
 const chatGroupModel = require('../models/chatGroupModel');
 const customError = require('./customError');
+const mongoose = require('mongoose');
+
 
 const { uploadPicture, uploadVideo, uploadDocument } = require('./filesHandler');
 
@@ -50,7 +52,7 @@ const getChatMembers = async (chatModel, chatId) => {
 };
 
 const validateChatMembership = async (chatModel, chatId, sender, type) => {
-    const chatMembers = getChatMembers(chatModel, chatId);
+    const chatMembers = await getChatMembers(chatModel, chatId);
 
     const isMember = chatMembers.map(member => member.toString()).includes(sender);
         
@@ -182,7 +184,8 @@ const updateGroupUnreadCounts = async (chatId, sender) => {
 
     const members = chat.members.filter(member => member.toString() !== sender);
     for (const member of members) {
-        await updateUnreadCount(member, chatId);
+        await updateUnreadCount(member, chatId, "ChatGroup");
+
     }
 };
 
@@ -224,6 +227,53 @@ const isSenderBlocked = async (senderId, receiverId) => {
 };
 
 
+/**
+ * Calculate total unread messages for a user
+ * @param {string} userId - The user ID
+ * @returns {Promise<number>} - Total unread count
+ */
+const calculateTotalUnreadCount = async (userId) => {
+    try {
+      console.log(`Calculating unread count for user: ${userId}`);
+      
+      // First get user document to debug
+      const user = await userModel.findById(userId);
+      if (!user) {
+        console.error(`User ${userId} not found in calculateTotalUnreadCount`);
+        return 0;
+      }
+
+      // Ensure userId is valid
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+        throw new Error('Invalid user ID');
+      }
+  
+      const result = await userModel.aggregate([
+        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+        {
+          $project: {
+            chatsForUnwind: { $ifNull: ["$chats", []] }
+          }
+        },
+        { $unwind: { path: "$chatsForUnwind", preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: "$_id",
+            totalUnread: { $sum: { $ifNull: ["$chatsForUnwind.unreadCount", 0] } }
+          }
+        }
+      ]);
+      
+      console.log(`Aggregation result:`, result);
+      
+      return result.length > 0 ? result[0].totalUnread : 0;
+    } catch (error) {
+      console.error('Error calculating unread count:', error);
+      return 0; // Return 0 on error as a fallback
+    }
+};
+
+
 module.exports = {
     validateUser,
     validateChatType,
@@ -238,5 +288,6 @@ module.exports = {
     validateMessageOwner,
     validateGroupChatData,
     isSenderBlocked,
+    calculateTotalUnreadCount,
     getChatMembers
 };

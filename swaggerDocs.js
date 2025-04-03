@@ -3374,6 +3374,234 @@
  *         description: Message not found
  */
 
+
+/**
+ * @swagger
+ * /messages/block/{userId}:
+ *   post:
+ *     summary: Block a user from messaging
+ *     tags: [Messages]
+ *     description: Blocks a user, preventing them from sending messages to the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the user to block
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User blocked successfully"
+ *                 blockedUserId:
+ *                   type: string
+ *                   format: uuid
+ *                   example: "60d21b4667d0d8992e610c85"
+ *       400:
+ *         description: Bad request - missing user ID or user already blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User ID is required"
+ *             examples:
+ *               missingId:
+ *                 summary: Missing user ID
+ *                 value:
+ *                   message: "User ID is required"
+ *               alreadyBlocked:
+ *                 summary: User already blocked
+ *                 value:
+ *                   message: "User is already blocked"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /messages/unblock/{userId}:
+ *   post:
+ *     summary: Unblock a user from messaging
+ *     tags: [Messages]
+ *     description: Unblocks a previously blocked user, allowing them to send messages to the authenticated user again
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the user to unblock
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User unblocked successfully"
+ *       400:
+ *         description: Bad request - missing user ID or user not blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User ID is required"
+ *             examples:
+ *               missingId:
+ *                 summary: Missing user ID
+ *                 value:
+ *                   message: "User ID is required"
+ *               notBlocked:
+ *                 summary: User not blocked
+ *                 value:
+ *                   message: "User is not blocked"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /messages/unread-count:
+ *   get:
+ *     summary: Get total unread message count
+ *     tags: [Messages]
+ *     description: Returns the total count of unread messages across all chats for the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Total unread count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Total unread count fetched successfully"
+ *                 totalUnread:
+ *                   type: integer
+ *                   description: The total number of unread messages
+ *                   example: 15
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
 // *********************************** Chat APIs ***************************************//
 
 /**
@@ -8373,8 +8601,6 @@
  *       404:
  *         description: User not found
  */
-
-
 
 
 /**
