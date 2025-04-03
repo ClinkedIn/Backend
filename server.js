@@ -2,6 +2,7 @@ require("dotenv").config();
 const yaml = require("js-yaml"); // Add this import at the top
 const process = require("process");
 const express = require("express");
+const cors = require('cors');
 const swaggerUI = require("swagger-ui-express");
 const { swaggerSpec } = require("./swagger");
 
