@@ -2,7 +2,7 @@ const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements, checkUserAccessPermission, updateSkillExperienceReferences} = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
@@ -502,6 +502,7 @@ const addExperience = async (req, res) => {
         }
     }
 };
+
 
 const getExperience = async (req, res) => {
     try {
