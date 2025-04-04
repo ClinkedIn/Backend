@@ -23,7 +23,13 @@ const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
 const app = express();
 connectDB();
-app.use(cors());
+const corsOptions = {
+  origin: "http://localhost:5173", // Replace with your frontend URL
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
