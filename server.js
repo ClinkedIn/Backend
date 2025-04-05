@@ -47,7 +47,7 @@ app.use("/search", searchRouter);
 app.use("/notifications", notificationRouter);
 
 app.use(
-  "/api-docs",
+  "/",
   swaggerUI.serve,
   swaggerUI.setup(swaggerSpec, {
     swaggerOptions: {
@@ -81,10 +81,11 @@ app.use(
     customSiteTitle: "Your API Documentation",
   })
 );
+
 app.get("/swagger.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
-});
+}); // <-- Properly close this route handler
 
 // Serve Swagger spec as YAML
 app.get("/swagger.yaml", (req, res) => {
@@ -95,4 +96,3 @@ app.get("/swagger.yaml", (req, res) => {
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
-});
