@@ -24,7 +24,7 @@ const cookieParser = require("cookie-parser");
 const app = express();
 connectDB();
 const corsOptions = {
-  origin: "http://localhost:5173", // Replace with your frontend URL
+  origin: "*", // Allow all origins
   credentials: true, // Allow credentials (cookies, authorization headers)
   methods: "GET,POST,PUT,DELETE,OPTIONS",
 };
