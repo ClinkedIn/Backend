@@ -16,7 +16,6 @@ const notificationSchema = new mongoose.Schema(
       ],
       required: true,
     }, // Type of notification
-    title: { type: String, required: true }, // Title of the notification
     content: { type: String, required: true },
     resourceId: { type: mongoose.Schema.Types.ObjectId },
     isRead: { type: Boolean, default: false }, // Mark as read/unread

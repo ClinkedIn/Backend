@@ -5,98 +5,86 @@ const Notification = require("./../models/notificationModel");
 const userModel = require("./../models/userModel");
 const admin = require("./firebase");
 const { getMessaging } = require("firebase-admin/messaging");
+const { body } = require("express-validator");
 
 // reaction, comment, follow, message, mention, tag, share, post,connectionRequest, connectionAccepted, connectionRejected
 
 const notificationTemplate = {
   reactionPost: (sendingUser, reactionType) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your post`,
-      body: `Tap to view the post`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your post`,
     };
     return message;
   },
   reactionComment: (sendingUser, reactionType) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your comment`,
-      body: `Tap to view the comment`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your comment`,
     };
     return message;
   },
-  comment: (sendingUser, comment) => {
+  comment: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} commented on your post`,
-      body: comment,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} commented on your post`,
     };
     return message;
   },
   follow: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} started following you`,
-      body: `Tap to view their profile`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} started following you`,
     };
     return message;
   },
   message: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a message`,
-      body: `Tap to view the message`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} sent you a message`,
     };
     return message;
   },
   mention: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} mentioned you in a comment`,
-      body: `Tap to view the comment`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} mentioned you in a comment`,
     };
     return message;
   },
   tag: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} tagged you in a post`,
-      body: `Tap to view the post`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} tagged you in a post`,
     };
     return message;
   },
   repost: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} shared your post`,
-      body: `Tap to view the post`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} shared your post`,
     };
     return message;
   },
   share: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} shared a post`,
-      body: `Tap to view the post`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} shared a post`,
     };
     return message;
   },
   post: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} created a new post`,
-      body: `Tap to view the post`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} created a new post`,
     };
     return message;
   },
   connectionRequest: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a connection request`,
-      body: `Tap to view the request`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} sent you a connection request`,
     };
     return message;
   },
   connectionAccepted: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} accepted your connection request`,
-      body: `Tap to view their profile`,
+      body: `${sendingUser.firstName} accepted your connection request`,
     };
     return message;
   },
   connectionRejected: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} rejected your connection request`,
-      body: `Tap to view their profile`,
+      body: `${sendingUser.firstName} ${sendingUser.lastName} rejected your connection request`,
     };
     return message;
   },
@@ -115,12 +103,7 @@ const sendNotification = async (
       return;
     }
     let messageStr = {};
-    if (subject === "comment") {
-      messageStr = notificationTemplate[subject](
-        sendingUser,
-        resource.commentContent
-      );
-    } else if (subject === "impression") {
+    if (subject === "impression") {
       if (resource.targetType === "Post") {
         messageStr = notificationTemplate["reactionPost"](
           sendingUser,
@@ -139,7 +122,6 @@ const sendNotification = async (
       from: sendingUser.id,
       to: recievingUser.id,
       subject: subject,
-      title: messageStr.title,
       content: messageStr.body,
       resourceId: resource.id,
     });
@@ -155,7 +137,6 @@ const sendNotification = async (
 
     const message = {
       notification: {
-        title: messageStr.title,
         body: messageStr.body,
       },
       data: {
