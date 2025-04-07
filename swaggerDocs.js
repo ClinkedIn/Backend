@@ -467,93 +467,6 @@
  *
  */
 
-/**
- * @swagger
- * tags:
- *   - name: Impressions
- *     description: API endpoints for managing impressions
- */
-
-/**
- * @swagger
- * /impressions:
- *   post:
- *     summary: Add an impression
- *     tags: [Impressions]
- *     description: Add a new impression
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateImpressionRequest'
- *     responses:
- *       201:
- *         description: Post created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Impression'
- *       400:
- *         description: Bad request, invalid input
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       500:
- *         description: Internal server error
- *
- */
-
-/**
- * @swagger
- * /impressions/{id}:
- *   get:
- *     summary: Retrieve all impression for a specific post or comment
- *     tags: [Impressions]
- *     description: Retrieve all impression for a specific post or comment
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: targetId
- *         required: true
- *         schema:
- *           type: string
- *         description: The target post or comment ID
- *     responses:
- *       200:
- *         description: List of posts retrieved successfully
- *         content:
- *           application/json:
- *            schema:
- *             type: array
- *             items:
- *              $ref: '#/components/schemas/Impression'
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *        description: No Impressions found
- *       500:
- *        description: Internal server error
- *
- *   delete:
- *     summary: Delete an impression
- *     tags: [Impressions]
- *     description: Remove an impression by its ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: impressionId
- *         required: true
- *         schema:
- *           type: string
- *         description: The impression ID
- *     responses:
- *       200:
- *         description: Impression deleted successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Impression not found
- */
 
 // ******************************************* Posts APIs ************************************* //
 
@@ -4402,7 +4315,7 @@
  * @swagger
  * /jobs:
  *   post:
- *     summary: Create a new job
+ *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
  *     tags: [Jobs]
  *     description: Create a new job posting
  *     security:
@@ -4423,25 +4336,6 @@
  *       500:
  *         description: Internal server error
  *
- *   get:
- *     summary: Retrieve all jobs
- *     tags: [Jobs]
- *     description: Retrieve a list of all job postings
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: List of jobs retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Job'
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       500:
- *         description: Internal server error
  */
 
 /**
@@ -10912,7 +10806,7 @@
  * /search/jobs:
  *   get:
  *     summary: Search for jobs with advanced filters
- *     tags: [Search]
+ *     tags: [Search, Jobs]
  *     description: |
  *       Search for jobs using multiple filter criteria including keyword search, location,
  *       industry, company, and minimum work experience requirements. Results are sorted
