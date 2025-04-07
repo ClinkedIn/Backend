@@ -420,6 +420,10 @@ const deleteComment = async (req, res) => {
     // Update post's comment count
     await postModel.findByIdAndUpdate(postId, { $inc: { commentCount: -1 } });
 
+    await notificationModel.findOneAndDelete({
+      resourceId: comment._id,
+    });
+
     res.status(200).json({
       message: "Comment deleted successfully",
     });
