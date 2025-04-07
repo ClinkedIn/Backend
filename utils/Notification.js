@@ -97,6 +97,9 @@ const sendNotification = async (
   resource
 ) => {
   try {
+    if (sendingUser.id === recievingUser.id) {
+      return;
+    }
     const user = await userModel.findById(recievingUser.id);
     if (!user) {
       console.error("User not found:", recievingUser.id);
