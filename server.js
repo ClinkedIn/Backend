@@ -17,6 +17,7 @@ const messageRouter = require("./routes/messageRoutes");
 const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
 const searchRouter = require("./routes/searchRoutes");
+const adminRouter = require("./routes/adminRoutes");
 //to be removed
 const uploadRouter = require("./routes/uploadRoutes");
 const connectDB = require("./models/db");
@@ -45,7 +46,7 @@ app.use("/company", companyRouter);
 app.use("/upload", uploadRouter);
 app.use("/search", searchRouter);
 app.use("/notifications", notificationRouter);
-
+app.use("/admin", adminRouter);
 app.use(
   "/",
   swaggerUI.serve,

@@ -127,7 +127,7 @@ router.route('/education')
     .post(protect, upload.single('file'), user.addEducation)
     .get(protect, user.getEducations);
 
-// ... (rest of the existing routes)
+
 
 
     
