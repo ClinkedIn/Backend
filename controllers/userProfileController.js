@@ -2,7 +2,7 @@ const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements, checkUserAccessPermission} = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences} = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
@@ -11,7 +11,6 @@ const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
 const customError = require('../utils/customError');
-
 
 const getUserProfile = async (req, res) => {
     try {
@@ -26,8 +25,8 @@ const getUserProfile = async (req, res) => {
         
         // Check privacy settings
         const requesterId = req.user.id; // Current authenticated user
-        
-        // If not requesting own profile and profile is private
+        const requester = await userModel.findById(requesterId).select('connectionList blockedUsers profilePrivacySettings');
+        //If not requesting own profile and profile is private
         if (userId !== requesterId && user.profilePrivacySettings === 'private') {
             return res.status(403).json({ message: 'This profile is private' });
         }
@@ -41,6 +40,16 @@ const getUserProfile = async (req, res) => {
         if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
             return res.status(403).json({ message: 'This profile is not available' });
         }
+        if(requester.blockedUsers.includes(userId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        if(userId.isActive === false) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        // const accessCheck = await checkUserAccessPermission(user, requesterId);
+        // if (!accessCheck.hasAccess) {
+        //     return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
+        // }
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
             user
@@ -493,6 +502,7 @@ const addExperience = async (req, res) => {
         }
     }
 };
+
 
 const getExperience = async (req, res) => {
     try {

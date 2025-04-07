@@ -100,7 +100,7 @@ const protect = async (req, res, next) => {
 };
 
 const mockUser = {
-  id: "0b3169152ee6c171d25e6860", // Use an ID from your seeded users
+  id: "473c0bddfacd1f8a541cb0d2", // Use an ID from your seeded users
   email: "Reta_Watsica78@hotmail.com",
   // Add other user properties you need
 };

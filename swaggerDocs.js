@@ -3374,207 +3374,1020 @@
  *         description: Message not found
  */
 
+
+/**
+ * @swagger
+ * /messages/block/{userId}:
+ *   post:
+ *     summary: Block a user from messaging
+ *     tags: [Messages]
+ *     description: Blocks a user, preventing them from sending messages to the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the user to block
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User blocked successfully"
+ *                 blockedUserId:
+ *                   type: string
+ *                   format: uuid
+ *                   example: "60d21b4667d0d8992e610c85"
+ *       400:
+ *         description: Bad request - missing user ID or user already blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User ID is required"
+ *             examples:
+ *               missingId:
+ *                 summary: Missing user ID
+ *                 value:
+ *                   message: "User ID is required"
+ *               alreadyBlocked:
+ *                 summary: User already blocked
+ *                 value:
+ *                   message: "User is already blocked"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /messages/unblock/{userId}:
+ *   post:
+ *     summary: Unblock a user from messaging
+ *     tags: [Messages]
+ *     description: Unblocks a previously blocked user, allowing them to send messages to the authenticated user again
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the user to unblock
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User unblocked successfully"
+ *       400:
+ *         description: Bad request - missing user ID or user not blocked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User ID is required"
+ *             examples:
+ *               missingId:
+ *                 summary: Missing user ID
+ *                 value:
+ *                   message: "User ID is required"
+ *               notBlocked:
+ *                 summary: User not blocked
+ *                 value:
+ *                   message: "User is not blocked"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /messages/unread-count:
+ *   get:
+ *     summary: Get total unread message count
+ *     tags: [Messages]
+ *     description: Returns the total count of unread messages across all chats for the authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Total unread count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Total unread count fetched successfully"
+ *                 totalUnread:
+ *                   type: integer
+ *                   description: The total number of unread messages
+ *                   example: 15
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
 // *********************************** Chat APIs ***************************************//
 
 /**
  * @swagger
  * tags:
- *   - name: Chats
- *     description: API endpoints for managing chats
+ *   name: Chats
+ *   description: Chat management APIs
  */
 
 /**
  * @swagger
- * /chats/direct-chat:
+ * /api/chats/group-chat:
  *   post:
- *     summary: Create a new direct chat
+ *     summary: Create a new group chat
+ *     description: Creates a new group chat with specified members and the authenticated user as admin
  *     tags: [Chats]
- *     description: Create a new direct chat between two users
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - groupName
+ *               - goupMembers
+ *             properties:
+ *               groupName:
+ *                 type: string
+ *                 description: Name of the group chat
+ *               goupMembers:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 description: Array of user IDs to add to the group
+ *             example:
+ *               groupName: "Project Team"
+ *               goupMembers: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
  *     responses:
  *       201:
- *        description: Direct chat created successfully
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/DirectChat'
+ *         description: Group chat created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group chat created successfully"
+ *                 groupChat:
+ *                   example:
+ *                      _id: "60d21b4667d0d8992e610c87"
+ *                      groupName: "Project Team"
+ *                      members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *                      messages: []
+ *                      isActive: true
+ *                      createdAt: "2023-10-01T12:00:00Z"
+ *                      updatedAt: "2023-10-01T12:00:00Z"
+ *                      
  *       400:
- *         description: Bad request, invalid input
+ *         description: Invalid input data or validation error
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User not found
  *       500:
- *         description: Internal server error
+ *         description: Internal server error or failed to create group chat
  */
 
 /**
  * @swagger
- * /chats/direct-chat/{chatId}:
+ * /api/chats/direct-chat/{chatId}:
  *   get:
- *    summary: Get a direct chat
- *    tags: [Chats]
- *    description: Get a direct chat by its ID
- *    security:
- *      - BearerAuth: []
- *    parameters:
- *      - in: path
- *        name: chatId
- *        required: true
- *        schema:
- *          type: string
- *          description: The direct chat ID
- *    responses:
- *     200:
- *      description: Direct chat retrieved successfully
- *      content:
- *       application/json:
- *        schema:
- *         $ref: '#/components/schemas/DirectChat'
- *    401:
- *     description: Unauthorized, invalid or missing token
- *    404:
- *     description: Chat not found
- *    500:
- *     description: Internal server error
- *
- *   put:
- *     summary: Edit a direct chat
+ *     summary: Get a direct chat by ID
+ *     description: Retrieves a direct chat by its ID, including message history and other user details. Also marks messages as read for the authenticated user.
  *     tags: [Chats]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: chatId
  *         required: true
  *         schema:
  *           type: string
- *           description: The direct chat ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateDirectChatRequest'
+ *           format: uuid
+ *         description: ID of the direct chat to retrieve
  *     responses:
  *       200:
- *         description: Chat updated successfully
+ *         description: Direct chat retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/DirectChat'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 chat:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: ID of the chat
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         format: uuid
+ *                       description: Array of user IDs in the chat
+ *                     conversationHistory:
+ *                       type: array
+ *                       description: Messages grouped by date
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             example: "Mar 15, 2025"
+ *                           messages:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/MessageWithFormatting'
+ *                     rawMessages:
+ *                       type: array
+ *                       description: Flat list of all messages sorted chronologically
+ *                       items:
+ *                         $ref: '#/components/schemas/MessageWithFormatting'
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                 otherUser:
+ *                   type: object
+ *                   description: Details of the other user in the chat
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       format: uuid
+ *                     firstName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     profilePicture:
+ *                       type: string
+ *                       format: uri
+ *                     headLine:
+ *                       type: string
+ *                 chatInfo:
+ *                   type: object
+ *                   properties:
+ *                     chatType:
+ *                       type: string
+ *                       example: "direct"
+ *                     lastActive:
+ *                       type: string
+ *                       format: date-time
+ *                     unreadCount:
+ *                       type: integer
+ *                       example: 0
+ *       400:
+ *         description: Invalid chat ID format
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       403:
+ *         description: Not authorized to access this chat
  *       404:
- *         description: Chat not found
+ *         description: Chat or user not found
+ *       500:
+ *         description: Internal server error or invalid chat structure
  */
 
 /**
  * @swagger
- * /chats/group-chat:
- *   post:
- *     summary: Create a new chat group
+ * /api/chats/all-chats:
+ *   get:
+ *     summary: Get all chats for the authenticated user
+ *     description: Returns all direct and group chats for the authenticated user, with preview information including latest message and unread counts.
  *     tags: [Chats]
- *     description: Create a new chat group between many users
  *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *       - bearerAuth: []
  *     responses:
- *       201:
- *        description: Group chat created successfully
- *        content:
- *          application/json:
- *            schema:
- *              $ref: '#/components/schemas/GroupChat'
- *       400:
- *         description: Bad request, invalid input
+ *       200:
+ *         description: All chats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 totalChats:
+ *                   type: integer
+ *                   description: Total number of chats
+ *                   example: 5
+ *                 totalUnread:
+ *                   type: integer
+ *                   description: Total number of unread messages across all chats
+ *                   example: 8
+ *                 chats:
+ *                   type: array
+ *                   description: List of all chats sorted by last activity (most recent first)
+ *                   items:
+ *                     oneOf:
+ *                       - $ref: '#/components/schemas/DirectChatPreview'
+ *                       - $ref: '#/components/schemas/GroupChatPreview'
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal server error
  */
 
 /**
  * @swagger
- * /chats/group-chat/{chatId}:
+ * /api/chats/group/{chatId}:
  *   get:
- *    summary: Get a group chat
- *    tags: [Chats]
- *    description: Get a group chat by its ID
- *    security:
- *      - BearerAuth: []
- *    parameters:
- *      - in: path
- *        name: chatId
- *        required: true
- *        schema:
- *          type: string
- *          description: Chat ID
- *    responses:
- *     200:
- *      description: Group chat retrieved successfully
- *      content:
- *       application/json:
- *        schema:
- *         $ref: '#/components/schemas/GroupChat'
- *    401:
- *     description: Unauthorized, invalid or missing token
- *    404:
- *     description: Chat not found
- *    500:
- *     description: Internal server error
- *
- *   put:
- *     summary: Edit a chat group
+ *     summary: Get a group chat by ID
+ *     description: Retrieves a group chat by its ID, including message history and member details
  *     tags: [Chats]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
- *     - in: path
- *       name: chatId
- *       required: true
- *       schema:
- *         type: string
- *         description: The chat group ID
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateGroupChatRequest'
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the group chat to retrieve
  *     responses:
  *       200:
- *         description: Chat updated successfully
+ *         description: Group chat retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/GroupChat'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
  *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Chat not found
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
  */
 
 /**
  * @swagger
- * /chats/all-chats:
- *   get:
- *     summary: Get all chats for a user
+ * /api/chats/direct/{chatId}:
+ *   put:
+ *     summary: Update a direct chat
+ *     description: Updates direct chat settings such as muting, archiving or starring
  *     tags: [Chats]
- *     description: Retrieve all chats for a user
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the direct chat to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               muted:
+ *                 type: boolean
+ *                 description: Whether the chat is muted
+ *               archived:
+ *                 type: boolean
+ *                 description: Whether the chat is archived
+ *               starred:
+ *                 type: boolean
+ *                 description: Whether the chat is starred
  *     responses:
  *       200:
- *         description: List of chats retrieved successfully
+ *         description: Direct chat updated successfully
  *         content:
  *           application/json:
  *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/group/{chatId}:
+ *   put:
+ *     summary: Update a group chat
+ *     description: Updates group chat settings or details such as name, members, or user-specific settings
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the group chat to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: New name for the group
+ *               muted:
+ *                 type: boolean
+ *                 description: Whether the chat is muted for the user
+ *               archived:
+ *                 type: boolean
+ *                 description: Whether the chat is archived for the user
+ *               starred:
+ *                 type: boolean
+ *                 description: Whether the chat is starred for the user
+ *     responses:
+ *       200:
+ *         description: Group chat updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dummy data"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/mark-as-read/{chatId}:
+ *   patch:
+ *     summary: Mark a chat as read
+ *     description: Marks all messages in a chat as read for the authenticated user by setting unread count to zero
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the chat to mark as read
+ *     responses:
+ *       200:
+ *         description: Chat marked as read successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Chat marked as read successfully"
+ *       400:
+ *         description: Invalid chat ID format
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User or chat not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/chats/mark-as-unread/{chatId}:
+ *   patch:
+ *     summary: Mark a chat as unread
+ *     description: Marks a chat as unread for the authenticated user by incrementing the unread count
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID of the chat to mark as unread
+ *     responses:
+ *       200:
+ *         description: Chat marked as unread successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Chat marked as unread successfully"
+ *       400:
+ *         description: Invalid chat ID format
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *       404:
+ *         description: User or chat not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DirectChat:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         members:
+ *           type: array
+ *           description: Array of user IDs who are members of this chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         messages:
+ *           type: array
+ *           description: Array of message IDs in this chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c87"
+ *         members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *         messages: ["60d21b4667d0d8992e610c88", "60d21b4667d0d8992e610c89"]
+ *         createdAt: "2025-03-15T10:00:00.000Z"
+ *         updatedAt: "2025-03-15T14:30:00.000Z"
+ *
+ *     GroupChat:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the group chat
+ *         name:
+ *           type: string
+ *           description: Name of the group chat
+ *         members:
+ *           type: array
+ *           description: Array of user IDs who are members of this group
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         messages:
+ *           type: array
+ *           description: Array of message IDs in this group chat
+ *           items:
+ *             type: string
+ *             format: uuid
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the group chat was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the group chat was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c90"
+ *         name: "Project Team"
+ *         members: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86", "60d21b4667d0d8992e610c87"]
+ *         messages: ["60d21b4667d0d8992e610c91", "60d21b4667d0d8992e610c92"]
+ *         createdAt: "2025-03-15T10:00:00.000Z"
+ *         updatedAt: "2025-03-15T14:30:00.000Z"
+ *
+ *     Message:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the message
+ *         sender:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             firstName:
+ *               type: string
+ *             lastName:
+ *               type: string
+ *             profilePicture:
+ *               type: string
+ *               format: uri
+ *         messageText:
+ *           type: string
+ *           description: Text content of the message
+ *         messageAttachment:
+ *           type: array
+ *           description: Array of attachment URLs
+ *           items:
+ *             type: string
+ *             format: uri
+ *         replyTo:
+ *           type: object
+ *           description: Reference to the message being replied to (if any)
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             messageText:
+ *               type: string
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the message was sent
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the message was last updated
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c88"
+ *         sender:
+ *           _id: "60d21b4667d0d8992e610c85"
+ *           firstName: "John"
+ *           lastName: "Doe"
+ *           profilePicture: "https://example.com/profiles/john.jpg"
+ *         messageText: "Hello, how are you?"
+ *         messageAttachment: []
+ *         createdAt: "2025-03-15T10:05:00.000Z"
+ *         updatedAt: "2025-03-15T10:05:00.000Z"
+ *
+ *     MessageWithFormatting:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Message'
+ *         - type: object
+ *           properties:
+ *             isMine:
+ *               type: boolean
+ *               description: Whether the message was sent by the authenticated user
+ *             formattedTime:
+ *               type: string
+ *               description: Formatted time string (e.g., "10:05 AM")
+ *               example: "10:05 AM"
+ *             formattedDate:
+ *               type: string
+ *               description: Formatted date string (e.g., "Mar 15, 2025")
+ *               example: "Mar 15, 2025"
+ *
+ *     DirectChatPreview:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         chatType:
+ *           type: string
+ *           enum: [direct]
+ *           description: Type of chat
+ *         name:
+ *           type: string
+ *           description: Display name for the chat (other user's name)
+ *         participants:
+ *           type: object
+ *           properties:
+ *             count:
+ *               type: integer
+ *               example: 2
+ *               description: Number of participants (always 2 for direct chats)
+ *             otherUser:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *                 headLine:
+ *                   type: string
+ *         unreadCount:
+ *           type: integer
+ *           description: Number of unread messages in this chat
+ *         lastMessage:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *             messageText:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *             formattedTime:
+ *               type: string
+ *               example: "10:05 AM"
+ *             isMine:
+ *               type: boolean
+ *         lastActive:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last active
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c87"
+ *         chatType: "direct"
+ *         name: "John Doe"
+ *         participants:
+ *           count: 2
+ *           otherUser:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *             headLine: "Software Engineer"
+ *         unreadCount: 3
+ *         lastMessage:
+ *           _id: "60d21b4667d0d8992e610c88"
+ *           sender:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *           messageText: "Hello, how are you?"
+ *           createdAt: "2025-03-15T10:05:00.000Z"
+ *           formattedTime: "10:05 AM"
+ *           isMine: false
+ *         lastActive: "2025-03-15T10:05:00.000Z"
+ *         createdAt: "2025-03-15T09:00:00.000Z"
+ *
+ *     GroupChatPreview:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           format: uuid
+ *           description: Unique identifier for the chat
+ *         chatType:
+ *           type: string
+ *           enum: [group]
+ *           description: Type of chat
+ *         name:
+ *           type: string
+ *           description: Name of the group chat
+ *         participants:
+ *           type: object
+ *           properties:
+ *             count:
+ *               type: integer
+ *               description: Number of participants in the group
+ *             list:
  *               type: array
  *               items:
- *                 oneOf:
- *                   - $ref: '#/components/schemas/DirectChat'
- *                   - $ref: '#/components/schemas/GroupChat'
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: No chats found
- *       500:
- *         description: Internal server error
+ *                 type: string
+ *                 format: uuid
+ *               description: List of participant user IDs
+ *         unreadCount:
+ *           type: integer
+ *           description: Number of unread messages in this chat
+ *         lastMessage:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               format: uuid
+ *             sender:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   format: uuid
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                   format: uri
+ *             messageText:
+ *               type: string
+ *             createdAt:
+ *               type: string
+ *               format: date-time
+ *             formattedTime:
+ *               type: string
+ *               example: "10:05 AM"
+ *             isMine:
+ *               type: boolean
+ *         lastActive:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was last active
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the chat was created
+ *       example:
+ *         _id: "60d21b4667d0d8992e610c90"
+ *         chatType: "group"
+ *         name: "Project Team"
+ *         participants:
+ *           count: 2
+ *           list: ["60d21b4667d0d8992e610c85", "60d21b4667d0d8992e610c86"]
+ *         unreadCount: 10
+ *         lastMessage:
+ *           _id: "60d21b4667d0d8992e610c91"
+ *           sender:
+ *             _id: "60d21b4667d0d8992e610c85"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             profilePicture: "https://example.com/profiles/john.jpg"
+ *           messageText: "Team meeting tomorrow at 10 AM"
+ *           createdAt: "2025-03-15T15:30:00.000Z"
+ *           formattedTime: "3:30 PM"
+ *           isMine: false
+ *         lastActive: "2025-03-15T15:30:00.000Z"
+ *         createdAt: "2025-03-10T09:00:00.000Z"
  */
 
 // *********************************** jobs APIs ***************************************//
@@ -3720,9 +4533,12 @@
  * @swagger
  * /jobs/{jobId}/apply:
  *   post:
- *     summary: Apply for a job
+ *     summary: Submit an application for a job
  *     tags: [Jobs]
- *     description: Submit an application for a specific job posting
+ *     description: |
+ *       Apply for a job by submitting contact information and answers to screening questions.
+ *       Applications may be automatically accepted or rejected based on screening question
+ *       answers and the job's configuration. Requires user authentication.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -3731,33 +4547,132 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the job to apply for
+ *           format: ObjectId
+ *         description: ID of the job to apply for
+ *         example: "65fb2a8e7c5721f123456789"
  *     requestBody:
- *       description: Applicant's user ID
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - contactEmail
  *             properties:
- *               userId:
+ *               contactEmail:
  *                 type: string
- *                 description: The ID of the user applying for the job
+ *                 format: email
+ *                 description: Email address to use for this application
+ *                 example: "john.doe@example.com"
+ *               contactPhone:
+ *                 type: string
+ *                 description: Phone number to use for this application (optional)
+ *                 example: "+1 (555) 123-4567"
+ *               answers:
+ *                 type: array
+ *                 description: Answers to the job's screening questions
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - question
+ *                     - answer
+ *                   properties:
+ *                     question:
+ *                       type: string
+ *                       description: The exact question text matching one of the job's screening questions
+ *                       example: "Background Check"
+ *                     answer:
+ *                       type: string
+ *                       description: Applicant's answer to the question
+ *                       example: "Yes, I consent to a background check"
  *     responses:
  *       200:
  *         description: Application submitted successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Application submitted successfully"
+ *                   description: Success message or auto-rejection message
+ *                 applicationStatus:
+ *                   type: string
+ *                   enum: [pending, rejected]
+ *                   example: "pending"
+ *                   description: Status of the application after submission
+ *                 applicationId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456795"
+ *                   description: ID of the created application record
+ *                 jobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *                   description: ID of the job applied to
+ *                 reason:
+ *                   type: string
+ *                   example: "Insufficient work experience. Required: 3 years"
+ *                   description: Reason for auto-rejection if application was rejected
  *       400:
- *         description: Bad request, invalid input or user already applied
+ *         description: Bad request - Missing required fields, invalid job ID, or already applied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Contact email is required for job applications"
+ *                   description: Error message explaining the issue
+ *                 alreadyApplied:
+ *                   type: boolean
+ *                   example: true
+ *                   description: Indicator that user has already applied (when applicable)
+ *                 applicationId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456795"
+ *                   description: ID of existing application (when already applied)
+ *                 applicationStatus:
+ *                   type: string
+ *                   example: "pending"
+ *                   description: Status of existing application (when already applied)
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
  *       404:
- *         description: Job not found
+ *         description: Job or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
  *       500:
- *         description: Internal server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to apply for job"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
 
 /**
@@ -7688,8 +8603,6 @@
  */
 
 
-
-
 /**
  * @swagger
  * /user/message-requests:
@@ -9992,4 +10905,1011 @@
  *                 error:
  *                   type: string
  *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /search/jobs:
+ *   get:
+ *     summary: Search for jobs with advanced filters
+ *     tags: [Search]
+ *     description: |
+ *       Search for jobs using multiple filter criteria including keyword search, location,
+ *       industry, company, and minimum work experience requirements. Results are sorted
+ *       by newest first and include company details.
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: |
+ *           General search term that matches against job title, description, industry, 
+ *           workplace type, job type, or company industry
+ *         example: "developer"
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Location search term to filter jobs by location
+ *         example: "New York"
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter jobs by specific industry (exact match)
+ *         example: "Technology"
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: MongoDB ObjectId of company to filter jobs by
+ *         example: "65fb2a8e7c5721f123456700"
+ *       - in: query
+ *         name: minExperience
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum years of work experience required
+ *         example: 3
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Jobs found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Jobs found successfully"
+ *                   description: Success message or no results message
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier for the job
+ *                       company:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456700"
+ *                             description: Company ID
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Corp"
+ *                             description: Company name
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                             description: Company logo URL
+ *                           industry:
+ *                             type: string
+ *                             example: "Technology"
+ *                             description: Company industry
+ *                           location:
+ *                             type: string
+ *                             example: "San Francisco, CA"
+ *                             description: Company location
+ *                       title:
+ *                         type: string
+ *                         example: "Senior Software Engineer"
+ *                         description: Job title
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                         description: Job industry
+ *                       workplaceType:
+ *                         type: string
+ *                         enum: ["Onsite", "Hybrid", "Remote"]
+ *                         example: "Hybrid"
+ *                         description: Job workplace type
+ *                       jobLocation:
+ *                         type: string
+ *                         example: "New York, NY"
+ *                         description: Job location
+ *                       jobType:
+ *                         type: string
+ *                         enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                         example: "Full Time"
+ *                         description: Job type
+ *                       description:
+ *                         type: string
+ *                         example: "We are seeking an experienced software engineer..."
+ *                         description: Job description
+ *                       applicationEmail:
+ *                         type: string
+ *                         example: "jobs@techcorp.com"
+ *                         description: Email for job applications
+ *                       screeningQuestions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question title
+ *                             specification:
+ *                               type: string
+ *                               example: "Years of experience in software development"
+ *                               description: Additional details about the question
+ *                             mustHave:
+ *                               type: boolean
+ *                               example: true
+ *                               description: Whether this is a required qualification
+ *                         description: Job screening questions (without ideal answers)
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: Job posting date
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: Last update date
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalJobs:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of jobs matching the search criteria
+ *                     totalPages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     q:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "developer"
+ *                       description: General search term used
+ *                     location:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "New York"
+ *                       description: Location filter used
+ *                     industry:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Technology"
+ *                       description: Industry filter used
+ *                     companyId:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "65fb2a8e7c5721f123456700"
+ *                       description: Company filter used
+ *                     minExperience:
+ *                       type: number
+ *                       nullable: true
+ *                       example: 3
+ *                       description: Minimum experience filter used
+ *       400:
+ *         description: Bad request - invalid search parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid companyId format"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/save:
+ *   post:
+ *     summary: Save a job for the authenticated user
+ *     tags: [Jobs]
+ *     description: Adds a job to the user's saved jobs list for easy reference and later application
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: The ID of the job to save
+ *         example: "65fb2a8e7c5721f123456789"
+ *     responses:
+ *       200:
+ *         description: Job saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job saved successfully"
+ *                 savedJobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid job ID format or job already saved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This job is already in your saved list"
+ *                 alreadySaved:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Job or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to save job"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ *   delete:
+ *     summary: Remove a job from saved jobs list
+ *     tags: [Jobs]
+ *     description: Removes a previously saved job from the user's saved jobs list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: The ID of the job to remove from saved list
+ *         example: "65fb2a8e7c5721f123456789"
+ *     responses:
+ *       200:
+ *         description: Job removed from saved list successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job removed from saved list successfully"
+ *                 removedJobId:
+ *                   type: string
+ *                   format: ObjectId
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid job ID format or job not in saved list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This job is not in your saved list"
+ *                 alreadyRemoved:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to remove job from saved list"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ *
+ * /jobs/saved:
+ *   get:
+ *     summary: Get all saved jobs for the authenticated user
+ *     tags: [Jobs, Users]
+ *     description: Retrieves a paginated list of jobs that the authenticated user has saved, including company details
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Saved jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Saved jobs retrieved successfully"
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       jobId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       title:
+ *                         type: string
+ *                         example: "Senior Software Engineer"
+ *                       company:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456700"
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Corp"
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                           industry:
+ *                             type: string
+ *                             example: "Technology"
+ *                           location:
+ *                             type: string
+ *                             example: "San Francisco, CA"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       workplaceType:
+ *                         type: string
+ *                         enum: ["Onsite", "Hybrid", "Remote"]
+ *                         example: "Hybrid"
+ *                       jobLocation:
+ *                         type: string
+ *                         example: "New York, NY"
+ *                       jobType:
+ *                         type: string
+ *                         enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                         example: "Full Time"
+ *                       description:
+ *                         type: string
+ *                         example: "We are seeking an experienced software engineer..."
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalJobs:
+ *                       type: number
+ *                       example: 25
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve saved jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/my-applications:
+ *   get:
+ *     summary: Get all job applications for the authenticated user
+ *     tags: [Jobs, Users]
+ *     description: |
+ *       Retrieve all job applications submitted by the authenticated user, with
+ *       status updates and job details. Applications are sorted by most recent first
+ *       and can be filtered by status.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, viewed, rejected, accepted]
+ *         description: Filter applications by status (optional)
+ *         example: "pending"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User's job applications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications retrieved successfully"
+ *                   description: Success message or no results message
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       applicationId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for the application
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, viewed, rejected, accepted]
+ *                         example: "pending"
+ *                         description: Current status of the application
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: When the application was submitted
+ *                       job:
+ *                         type: object
+ *                         properties:
+ *                           jobId:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456789"
+ *                             description: ID of the job applied to
+ *                           title:
+ *                             type: string
+ *                             example: "Senior Software Engineer"
+ *                             description: Job title
+ *                           workplaceType:
+ *                             type: string
+ *                             enum: [Onsite, Hybrid, Remote]
+ *                             example: "Remote"
+ *                             description: Type of workplace arrangement
+ *                           jobLocation:
+ *                             type: string
+ *                             example: "New York, NY"
+ *                             description: Location of the job
+ *                           jobType:
+ *                             type: string
+ *                             enum: [Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship]
+ *                             example: "Full Time"
+ *                             description: Type of employment
+ *                           company:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 format: ObjectId
+ *                                 example: "65fb2a8e7c5721f123456700"
+ *                                 description: ID of the company
+ *                               name:
+ *                                 type: string
+ *                                 example: "Tech Corp"
+ *                                 description: Name of the company
+ *                               logo:
+ *                                 type: string
+ *                                 example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                                 description: URL to company logo
+ *                               industry:
+ *                                 type: string
+ *                                 example: "Technology"
+ *                                 description: Industry sector
+ *                               location:
+ *                                 type: string
+ *                                 example: "San Francisco, CA"
+ *                                 description: Company location
+ *                       contactEmail:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                         description: Contact email used for this application
+ *                       screeningAnswers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question
+ *                             answer:
+ *                               type: string
+ *                               example: "5 years"
+ *                               description: Applicant's answer
+ *                         description: Answers provided to screening questions
+ *                       rejectionReason:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "The position has been filled"
+ *                         description: Reason for rejection if application was rejected
+ *                       autoRejected:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the application was automatically rejected
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 12
+ *                       description: Total number of applications matching the filter
+ *                     totalPages:
+ *                       type: number
+ *                       example: 2
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "all"
+ *                       description: Status filter used in the request
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve job applications"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
+ */
+
+/**
+ * @swagger
+ * /jobs/{jobId}/apply:
+ *   get:
+ *     summary: Get all applications for a specific job
+ *     tags: [Jobs, Applications]
+ *     description: |
+ *       Returns all applications submitted for a specific job. This endpoint is restricted
+ *       to company representatives who own the job posting. Includes applicant information
+ *       and screening answers.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: ID of the job to get applications for
+ *         example: "65fb2a8e7c5721f123456789"
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, viewed, rejected, accepted]
+ *         description: Filter applications by status (optional)
+ *         example: "pending"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of results per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Job applications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications retrieved successfully"
+ *                   description: Success message or no results message
+ *                 jobTitle:
+ *                   type: string
+ *                   example: "Senior Software Engineer"
+ *                   description: Title of the job
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       applicationId:
+ *                         type: string
+ *                         format: ObjectId
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: Unique identifier for the application
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, viewed, rejected, accepted]
+ *                         example: "pending"
+ *                         description: Current status of the application
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-15T14:30:00Z"
+ *                         description: When the application was submitted
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: When the application was last updated
+ *                       lastViewed:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         example: "2025-03-16T09:45:00Z"
+ *                         description: When the application was last viewed by the company
+ *                       applicant:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             format: ObjectId
+ *                             example: "65fb2a8e7c5721f123456791"
+ *                             description: Applicant's user ID
+ *                           firstName:
+ *                             type: string
+ *                             example: "John"
+ *                             description: Applicant's first name
+ *                           lastName:
+ *                             type: string
+ *                             example: "Doe"
+ *                             description: Applicant's last name
+ *                           email:
+ *                             type: string
+ *                             example: "john.doe@example.com"
+ *                             description: Applicant's email
+ *                           profilePicture:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                             description: URL to applicant's profile picture
+ *                           headline:
+ *                             type: string
+ *                             example: "Senior Software Engineer"
+ *                             description: Applicant's professional headline
+ *                       contactEmail:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                         description: Email provided for contact in this application
+ *                       contactPhone:
+ *                         type: string
+ *                         example: "+1 (555) 123-4567"
+ *                         description: Phone number provided for contact in this application
+ *                       screeningAnswers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             question:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Screening question
+ *                             questionType:
+ *                               type: string
+ *                               example: "Work Experience"
+ *                               description: Type of screening question
+ *                             answer:
+ *                               type: string
+ *                               example: "5 years"
+ *                               description: Applicant's answer
+ *                             meetsCriteria:
+ *                               type: boolean
+ *                               nullable: true
+ *                               example: true
+ *                               description: Whether the answer meets the criteria
+ *                       rejectionReason:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Insufficient work experience"
+ *                         description: Reason for rejection if application was rejected
+ *                       autoRejected:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the application was automatically rejected
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of applications matching the criteria
+ *                     totalPages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages available
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages available
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are previous pages available
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       example: "all"
+ *                       description: Status filter used in the request
+ *       400:
+ *         description: Bad request - invalid job ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid job ID format"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - User doesn't have permission to view these applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized. You can only view applications for your company's jobs."
+ *       404:
+ *         description: Job not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve job applications"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
