@@ -105,6 +105,13 @@ const sendNotification = async (
       console.error("User not found:", recievingUser.id);
       return;
     }
+    if (user.notificationPauseExpiresAt !== null) {
+      if (user.notificationPauseExpiresAt > new Date()) {
+        console.log("User has paused notifications:", user.id);
+        return;
+      }
+    }
+
     let messageStr = {};
     if (subject === "impression") {
       if (resource.targetType === "Post") {
