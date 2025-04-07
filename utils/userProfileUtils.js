@@ -199,5 +199,40 @@ const checkUserAccessPermission = async (user, requesterId, requester = null, ac
   }
 };
 
-module.exports = { checkUserAccessPermission,sortWorkExperience, validateSkillName,  uploadPicture, handleUserPicture,updateSkillExperienceReferences
+const validateConnectionStatus = async (userId, targetUserId, userModel) => {
+    const [user, targetUser] = await Promise.all([
+        userModel.findById(userId).select('connectionList blockedUsers pendingConnections'),
+        userModel.findById(targetUserId).select('connectionList blockedUsers pendingConnections')
+    ]);
+
+    if (!targetUser) {
+        return { isValid: false, message: 'Target user not found', statusCode: 404 };
+    }
+
+    // Check if users are already connected
+    const isConnected = user.connectionList.includes(targetUserId);
+    if (isConnected) {
+        return { isValid: false, message: 'Users are already connected', statusCode: 400 };
+    }
+
+    // Check if either user is blocked
+    const isBlocked = user.blockedUsers.includes(targetUserId) ||
+        targetUser.blockedUsers.includes(userId);
+    if (isBlocked) {
+        return { isValid: false, message: 'Unable to perform this action due to user block', statusCode: 403 };
+    }
+
+    return { isValid: true, user, targetUser };
+};
+
+const handlePagination = (page = 1, limit = 10) => {
+    const skip = (page - 1) * limit;
+    return { skip, limit: parseInt(limit) };
+};
+
+
+module.exports = {
+    checkUserAccessPermission, sortWorkExperience, validateSkillName, uploadPicture, handleUserPicture, updateSkillExperienceReferences,
+    validateConnectionStatus,
+    handlePagination
 };

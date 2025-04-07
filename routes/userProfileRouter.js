@@ -77,7 +77,7 @@ router.route('/:userId/user-activity')
 
 
 // #################################
-/ Search routes (as per /search and / search / users endpoints in Swagger)
+// Search routes (as per /search and / search / users endpoints in Swagger)
 router.route('/search')
     .get(protect, user.searchUsers);  // Search for users by name, company, or industry
 
