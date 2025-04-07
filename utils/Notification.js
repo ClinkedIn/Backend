@@ -9,79 +9,86 @@ const { getMessaging } = require("firebase-admin/messaging");
 // reaction, comment, follow, message, mention, tag, share, post,connectionRequest, connectionAccepted, connectionRejected
 
 const notificationTemplate = {
-  reaction: (sendingUser, reactionType) => {
+  reactionPost: (sendingUser, reactionType) => {
     const message = {
-      title: `${sendingUser.firstName} reacted with ${reactionType} to your post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your post`,
       body: `Tap to view the post`,
+    };
+    return message;
+  },
+  reactionComment: (sendingUser, reactionType) => {
+    const message = {
+      title: `${sendingUser.firstName} ${sendingUser.lastName} reacted with ${reactionType} to your comment`,
+      body: `Tap to view the comment`,
     };
     return message;
   },
   comment: (sendingUser, comment) => {
     const message = {
-      title: `${sendingUser.firstName} commented on your post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} commented on your post`,
       body: comment,
     };
     return message;
   },
   follow: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} started following you`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} started following you`,
       body: `Tap to view their profile`,
     };
     return message;
   },
   message: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} sent you a message`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a message`,
       body: `Tap to view the message`,
     };
     return message;
   },
   chatMessage: (sendingUser, chatMessage) => {
     const message = {
-      title: `${sendingUser.firstName} sent you a message`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a message`,
       body: chatMessage,
     };
     return message;
   },
   mention: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} mentioned you in a comment`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} mentioned you in a comment`,
       body: `Tap to view the comment`,
     };
     return message;
   },
   tag: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} tagged you in a post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} tagged you in a post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   repost: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} shared your post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} shared your post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   share: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} shared a post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} shared a post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   post: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} created a new post`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} created a new post`,
       body: `Tap to view the post`,
     };
     return message;
   },
   connectionRequest: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} sent you a connection request`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a connection request`,
       body: `Tap to view the request`,
     };
     return message;
@@ -95,7 +102,7 @@ const notificationTemplate = {
   },
   connectionRejected: (sendingUser) => {
     const message = {
-      title: `${sendingUser.firstName} rejected your connection request`,
+      title: `${sendingUser.firstName} ${sendingUser.lastName} rejected your connection request`,
       body: `Tap to view their profile`,
     };
     return message;
@@ -108,6 +115,7 @@ const sendNotification = async (
   subject,
   resource,
   reactionType = null,
+  impressionAbout = null,
   chatMessage = null
 ) => {
   try {
@@ -122,8 +130,18 @@ const sendNotification = async (
         sendingUser,
         resource.commentContent
       );
-    } else if (subject === "reaction") {
-      messageStr = notificationTemplate[subject](sendingUser, reactionType);
+    } else if (subject === "impression") {
+      if (impressionAbout === "Post") {
+        messageStr = notificationTemplate["reactionPost"](
+          sendingUser,
+          reactionType
+        );
+      } else if (impressionAbout === "Comment") {
+        messageStr = notificationTemplate["reactionComment"](
+          sendingUser,
+          reactionType
+        );
+      }
     } else if (subject === "chatMessage") {
       messageStr = notificationTemplate[subject](sendingUser, chatMessage);
     } else {
