@@ -9119,50 +9119,157 @@
  *   - name: Connections
  *     description: Managing connections and connection requests
  */
-
 /**
  * @swagger
- * /connections/request/{targetUserId}:
+ * /user/search:
+ *   get:
+ *     summary: Search users with filters
+ *     tags: [Users]
+ *     description: Search for users using various filters including name, company, and industry
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query (searches across name)
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       500:
+ *         description: Server error
+ *
+ * /user/search/users:
+ *   get:
+ *     summary: Search users by name
+ *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users found successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       500:
+ *         description: Server error
+ *
+ * /user/connections/request/{targetUserId}:
  *   post:
- *     summary: Send connection request to another user
+ *     summary: Send connection request
  *     tags: [Connections]
- *     description: Send a connection request to the user specified by targetUserId.
  *     parameters:
  *       - name: targetUserId
  *         in: path
  *         required: true
- *         description: The ID of the user to send a connection request to
  *         schema:
  *           type: string
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Connection request sent successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Connection request sent successfully"
  *       400:
- *         description: Invalid user ID
- *       401:
- *         description: Unauthorized, user must be logged in
- *       409:
- *         description: request already sent
- *       404:
- *         description: User not found
- */
-
-/**
- * @swagger
- * /connections/requests/{userId}:
+ *         description: Invalid request or already pending
+ *       500:
+ *         description: Server error
+ *
+ * /user/connections/requests/{requestId}:
  *   patch:
- *     summary: Accept or decline a connection request
+ *     summary: Handle connection request
  *     tags: [Connections]
- *     description: Accept or decline a pending connection request.
  *     parameters:
- *       - name: userId
+ *       - name: requestId
  *         in: path
  *         required: true
- *         description: The ID of the user that sent the request
  *         schema:
  *           type: string
  *     requestBody:
@@ -9175,90 +9282,202 @@
  *               action:
  *                 type: string
  *                 enum: [accept, decline]
- *                 example: accept
- *     responses:
- *       200:
- *         description: Connection request updated successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Connection request accepted"
- *       400:
- *         description: Invalid action or userId
- *       401:
- *         description: Unauthorized, user must be logged in
- *       404:
- *         description: Connection request not found
- */
-
-/**
- * @swagger
- * /connections/{userId}:
- *   delete:
- *     summary: Remove a connection
- *     tags: [Connections]
- *     description: Remove an existing connection.
- *     parameters:
- *       - name: uderId
- *         in: path
- *         required: true
- *         description: The ID of the user to remove
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Connection removed successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Connection removed successfully"
- *       400:
- *         description: Invalid user ID
- *       401:
- *         description: Unauthorized, user must be logged in
- *       404:
- *         description: user not found
- */
-
-/**
- * @swagger
- * /connections:
- *   get:
- *     summary: Get a list of connections
- *     tags: [Connections]
- *     description: Retrieve a list of all connections for the logged-in user.
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Request handled successfully
+ *       400:
+ *         description: Invalid action
+ *       404:
+ *         description: Request not found
+ *       500:
+ *         description: Server error
+ *
+ * /user/connections:
+ *   get:
+ *     summary: Get user connections
+ *     tags: [Connections]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Connections retrieved successfully
- *         content:
- *           application/json:
- *             example:
- *               connections: ["user123", "user456"]
+ *       500:
+ *         description: Server error
  *
- *       401:
- *         description: Unauthorized, user must be logged in
- */
-
-/**
- * @swagger
- * /connections/requests:
+ * /user/connections/requests:
  *   get:
- *     summary: Get a list of pending connection requests
+ *     summary: Get pending connection requests
  *     tags: [Connections]
- *     description: Retrieve a list of all pending connection requests for the logged-in user.
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Pending connection requests retrieved successfully
+ *         description: Pending requests retrieved successfully
+ *       500:
+ *         description: Server error
+ *
+ * /user/connections/{connectionId}:
+ *   delete:
+ *     summary: Remove connection
+ *     tags: [Connections]
+ *     parameters:
+ *       - name: connectionId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Connection removed successfully
+ *       500:
+ *         description: Server error
+ *
+ * /user/block/{userId}:
+ *   post:
+ *     summary: Block user
+ *     tags: [Users]
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *       500:
+ *         description: Server error
+ *   delete:
+ *     summary: Unblock user
+ *     tags: [Users]
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *       500:
+ *         description: Server error
+ *
+ * /user/blocked:
+ *   get:
+ *     summary: Get blocked users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Blocked users retrieved successfully
+ *       500:
+ *         description: Server error
+ *
+ * /user/message-requests:
+ *   post:
+ *     summary: Send message request
+ *     tags: [Messages]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetUserId:
+ *                 type: string
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Message request sent successfully
+ *       500:
+ *         description: Server error
+ *   get:
+ *     summary: Get message requests
+ *     tags: [Messages]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Message requests retrieved successfully
  *         content:
  *           application/json:
- *             example:
- *               pendingRequests: ["user123", "user456"]
- *       401:
- *         description: Unauthorized, user must be logged in
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messageRequests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       500:
+ *         description: Server error
+ *
+ * /user/message-requests/{requestId}:
+ *   patch:
+ *     summary: Handle message request
+ *     tags: [Messages]
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [accept, decline]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Message request handled successfully
+ *       400:
+ *         description: Invalid action
+ *       500:
+ *         description: Server error
  */
 
 // *********************************** Notifications APIs ******************************************//
@@ -11912,4 +12131,396 @@
  *                 error:
  *                   type: string
  *                   example: "Internal server error details"
+ */
+// Add after your existing documentation sections, before any closing comments
+// Look for sections like "PRIVACY SETTINGS DOCUMENTATION" or similar
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// ADMIN DOCUMENTATION ////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Admin
+ *     description: API endpoints for admin operations including reports, jobs, and analytics
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Report:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           example: "65fb2a8e7c5721f123456789"
+ *         userId:
+ *           type: string
+ *           description: ID of the user who reported
+ *         reportedId:
+ *           type: string
+ *           description: ID of the reported content (post, comment, etc.)
+ *         reportedType:
+ *           type: string
+ *           enum: [Post, Comment, Job, User]
+ *         reason:
+ *           type: string
+ *           example: "Inappropriate content"
+ *         status:
+ *           type: string
+ *           enum: [pending, approved, rejected]
+ *           default: pending
+ *         adminFeedback:
+ *           type: string
+ *           example: "Content violates community guidelines"
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ */
+
+/**
+ * @swagger
+ * /admin/reports:
+ *   get:
+ *     summary: Get all reports
+ *     tags: [Admin]
+ *     description: Retrieve all user reports for content moderation
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reports retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Report'
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - User is not an admin
+ */
+
+/**
+ * @swagger
+ * /admin/reports/{reportId}:
+ *   get:
+ *     summary: Get specific report
+ *     tags: [Admin]
+ *     description: Retrieve details of a specific report
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the report to retrieve
+ *     responses:
+ *       200:
+ *         description: Report retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Report'
+ *       404:
+ *         description: Report not found
+ *
+ *   patch:
+ *     summary: Handle report
+ *     tags: [Admin]
+ *     description: Update report status and provide admin feedback
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the report to handle
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [approved, rejected]
+ *               reason:
+ *                 type: string
+ *                 example: "Content violates community guidelines"
+ *     responses:
+ *       200:
+ *         description: Report handled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Report'
+ *
+ *   delete:
+ *     summary: Delete report
+ *     tags: [Admin]
+ *     description: Remove a report from the system
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the report to delete
+ *     responses:
+ *       200:
+ *         description: Report deleted successfully
+ *       404:
+ *         description: Report not found
+ */
+
+/**
+ * @swagger
+ * /admin/jobs:
+ *   get:
+ *     summary: Get flagged jobs
+ *     tags: [Admin]
+ *     description: Retrieve all flagged job postings for moderation
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Flagged jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ */
+
+/**
+ * @swagger
+ * /admin/jobs/{jobId}:
+ *   patch:
+ *     summary: Moderate job
+ *     tags: [Admin]
+ *     description: Update job moderation status
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the job to moderate
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [approve, reject]
+ *               reason:
+ *                 type: string
+ *                 example: "Job posting violates guidelines"
+ *     responses:
+ *       200:
+ *         description: Job moderated successfully
+ *
+ *   delete:
+ *     summary: Remove job
+ *     tags: [Admin]
+ *     description: Delete a job posting
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the job to remove
+ *     responses:
+ *       200:
+ *         description: Job removed successfully
+ *       404:
+ *         description: Job not found
+ */
+
+/**
+ * @swagger
+ * /admin/analytics/overview:
+ *   get:
+ *     summary: Get analytics overview
+ *     tags: [Admin]
+ *     description: Retrieve platform-wide analytics overview
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics overview retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 1000
+ *                     active:
+ *                       type: number
+ *                       example: 800
+ *                     premium:
+ *                       type: number
+ *                       example: 200
+ *                 posts:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 5000
+ *                     totalImpressions:
+ *                       type: number
+ *                       example: 50000
+ *                     totalComments:
+ *                       type: number
+ *                       example: 2500
+ *                     totalShares:
+ *                       type: number
+ *                       example: 1000
+ *                 jobs:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 200
+ *                     active:
+ *                       type: number
+ *                       example: 150
+ *                     totalApplications:
+ *                       type: number
+ *                       example: 1000
+ */
+
+/**
+ * @swagger
+ * /admin/analytics/users:
+ *   get:
+ *     summary: Get user analytics
+ *     tags: [Admin]
+ *     description: Retrieve detailed user-related analytics
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: range
+ *         schema:
+ *           type: string
+ *         description: Time range in days (default 30)
+ *         example: "30"
+ *     responses:
+ *       200:
+ *         description: User analytics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 timeRange:
+ *                   type: object
+ *                   properties:
+ *                     start:
+ *                       type: string
+ *                       format: date-time
+ *                     end:
+ *                       type: string
+ *                       format: date-time
+ *                 growth:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: object
+ *                       newUsers:
+ *                         type: number
+ *                       premiumUsers:
+ *                         type: number
+ */
+
+/**
+ * @swagger
+ * /admin/analytics/content:
+ *   get:
+ *     summary: Get content analytics
+ *     tags: [Admin]
+ *     description: Retrieve detailed content-related analytics
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: range
+ *         schema:
+ *           type: string
+ *         description: Time range in days (default 30)
+ *         example: "30"
+ *     responses:
+ *       200:
+ *         description: Content analytics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 timeRange:
+ *                   type: object
+ *                   properties:
+ *                     start:
+ *                       type: string
+ *                       format: date-time
+ *                     end:
+ *                       type: string
+ *                       format: date-time
+ *                 posts:
+ *                   type: object
+ *                   properties:
+ *                     daily:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     engagementByType:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     distributionByIndustry:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
  */
