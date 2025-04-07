@@ -6,7 +6,14 @@ const notificationSchema = new mongoose.Schema(
     to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Receiver of the notification
     subject: {
       type: String,
-      enum: ["impression", "comment", "connection request", "message"],
+      enum: [
+        "impression",
+        "comment",
+        "connection request",
+        "message",
+        "follow",
+        "post",
+      ],
       required: true,
     }, // Type of notification
     title: { type: String, required: true }, // Title of the notification
