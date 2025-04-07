@@ -44,13 +44,6 @@ const notificationTemplate = {
     };
     return message;
   },
-  chatMessage: (sendingUser, chatMessage) => {
-    const message = {
-      title: `${sendingUser.firstName} ${sendingUser.lastName} sent you a message`,
-      body: chatMessage,
-    };
-    return message;
-  },
   mention: (sendingUser) => {
     const message = {
       title: `${sendingUser.firstName} ${sendingUser.lastName} mentioned you in a comment`,
@@ -113,10 +106,7 @@ const sendNotification = async (
   sendingUser,
   recievingUser,
   subject,
-  resource,
-  reactionType = null,
-  impressionAbout = null,
-  chatMessage = null
+  resource
 ) => {
   try {
     const user = await userModel.findById(recievingUser.id);
@@ -131,19 +121,17 @@ const sendNotification = async (
         resource.commentContent
       );
     } else if (subject === "impression") {
-      if (impressionAbout === "Post") {
+      if (resource.targetType === "Post") {
         messageStr = notificationTemplate["reactionPost"](
           sendingUser,
-          reactionType
+          resource.type
         );
-      } else if (impressionAbout === "Comment") {
+      } else if (resource.targetType === "Comment") {
         messageStr = notificationTemplate["reactionComment"](
           sendingUser,
-          reactionType
+          resource.type
         );
       }
-    } else if (subject === "chatMessage") {
-      messageStr = notificationTemplate[subject](sendingUser, chatMessage);
     } else {
       messageStr = notificationTemplate[subject](sendingUser);
     }

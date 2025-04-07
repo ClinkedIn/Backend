@@ -1,4 +1,5 @@
 const postModel = require("../models/postModel");
+const notificationModel = require("../models/notificationModel");
 const userModel = require("../models/userModel");
 const repostModel = require("../models/repostModel");
 const reportModel = require("../models/reportModel");
@@ -700,6 +701,18 @@ const likePost = async (req, res) => {
           },
           { new: true }
         );
+        await notificationModel.findOneAndDelete({
+          resourceId: existingImpression._id,
+        });
+
+        const sendingUser = await userModel.findById(userId);
+        const recievingUser = await userModel.findById(updatedPost.userId);
+        await sendNotification(
+          sendingUser,
+          recievingUser,
+          "impression",
+          existingImpression
+        );
 
         return res.status(200).json({
           message: `Impression changed from ${oldType} to ${impressionType}`,
@@ -730,7 +743,14 @@ const likePost = async (req, res) => {
       },
       { new: true }
     );
-
+    const sendingUser = await userModel.findById(userId);
+    const recievingUser = await userModel.findById(updatedPost.userId);
+    await sendNotification(
+      sendingUser,
+      recievingUser,
+      "impression",
+      newImpression
+    );
     res.status(200).json({
       message: `Post ${impressionType}d successfully`,
       impressionCounts: updatedPost.impressionCounts,
@@ -778,6 +798,10 @@ const unlikePost = async (req, res) => {
 
     // Get the impression type before deleting
     const impressionType = existingImpression.type;
+
+    await notificationModel.findOneAndDelete({
+      resourceId: existingImpression._id,
+    });
 
     // Hard delete the impression
     await impressionModel.findByIdAndDelete(existingImpression._id);
