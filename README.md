@@ -33,3 +33,11 @@ Module 1: Authentication & User Management
 ●	Block/Unblock users
 ●	Manage blocked users list
 ●	Messaging requests for non-connections
+
+
+
+Module 14: Admin Panel
+●	Monitor reports of inappropriate content
+●	Manage job postings and flagged job listings
+●	View platform analytics
+
