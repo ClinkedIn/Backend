@@ -2147,6 +2147,47 @@ const handleConnectionRequest = async (req, res) => {
     }
 };
 
+/**
+ * Cancel a sent connection request
+ * @route DELETE /user/connections/requests/:requestId
+ */
+const cancelConnectionRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const userId = req.user.id;
+
+        // Find the target user who received the connection request
+        const targetUser = await userModel.findById(requestId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+
+        // Check if there's actually a pending request
+        const requestExists = targetUser.pendingConnections.includes(userId);
+        if (!requestExists) {
+            return res.status(400).json({
+                message: 'No pending connection request found to cancel'
+            });
+        }
+
+        // Remove the request from target user's pending connections
+        await userModel.findByIdAndUpdate(requestId, {
+            $pull: { pendingConnections: userId }
+        });
+
+        res.status(200).json({
+            message: 'Connection request cancelled successfully'
+        });
+
+    } catch (error) {
+        console.error('Error cancelling connection request:', error);
+        res.status(500).json({
+            message: 'Failed to cancel connection request',
+            error: error.message
+        });
+    }
+};
+
 const getConnections = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
@@ -2414,6 +2455,7 @@ module.exports = {
     searchUsersByName,
     sendConnectionRequest,
     handleConnectionRequest,
+    cancelConnectionRequest,
     getConnections,
     getPendingRequests,
     removeConnection,
