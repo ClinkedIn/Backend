@@ -4339,9 +4339,10 @@
  *   get:
  *     summary: Retrieve all jobs
  *     tags: [Jobs]
- *     description: Retrieve a list of all job postings
- *     security:
- *       - BearerAuth: []
+ *     description: |
+ *       Retrieves all job listings from the database.
+ *       Returns job details along with associated company information.
+ *       Jobs are sorted by creation date (newest first).
  *     responses:
  *       200:
  *         description: List of jobs retrieved successfully
@@ -4350,11 +4351,73 @@
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Job'
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     description: Unique identifier for the job
+ *                     example: "60d21b4667d0d8992e610c85"
+ *                   title:
+ *                     type: string
+ *                     description: Job title
+ *                     example: "Senior Software Engineer"
+ *                   companyId:
+ *                     type: object
+ *                     description: Details of the company offering the job
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c84"
+ *                       name:
+ *                         type: string
+ *                         example: "Tech Solutions Inc."
+ *                       logo:
+ *                         type: string
+ *                         example: "https://example.com/logo.png"
+ *                       industry:
+ *                         type: string
+ *                         example: "Software Development"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                   workplaceType:
+ *                     type: string
+ *                     enum: [Onsite, Hybrid, Remote]
+ *                     example: "Remote"
+ *                   jobLocation:
+ *                     type: string
+ *                     example: "New York, NY"
+ *                   jobType:
+ *                     type: string
+ *                     enum: [Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship]
+ *                     example: "Full Time"
+ *                   description:
+ *                     type: string
+ *                     example: "We are looking for a talented software engineer..."
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2023-09-30T14:48:00.000Z"
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2023-10-05T09:12:00.000Z"
+ *                   isActive:
+ *                     type: boolean
+ *                     example: true
  *       500:
- *         description: Internal server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**

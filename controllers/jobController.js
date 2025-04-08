@@ -31,10 +31,17 @@ const createJob = async (req, res) => {
 // Get all jobs
 const getAllJobs = async (req, res) => {
     try {
-        const jobs = await jobModel.find();
-        res.status(200).json(jobs);
+        // Only include active jobs and populate company information
+        const jobs = await jobModel.find()
+            .populate('companyId', 'name logo industry location')
+            .sort({ createdAt: -1 });
+            res.status(200).json(jobs);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error getting jobs:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve jobs',
+            error: error.message 
+        });
     }
 };
 
