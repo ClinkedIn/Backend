@@ -86,7 +86,9 @@ const searchJobs = async (req, res) => {
         const skipIndex = (pageNum - 1) * limitNum;
         
         // Build the match stage for aggregation pipeline
-        const matchStage = {};
+        const matchStage = {
+            isActive: true // Only return active jobs
+        };
         
         // Add general search criteria (searches across multiple fields)
         if (q && q.trim().length >= 2) {

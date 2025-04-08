@@ -39,6 +39,7 @@ const jobSchema = new mongoose.Schema({
   applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who applied
   accepted: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users accepted
   rejected: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users rejected
+  isActive: { type: Boolean, default: true }, // Job status
 }, { timestamps: true }); // Adds createdAt & updatedAt timestamps
 
 module.exports = mongoose.model("Job", jobSchema);

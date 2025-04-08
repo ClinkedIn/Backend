@@ -76,8 +76,12 @@ const updateJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
     try {
-        // Using findByIdAndDelete instead of find + remove
-        const deletedJob = await jobModel.findByIdAndDelete(req.params.jobId);
+        // Using findByIdAndUpdate to soft delete instead of findByIdAndDelete
+        const deletedJob = await jobModel.findByIdAndUpdate(
+            req.params.jobId,
+            { isActive: false },
+            { new: true } // Return the updated document
+        );
         
         if (!deletedJob) {
             return res.status(404).json({ message: 'Job not found' });
