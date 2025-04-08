@@ -4336,6 +4336,25 @@
  *       500:
  *         description: Internal server error
  *
+ *   get:
+ *     summary: Retrieve all jobs
+ *     tags: [Jobs]
+ *     description: Retrieve a list of all job postings
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of jobs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Job'
+ *       401:
+ *         description: Unauthorized, invalid or missing token
+ *       500:
+ *         description: Internal server error
  */
 
 /**
@@ -5602,33 +5621,6 @@
  *               message: "Internal server error"
  */
 
-/**
- * @swagger
- * /user/in/{userId}:
- *    get:
- *      summary: Get a logged-in user's public profile data by ID
- *      tags: [Users]
- *      description: Retrieve a logged-in user's public profile data by their ID
- *      parameters:
- *        - name: userId
- *          in: path
- *          required: true
- *          schema:
- *            type: string
- *      responses:
- *        200:
- *          description: User data retrieved successfully
- *          content:
- *            application/json:
- *              schema:
- *                $ref: "#/components/schemas/LoggedInUser"
- *        401:
- *          description: Unauthorized, user must be logged in
- *        404:
- *          description: User not found
- *        500:
- *          description: Internal server error
- */
 
 /**
  * @swagger
