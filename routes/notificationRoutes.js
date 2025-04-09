@@ -22,4 +22,13 @@ router
 router
   .route("/resume-notifications")
   .patch(protect, notificationController.resumeNotifications);
+
+router
+  .route("/delete-notification/:id")
+  .delete(protect, notificationController.deleteNotification);
+
+router
+  .route("/restore-notification/:id")
+  .patch(protect, notificationController.restoreNotification);
+
 module.exports = router;

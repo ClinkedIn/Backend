@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
     content: { type: String, required: true },
     resourceId: { type: mongoose.Schema.Types.ObjectId },
     isRead: { type: Boolean, default: false }, // Mark as read/unread
+    isDeleted: { type: Boolean, default: false }, // Mark as deleted
   },
   { timestamps: true }
 ); // Adds createdAt & updatedAt timestamps

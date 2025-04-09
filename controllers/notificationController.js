@@ -8,7 +8,7 @@ const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
     const features = new APIFeatures(
-      Notification.find({ to: userId }),
+      Notification.find({ to: userId, isDeleted: false }),
       req.query
     )
       .filter()
@@ -48,6 +48,7 @@ const getUnreadNotificationsCount = async (req, res) => {
     const unreadCount = await Notification.countDocuments({
       to: userId,
       isRead: false,
+      isDeleted: false,
     });
 
     return res.status(200).json({ unreadCount });
@@ -61,8 +62,14 @@ const markRead = async (req, res) => {
     const notificationId = req.params.id;
     const notification = await Notification.findById(notificationId);
 
-    if (!notification) {
+    if (!notification || notification.isDeleted) {
       return res.status(404).json({ message: "Notification not found" });
+    }
+
+    if (notification.to.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not authorized to edit this notification",
+      });
     }
 
     notification.isRead = true;
@@ -79,8 +86,14 @@ const markUnread = async (req, res) => {
     const notificationId = req.params.id;
     const notification = await Notification.findById(notificationId);
 
-    if (!notification) {
+    if (!notification || notification.isDeleted) {
       return res.status(404).json({ message: "Notification not found" });
+    }
+
+    if (notification.to.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not authorized to edit this notification",
+      });
     }
 
     notification.isRead = false;
@@ -138,6 +151,56 @@ const resumeNotifications = async (req, res) => {
   }
 };
 
+const deleteNotification = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const notification = await Notification.findById(notificationId);
+    if (!notification || notification.isDeleted) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+    if (notification.to.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not authorized to delete this notification",
+      });
+    }
+
+    notification.isDeleted = true;
+    await notification.save();
+
+    return res.status(204).json({ message: "Notification deleted" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server Error", error });
+  }
+};
+
+const restoreNotification = async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    if (!notification.isDeleted) {
+      return res.status(400).json({ message: "Notification is not deleted" });
+    }
+
+    if (notification.to.toString() !== req.user.id) {
+      return res.status(403).json({
+        message: "You are not authorized to restore this notification",
+      });
+    }
+
+    notification.isDeleted = false;
+    await notification.save();
+
+    return res.status(200).json({ message: "Notification restored" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server Error", error });
+  }
+};
+
 module.exports = {
   getNotifications,
   markRead,
@@ -145,4 +208,6 @@ module.exports = {
   getUnreadNotificationsCount,
   pauseNotifications,
   resumeNotifications,
+  deleteNotification,
+  restoreNotification,
 };
