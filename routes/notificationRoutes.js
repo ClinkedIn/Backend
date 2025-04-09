@@ -14,4 +14,12 @@ router
 router
   .route("/unread-count")
   .get(protect, notificationController.getUnreadNotificationsCount);
+
+router
+  .route("/pause-notifications")
+  .patch(protect, notificationController.pauseNotifications);
+
+router
+  .route("/resume-notifications")
+  .patch(protect, notificationController.resumeNotifications);
 module.exports = router;

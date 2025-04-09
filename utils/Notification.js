@@ -105,12 +105,6 @@ const sendNotification = async (
       console.error("User not found:", recievingUser.id);
       return;
     }
-    if (user.notificationPauseExpiresAt !== null) {
-      if (user.notificationPauseExpiresAt > new Date()) {
-        console.log("User has paused notifications:", user.id);
-        return;
-      }
-    }
 
     let messageStr = {};
     if (subject === "impression") {
@@ -135,6 +129,16 @@ const sendNotification = async (
       content: messageStr.body,
       resourceId: resource.id,
     });
+
+    if (
+      user.notificationPauseExpiresAt &&
+      user.notificationPauseExpiresAt > new Date()
+    ) {
+      return;
+    } else {
+      user.notificationPauseExpiresAt = null;
+      await user.save();
+    }
 
     const fcmTokens = user.fcmToken;
     if (!fcmTokens || fcmTokens.length === 0) {
