@@ -3,6 +3,7 @@
 const { shouldUseFlatConfig } = require("eslint/use-at-your-own-risk");
 const Notification = require("./../models/notificationModel");
 const userModel = require("./../models/userModel");
+const commentModel = require("./../models/commentModel");
 const admin = require("./firebase");
 const { getMessaging } = require("firebase-admin/messaging");
 const { body } = require("express-validator");
@@ -90,6 +91,51 @@ const notificationTemplate = {
   },
 };
 
+const generateMessage = (sendingUser, subject, resource) => {
+  if (subject === "impression") {
+    if (resource.targetType === "Post") {
+      return notificationTemplate.reactionPost(sendingUser, resource.type);
+    } else if (resource.targetType === "Comment") {
+      return notificationTemplate.reactionComment(sendingUser, resource.type);
+    }
+  }
+  return notificationTemplate[subject](sendingUser);
+};
+
+// Helper to build notification data based on the subject and resource
+const buildNotificationData = async (
+  sendingUser,
+  recievingUser,
+  subject,
+  resource
+) => {
+  const baseData = {
+    from: sendingUser.id,
+    to: recievingUser.id,
+    subject,
+    content: "", // To be set after message is generated.
+    resourceId: resource.id,
+  };
+
+  if (subject === "impression") {
+    if (resource.targetType === "Post") {
+      baseData.relatedPostId = resource.targetId;
+    } else if (resource.targetType === "Comment") {
+      const comment = await commentModel.findById(resource.targetId);
+      if (!comment) {
+        console.error("Comment not found:", resource.targetId);
+        return null;
+      }
+      baseData.relatedPostId = comment.postId;
+      baseData.relatedCommentId = comment._id;
+    }
+  } else if (subject === "comment") {
+    baseData.relatedPostId = resource.postId;
+  }
+
+  return baseData;
+};
+
 const sendNotification = async (
   sendingUser,
   recievingUser,
@@ -97,39 +143,38 @@ const sendNotification = async (
   resource
 ) => {
   try {
-    if (sendingUser.id === recievingUser.id) {
-      return;
-    }
+    // Prevent self-notifications
+    if (sendingUser.id === recievingUser.id) return;
+
     const user = await userModel.findById(recievingUser.id);
     if (!user) {
       console.error("User not found:", recievingUser.id);
       return;
     }
 
-    let messageStr = {};
-    if (subject === "impression") {
-      if (resource.targetType === "Post") {
-        messageStr = notificationTemplate["reactionPost"](
-          sendingUser,
-          resource.type
-        );
-      } else if (resource.targetType === "Comment") {
-        messageStr = notificationTemplate["reactionComment"](
-          sendingUser,
-          resource.type
-        );
-      }
-    } else {
-      messageStr = notificationTemplate[subject](sendingUser);
+    // Generate the message text
+    const messageStr = generateMessage(sendingUser, subject, resource);
+    if (!messageStr || !messageStr.body) {
+      console.error("Failed to generate notification message.");
+      return;
     }
-    const notification = await Notification.create({
-      from: sendingUser.id,
-      to: recievingUser.id,
-      subject: subject,
-      content: messageStr.body,
-      resourceId: resource.id,
-    });
 
+    // Build notification data
+    let notificationData = await buildNotificationData(
+      sendingUser,
+      recievingUser,
+      subject,
+      resource
+    );
+    if (!notificationData) {
+      return;
+    }
+    notificationData.content = messageStr.body;
+
+    // Create the notification record
+    const notification = await Notification.create(notificationData);
+
+    // Check and clear notification pause if applicable
     if (
       user.notificationPauseExpiresAt &&
       user.notificationPauseExpiresAt > new Date()
@@ -140,42 +185,33 @@ const sendNotification = async (
       await user.save();
     }
 
+    // Ensure FCM tokens are available
     const fcmTokens = user.fcmToken;
     if (!fcmTokens || fcmTokens.length === 0) {
       console.error(
         "FCM tokens not found for user:",
-        recievingUser.firstName + " " + recievingUser.lastName
+        `${recievingUser.firstName} ${recievingUser.lastName}`
       );
       return;
     }
 
-    const message = {
-      notification: {
-        body: messageStr.body,
-      },
-      data: {
-        subject: subject,
-        resourceId: resource.id,
-      },
+    // Prepare the FCM message payload
+    const fcmMessage = {
+      notification: { body: messageStr.body },
+      data: { subject, resourceId: resource.id },
       tokens: fcmTokens,
     };
 
-    getMessaging()
-      .sendEachForMulticast(message)
-      .then((response) => {
-        if (response.failureCount > 0) {
-          const failedTokens = [];
-          response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-              failedTokens.push(fcmTokens[idx]);
-            }
-          });
-          console.log("List of tokens that caused failures:", failedTokens);
-        }
-      })
-      .catch((error) => {
-        console.error("Error sending messages:", error);
-      });
+    // Send the FCM message
+    const messaging = getMessaging();
+    const response = await messaging.sendEachForMulticast(fcmMessage);
+    if (response.failureCount > 0) {
+      const failedTokens = response.responses.reduce((acc, resp, idx) => {
+        if (!resp.success) acc.push(fcmTokens[idx]);
+        return acc;
+      }, []);
+      console.log("List of tokens that caused failures:", failedTokens);
+    }
   } catch (err) {
     console.error("Error creating notification:", err);
   }

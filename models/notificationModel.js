@@ -18,6 +18,11 @@ const notificationSchema = new mongoose.Schema(
     }, // Type of notification
     content: { type: String, required: true },
     resourceId: { type: mongoose.Schema.Types.ObjectId },
+    relatedPostId: { type: mongoose.Schema.Types.ObjectId, default: undefined }, // ID of the related post (if applicable)
+    relatedCommentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: undefined,
+    }, // ID of the related comment (if applicable)
     isRead: { type: Boolean, default: false }, // Mark as read/unread
     isDeleted: { type: Boolean, default: false }, // Mark as deleted
   },
