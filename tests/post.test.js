@@ -2,7 +2,9 @@ const request = require('supertest');
 const express = require('express');
 const mongoose = require('mongoose');
 const { uploadPostAttachments } = require('../utils/postUtils');
-const { createPost, getPost, getAllPosts,deletePost, updatePost, savePost,unsavePost,likePost, unlikePost } = require('../controllers/postController');
+const { createPost, getPost, getAllPosts,deletePost, updatePost, savePost,unsavePost,likePost, unlikePost,repostPost,
+  deleteRepost,reportPost,getPostImpressions,getPostReposts
+ } = require('../controllers/postController');
 
 // Set up mocks BEFORE importing models
 jest.mock('../utils/postUtils');
@@ -27,18 +29,34 @@ jest.mock('../models/userModel', () => ({
       firstName: 'Jane',
       lastName: 'Doe',
       headline: 'Software Engineer'
-    })
+    }),
   })),
   findByIdAndUpdate: jest.fn().mockResolvedValue({}),
+  find: jest.fn(),
+  limit: jest.fn(),
   correctPassword: jest.fn().mockImplementation((candidatePassword, userPassword) => {
     return Promise.resolve(candidatePassword === userPassword);
   })
 }));
 jest.mock('../models/repostModel', () => ({
   findOne: jest.fn(),
-  find: jest.fn()
+  find: jest.fn(),
+  create: jest.fn(),
+  findById: jest.fn(),
+  findByIdAndDelete: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
+  countDocuments: jest.fn(),
 }));
 jest.mock('../models/impressionModel', () => ({
+  create: jest.fn(),
+  findById: jest.fn(),
+  find: jest.fn(),
+  findOne: jest.fn(), // Add this missing method
+  findByIdAndUpdate: jest.fn(),
+  findByIdAndDelete: jest.fn(),
+  countDocuments: jest.fn()
+}));
+jest.mock('../models/reportModel', () => ({
   create: jest.fn(),
   findById: jest.fn(),
   find: jest.fn(),
@@ -52,6 +70,7 @@ const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
 const repostModel = require('../models/repostModel');
 const impressionModel = require('../models/impressionModel');
+const reportModel = require('../models/reportModel');
 const app = express();
 app.use(express.json());
 
@@ -1470,5 +1489,945 @@ describe('POST /posts/:postId/like - Like Post', () => {
     // Verify no updates were made
     expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
     expect(impressionModel.create).not.toHaveBeenCalled();
+  });
+});
+
+app.delete('/posts/:postId/like', mockVerifyToken, unlikePost);
+
+describe('DELETE /posts/:postId/like - Unlike Post', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully remove an impression', async () => {
+    // Mock an active post with existing impression counts
+    const mockPost = {
+      _id: 'post123',
+      userId: 'anotherUser456',
+      description: 'Test post content',
+      isActive: true,
+      impressionCounts: {
+        like: 5,
+        celebrate: 2,
+        total: 7
+      }
+    };
+    
+    // Mock existing impression
+    const mockExistingImpression = {
+      _id: 'impression789',
+      targetId: 'post123',
+      targetType: 'Post',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      type: 'like',
+      isActive: true
+    };
+    
+    // Mock updated post with decremented counts
+    const mockUpdatedPost = {
+      ...mockPost,
+      impressionCounts: {
+        like: 4, // Decremented like count
+        celebrate: 2,
+        total: 6 // Decremented total
+      }
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockResolvedValue(mockPost);
+    impressionModel.findOne.mockResolvedValue(mockExistingImpression);
+    impressionModel.findByIdAndDelete.mockResolvedValue(mockExistingImpression);
+    postModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedPost);
+    
+    const response = await request(app)
+      .delete('/posts/post123/like');
+    
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Post like removed successfully');
+    expect(response.body.impressionCounts).toEqual(mockUpdatedPost.impressionCounts);
+    
+    // Verify impression was deleted
+    expect(impressionModel.findByIdAndDelete).toHaveBeenCalledWith('impression789');
+    
+    // Verify post was updated with correct parameters
+    expect(postModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'post123',
+      {
+        'impressionCounts.like': 4,
+        'impressionCounts.total': 6
+      },
+      { new: true }
+    );
+  });
+
+  test('should return 400 if user has not reacted to the post', async () => {
+    // Mock an active post
+    const mockPost = {
+      _id: 'post123',
+      userId: 'anotherUser456',
+      description: 'Test post content',
+      isActive: true,
+      impressionCounts: {
+        like: 5,
+        total: 5
+      }
+    };
+    
+    // Mock no existing impression
+    impressionModel.findOne.mockResolvedValue(null);
+    postModel.findOne.mockResolvedValue(mockPost);
+    
+    const response = await request(app)
+      .delete('/posts/post123/like');
+    
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('You have not reacted to this post');
+    
+    // Verify no updates were made
+    expect(impressionModel.findByIdAndDelete).not.toHaveBeenCalled();
+    expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  test('should return 404 if post is not found or inactive', async () => {
+    // Mock post not found
+    postModel.findOne.mockResolvedValue(null);
+    
+    const response = await request(app)
+      .delete('/posts/nonexistentpost/like');
+    
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe('Post not found or inactive');
+    
+    // Verify no impression lookup or updates were made
+    expect(impressionModel.findOne).not.toHaveBeenCalled();
+    expect(impressionModel.findByIdAndDelete).not.toHaveBeenCalled();
+    expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+});
+
+
+app.post('/posts/:postId/repost', mockVerifyToken, repostPost);
+
+describe('POST /posts/:postId/repost - Repost Post', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully repost a post with description', async () => {
+    // Mock an active post
+    const mockPost = {
+      _id: 'post123',
+      userId: 'otherUser456',
+      description: 'Original post content',
+      isActive: true,
+      repostCount: 5
+    };
+    
+    // Mock the created repost
+    const mockNewRepost = {
+      _id: 'repost789',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      postId: 'post123',
+      description: 'Great insights worth sharing!',
+      isActive: true,
+      createdAt: new Date()
+    };
+    
+    // Mock the user who is reposting
+    const mockUser = {
+      _id: 'cc81c18d6b9fc1b83e2bebe3',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      headline: 'Software Engineer',
+      profilePicture: 'profile.jpg'
+    };
+    
+    // Mock updated post with incremented repost count
+    const mockUpdatedPost = {
+      ...mockPost,
+      repostCount: 6
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockResolvedValue(mockPost);
+    repostModel.create.mockResolvedValue(mockNewRepost);
+    postModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedPost);
+    userModel.findById.mockImplementation(() => ({
+      select: jest.fn().mockResolvedValue(mockUser)
+    }));
+    
+    const response = await request(app)
+      .post('/posts/post123/repost')
+      .send({ description: 'Great insights worth sharing!' });
+    
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBe('Post reposted successfully');
+    expect(response.body.repost).toEqual({
+      repostId: 'repost789',
+      originalPostId: 'post123',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      headline: 'Software Engineer',
+      profilePicture: 'profile.jpg',
+      repostDescription: 'Great insights worth sharing!',
+      createdAt: mockNewRepost.createdAt.toISOString()
+    });
+    
+    // Verify repost was created with correct parameters
+    expect(repostModel.create).toHaveBeenCalledWith({
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      postId: 'post123',
+      description: 'Great insights worth sharing!',
+      isActive: true
+    });
+    
+    // Verify repost count was incremented on original post
+    expect(postModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'post123',
+      { $inc: { repostCount: 1 } },
+      { new: true }
+    );
+  });
+
+  test('should successfully repost a post without description', async () => {
+    // Mock an active post
+    const mockPost = {
+      _id: 'post123',
+      userId: 'otherUser456',
+      description: 'Original post content',
+      isActive: true,
+      repostCount: 5
+    };
+    
+    // Mock the created repost with empty description
+    const mockNewRepost = {
+      _id: 'repost789',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      postId: 'post123',
+      description: '', // Empty description
+      isActive: true,
+      createdAt: new Date()
+    };
+    
+    // Mock the user who is reposting
+    const mockUser = {
+      _id: 'cc81c18d6b9fc1b83e2bebe3',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      headline: 'Software Engineer',
+      profilePicture: 'profile.jpg'
+    };
+    
+    // Mock updated post with incremented repost count
+    const mockUpdatedPost = {
+      ...mockPost,
+      repostCount: 6
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockResolvedValue(mockPost);
+    repostModel.create.mockResolvedValue(mockNewRepost);
+    postModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedPost);
+    userModel.findById.mockImplementation(() => ({
+      select: jest.fn().mockResolvedValue(mockUser)
+    }));
+    
+    const response = await request(app)
+      .post('/posts/post123/repost')
+      .send({}); // No description provided
+    
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBe('Post reposted successfully');
+    expect(response.body.repost.repostDescription).toBe(''); // Empty description
+    
+    // Verify repost was created with empty description
+    expect(repostModel.create).toHaveBeenCalledWith({
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      postId: 'post123',
+      description: '',
+      isActive: true
+    });
+  });
+
+  test('should return 404 if post is not found or inactive', async () => {
+    // Mock post not found
+    postModel.findOne.mockResolvedValue(null);
+    
+    const response = await request(app)
+      .post('/posts/nonexistentpost/repost')
+      .send({ description: 'Attempting to repost a non-existent post' });
+    
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe('Post not found or inactive');
+    
+    // Verify no repost was created
+    expect(repostModel.create).not.toHaveBeenCalled();
+    expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+});
+app.delete('/reposts/:repostId', mockVerifyToken, deleteRepost);
+
+describe('DELETE /reposts/:repostId - Delete Repost', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully delete a repost', async () => {
+    // Mock an active repost that belongs to the authenticated user
+    const mockRepost = {
+      _id: 'repost123',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      postId: 'post456',
+      description: 'Test repost',
+      isActive: true,
+      toString: () => 'repost123',
+      userId: {
+        toString: () => 'cc81c18d6b9fc1b83e2bebe3'
+      }
+    };
+    
+    // Mock the original post
+    const mockPost = {
+      _id: 'post456',
+      repostCount: 3
+    };
+    
+    // Set up mocks
+    repostModel.findById.mockResolvedValue(mockRepost);
+    repostModel.findByIdAndUpdate.mockResolvedValue({ ...mockRepost, isActive: false });
+    postModel.findById.mockResolvedValue(mockPost);
+    postModel.findByIdAndUpdate.mockResolvedValue({ ...mockPost, repostCount: 2 });
+    
+    const response = await request(app)
+      .delete('/reposts/repost123');
+    
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Repost deleted successfully');
+    
+    // Verify repost was updated to inactive
+    expect(repostModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'repost123', 
+      { isActive: false }
+    );
+    
+    // Verify repost count was decremented on the original post
+    expect(postModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'post456',
+      { $inc: { repostCount: -1 } }
+    );
+  });
+
+  test('should return 403 if user is not the repost owner', async () => {
+    // Mock a repost that belongs to another user
+    const mockRepost = {
+      _id: 'repost123',
+      userId: {
+        toString: () => 'otherUser456' // Different from auth user
+      },
+      postId: 'post456',
+      description: 'Test repost',
+      isActive: true
+    };
+    
+    // Set up mocks
+    repostModel.findById.mockResolvedValue(mockRepost);
+    
+    const response = await request(app)
+      .delete('/reposts/repost123');
+    
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe('You can only delete your own reposts');
+    
+    // Verify no update operations were performed
+    expect(repostModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(postModel.findById).not.toHaveBeenCalled();
+    expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  test('should return 404 if repost is not found or already inactive', async () => {
+    // Test case 1: Repost not found
+    repostModel.findById.mockResolvedValueOnce(null);
+    
+    const response1 = await request(app)
+      .delete('/reposts/nonexistentRepost');
+    
+    expect(response1.status).toBe(404);
+    expect(response1.body.message).toBe('Repost not found');
+    
+    // Test case 2: Repost is already inactive
+    const inactiveRepost = {
+      _id: 'repost123',
+      userId: {
+        toString: () => 'cc81c18d6b9fc1b83e2bebe3'
+      },
+      postId: 'post456',
+      isActive: false // Already inactive
+    };
+    
+    repostModel.findById.mockResolvedValueOnce(inactiveRepost);
+    
+    const response2 = await request(app)
+      .delete('/reposts/repost123');
+    
+    expect(response2.status).toBe(404);
+    expect(response2.body.message).toBe('Repost not found or already deleted');
+    
+    // Verify no update operations were performed in either case
+    expect(repostModel.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(postModel.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+});
+app.post('/posts/:postId/report', mockVerifyToken, reportPost);
+
+describe('POST /posts/:postId/report - Report Post', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully report a post with valid policy and dontWantToSee', async () => {
+    // Mock an active post
+    const mockPost = {
+      _id: 'post123',
+      userId: 'anotherUser456',
+      description: 'Test post content',
+      isActive: true
+    };
+    
+    // Mock the created report
+    const mockReport = {
+      _id: 'report789',
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      reportedId: 'post123',
+      reportedType: 'Post',
+      policy: 'Misinformation',
+      dontWantToSee: 'It\'s something else'
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockResolvedValue(mockPost);
+    reportModel.create.mockResolvedValue(mockReport);
+    
+    const response = await request(app)
+      .post('/posts/post123/report')
+      .send({ 
+        policy: 'Misinformation', 
+        dontWantToSee: 'It\'s something else' 
+      });
+    
+    expect(response.status).toBe(201);
+    expect(response.body.message).toBe('Post reported successfully');
+    expect(response.body.reportId).toBe('report789');
+    
+    // Verify findOne was called with correct parameters
+    expect(postModel.findOne).toHaveBeenCalledWith({ 
+      _id: 'post123', 
+      isActive: true 
+    });
+    
+    // Verify report was created with correct parameters
+    expect(reportModel.create).toHaveBeenCalledWith({
+      userId: 'cc81c18d6b9fc1b83e2bebe3',
+      reportedId: 'post123',
+      reportedType: 'Post',
+      policy: 'Misinformation',
+      dontWantToSee: 'It\'s something else'
+    });
+  });
+
+  test('should return 400 if policy is invalid', async () => {
+    const response = await request(app)
+      .post('/posts/post123/report')
+      .send({ 
+        policy: 'InvalidPolicy'
+      });
+    
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Invalid report reason');
+    expect(response.body.validReasons).toBeInstanceOf(Array);
+    expect(response.body.validReasons).toContain('Harassment');
+    expect(response.body.validReasons).toContain('Misinformation');
+    
+    // Verify that no database operations were performed
+    expect(postModel.findOne).not.toHaveBeenCalled();
+    expect(reportModel.create).not.toHaveBeenCalled();
+  });
+
+  test('should return 404 if post is not found or inactive', async () => {
+    // Mock post not found
+    postModel.findOne.mockResolvedValue(null);
+    
+    const response = await request(app)
+      .post('/posts/nonexistentpost/report')
+      .send({ 
+        policy: 'Spam'
+      });
+    
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe('Post not found or inactive');
+    
+    // Verify findOne was called with correct parameters
+    expect(postModel.findOne).toHaveBeenCalledWith({ 
+      _id: 'nonexistentpost', 
+      isActive: true 
+    });
+    
+    // Verify report was not created
+    expect(reportModel.create).not.toHaveBeenCalled();
+  });
+});
+
+app.get('/posts/:postId/impressions', mockVerifyToken, getPostImpressions);
+
+describe('GET /posts/:postId/impressions - Get Post Impressions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully return all impressions with pagination and counts', async () => {
+    // Mock post with impression counts
+    const mockPost = {
+      _id: 'post123',
+      userId: 'user456',
+      description: 'Test post',
+      isActive: true,
+      impressionCounts: {
+        like: 5,
+        celebrate: 3,
+        love: 2,
+        total: 10
+      }
+    };
+  
+    // Mock impressions for the post
+    const mockImpressions = [
+      {
+        _id: 'impression1',
+        userId: 'user1',
+        targetId: 'post123',
+        targetType: 'Post',
+        type: 'like',
+        createdAt: new Date('2025-04-10T10:00:00Z')
+      },
+      {
+        _id: 'impression2',
+        userId: 'user2',
+        targetId: 'post123',
+        targetType: 'Post',
+        type: 'celebrate',
+        createdAt: new Date('2025-04-10T09:30:00Z')
+      },
+      {
+        _id: 'impression3',
+        userId: 'user3',
+        targetId: 'post123',
+        targetType: 'Post',
+        type: 'love',
+        createdAt: new Date('2025-04-10T09:00:00Z')
+      }
+    ];
+  
+    // Mock users who made impressions
+    const mockUsers = [
+      {
+        _id: 'user1',
+        firstName: 'John',
+        lastName: 'Doe',
+        headline: 'Software Engineer',
+        profilePicture: 'profile1.jpg'
+      },
+      {
+        _id: 'user2',
+        firstName: 'Jane',
+        lastName: 'Smith',
+        headline: 'UX Designer',
+        profilePicture: 'profile2.jpg'
+      },
+      {
+        _id: 'user3',
+        firstName: 'Alex',
+        lastName: 'Johnson',
+        headline: 'Product Manager',
+        profilePicture: 'profile3.jpg'
+      }
+    ];
+  
+    // Configure mocks with a simpler approach
+    postModel.findOne.mockResolvedValue(mockPost);
+    impressionModel.countDocuments.mockResolvedValue(10);
+    
+    // Instead of trying to mock the chain, directly mock the final resolved value
+    const mockSort = jest.fn();
+    const mockSkip = jest.fn();
+    const mockLimit = jest.fn();
+    
+    mockSort.mockReturnValue({ skip: mockSkip });
+    mockSkip.mockReturnValue({ limit: mockLimit });
+    mockLimit.mockResolvedValue(mockImpressions);
+    
+    impressionModel.find.mockReturnValue({ sort: mockSort });
+    
+    userModel.find.mockResolvedValue(mockUsers);
+  
+    const response = await request(app)
+      .get('/posts/post123/impressions?page=1&limit=3');
+  
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Impressions retrieved successfully');
+    
+    // Instead of verifying the chain calls, just verify the results
+    expect(response.body.impressions).toHaveLength(3);
+    expect(response.body.impressions[0].firstName).toBe('John');
+    expect(response.body.impressions[0].type).toBe('like');
+    
+    expect(response.body.counts).toEqual({
+      like: 5,
+      support: 0,
+      celebrate: 3,
+      love: 2,
+      insightful: 0,
+      funny: 0,
+      total: 10
+    });
+    
+    expect(response.body.pagination.totalImpressions).toBe(10);
+    expect(response.body.pagination.currentPage).toBe(1);
+    
+    // Verify the find was called with the right parameters
+    expect(impressionModel.find).toHaveBeenCalledWith({
+      targetId: 'post123',
+      targetType: 'Post'
+    });
+  }); 
+
+  test('should filter impressions by type when provided', async () => {
+    // Mock post with impression counts
+    const mockPost = {
+      _id: 'post123',
+      userId: 'user456',
+      description: 'Test post',
+      isActive: true,
+      impressionCounts: {
+        like: 5,
+        celebrate: 3,
+        love: 2,
+        total: 10
+      }
+    };
+
+    // Mock like impressions for the post
+    const mockLikeImpressions = [
+      {
+        _id: 'impression1',
+        userId: 'user1',
+        targetId: 'post123',
+        targetType: 'Post',
+        type: 'like',
+        createdAt: new Date()
+      },
+      {
+        _id: 'impression4',
+        userId: 'user4',
+        targetId: 'post123',
+        targetType: 'Post',
+        type: 'like',
+        createdAt: new Date()
+      }
+    ];
+
+    // Mock users who made like impressions
+    const mockUsers = [
+      {
+        _id: 'user1',
+        firstName: 'John',
+        lastName: 'Doe',
+        headline: 'Software Engineer',
+        profilePicture: 'profile1.jpg'
+      },
+      {
+        _id: 'user4',
+        firstName: 'Emily',
+        lastName: 'Wilson',
+        headline: 'Data Scientist',
+        profilePicture: 'profile4.jpg'
+      }
+    ];
+
+    // Configure mocks
+    postModel.findOne.mockResolvedValue(mockPost);
+    impressionModel.countDocuments.mockResolvedValue(5); // 5 likes total
+    impressionModel.find.mockImplementation(() => ({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue(mockLikeImpressions)
+    }));
+    userModel.find.mockResolvedValue(mockUsers);
+
+    const response = await request(app)
+      .get('/posts/post123/impressions?type=like&page=1&limit=10');
+
+    expect(response.status).toBe(200);
+    expect(response.body.impressions).toHaveLength(2);
+    expect(response.body.impressions[0].type).toBe('like');
+    expect(response.body.impressions[1].type).toBe('like');
+
+    // Verify query included type filter
+    expect(impressionModel.find).toHaveBeenCalledWith({
+      targetId: 'post123',
+      targetType: 'Post',
+      type: 'like'
+    });
+  });
+
+  test('should return 400 if invalid impression type is provided', async () => {
+    // Mock post
+    const mockPost = {
+      _id: 'post123',
+      userId: 'user456',
+      description: 'Test post',
+      isActive: true,
+      impressionCounts: {
+        like: 5,
+        celebrate: 3,
+        total: 8
+      }
+    };
+
+    // Configure mock
+    postModel.findOne.mockResolvedValue(mockPost);
+
+    const response = await request(app)
+      .get('/posts/post123/impressions?type=invalidType');
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Invalid impression type');
+    expect(response.body.validTypes).toEqual([
+      'like', 'support', 'celebrate', 
+      'love', 'insightful', 'funny'
+    ]);
+
+    // Verify no impressions were fetched
+    expect(impressionModel.find).not.toHaveBeenCalled();
+  });
+});
+app.get('/posts/:postId/reposts', mockVerifyToken, getPostReposts);
+
+describe('GET /posts/:postId/reposts - Get Post Reposts', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('should successfully return reposts with pagination for an existing post', async () => {
+    // Mock post with populated user data
+    const mockPost = {
+      _id: 'post123',
+      userId: {
+        _id: 'user456',
+        firstName: 'John',
+        lastName: 'Smith',
+        headline: 'CEO',
+        profilePicture: 'profile.jpg'
+      },
+      description: 'Original post content',
+      attachments: ['image.jpg'],
+      impressionCounts: { like: 10, total: 15 },
+      commentCount: 5,
+      repostCount: 3,
+      createdAt: new Date('2025-01-01'),
+      taggedUsers: [],
+      isActive: true
+    };
+    
+    // Mock reposts with populated user data
+    const mockReposts = [
+      {
+        _id: 'repost1',
+        userId: {
+          _id: 'user789',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          headline: 'Developer',
+          profilePicture: 'jane-profile.jpg'
+        },
+        postId: 'post123',
+        description: 'Great post!',
+        createdAt: new Date('2025-01-02'),
+        isActive: true
+      },
+      {
+        _id: 'repost2',
+        userId: {
+          _id: 'user101',
+          firstName: 'Bob',
+          lastName: 'Johnson',
+          headline: 'Designer',
+          profilePicture: 'bob-profile.jpg'
+        },
+        postId: 'post123',
+        description: 'I agree with this!',
+        createdAt: new Date('2025-01-03'),
+        isActive: true
+      }
+    ];
+    
+    // Mock user data for checking saved posts
+    const mockUser = {
+      _id: 'cc81c18d6b9fc1b83e2bebe3',
+      savedPosts: ['otherpost789']
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockImplementation(() => ({
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(mockPost)
+    }));
+    
+    repostModel.countDocuments.mockResolvedValue(2);
+    
+    // Use a simpler approach for mocking chain
+    const mockSort = jest.fn().mockReturnValue({
+      skip: jest.fn().mockReturnValue({
+        limit: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockReposts)
+          })
+        })
+      })
+    });
+    repostModel.find.mockReturnValue({ sort: mockSort });
+    
+    userModel.findById.mockImplementation(() => ({
+      select: jest.fn().mockResolvedValue(mockUser)
+    }));
+    
+    const response = await request(app)
+      .get('/posts/post123/reposts?page=1&limit=10');
+    
+    expect(response.status).toBe(200);
+    expect(response.body.posts).toHaveLength(2);
+    
+    // Verify first repost formatting
+    expect(response.body.posts[0]).toEqual({
+      postId: 'post123',
+      userId: 'user456',
+      firstName: 'John',
+      lastName: 'Smith',
+      headline: 'CEO',
+      profilePicture: 'profile.jpg',
+      postDescription: 'Original post content',
+      attachments: ['image.jpg'],
+      impressionCounts: { like: 10, total: 15 },
+      commentCount: 5,
+      repostCount: 3,
+      createdAt: mockPost.createdAt.toISOString(),
+      taggedUsers: [],
+      isRepost: true,
+      isSaved: false,
+      repostId: 'repost1',
+      reposterId: 'user789',
+      reposterFirstName: 'Jane',
+      reposterLastName: 'Doe',
+      reposterProfilePicture: 'jane-profile.jpg',
+      reposterHeadline: 'Developer',
+      repostDescription: 'Great post!',
+      repostDate: mockReposts[0].createdAt.toISOString()
+    });
+    
+    // Verify pagination metadata
+    expect(response.body.pagination).toEqual({
+      total: 2,
+      page: 1,
+      limit: 10,
+      pages: 1,
+      hasNextPage: false,
+      hasPrevPage: false
+    });
+  });
+
+  test('should return 404 if post is not found or inactive', async () => {
+    // Mock post not found
+    postModel.findOne.mockImplementation(() => ({
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(null)
+    }));
+    
+    const response = await request(app)
+      .get('/posts/nonexistentpost/reposts');
+    
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe('Post not found or inactive');
+    
+    // Verify no reposts were fetched
+    expect(repostModel.find).not.toHaveBeenCalled();
+    expect(userModel.findById).not.toHaveBeenCalled();
+  });
+
+  test('should return empty array when post has no reposts', async () => {
+    // Mock post with populated user data
+    const mockPost = {
+      _id: 'post123',
+      userId: {
+        _id: 'user456',
+        firstName: 'John',
+        lastName: 'Smith',
+        headline: 'CEO',
+        profilePicture: 'profile.jpg'
+      },
+      description: 'Original post content',
+      attachments: [],
+      impressionCounts: { like: 5, total: 5 },
+      commentCount: 2,
+      repostCount: 0,
+      createdAt: new Date('2025-01-01'),
+      taggedUsers: [],
+      isActive: true
+    };
+    
+    // Mock user data with the post saved
+    const mockUser = {
+      _id: 'cc81c18d6b9fc1b83e2bebe3',
+      savedPosts: ['post123']
+    };
+    
+    // Set up mocks
+    postModel.findOne.mockImplementation(() => ({
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(mockPost)
+    }));
+    
+    repostModel.countDocuments.mockResolvedValue(0);
+    
+    // Return empty array for reposts
+    const mockSort = jest.fn().mockReturnValue({
+      skip: jest.fn().mockReturnValue({
+        limit: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue([])
+          })
+        })
+      })
+    });
+    repostModel.find.mockReturnValue({ sort: mockSort });
+    
+    userModel.findById.mockImplementation(() => ({
+      select: jest.fn().mockResolvedValue(mockUser)
+    }));
+    
+    const response = await request(app)
+      .get('/posts/post123/reposts?page=1&limit=10');
+    
+    expect(response.status).toBe(200);
+    expect(response.body.posts).toEqual([]);
+    expect(response.body.pagination).toEqual({
+      total: 0,
+      page: 1,
+      limit: 10,
+      pages: 0,
+      hasNextPage: false,
+      hasPrevPage: false
+    });
+    
+    // Verify the post was correctly identified as saved
+    expect(response.body.posts).toEqual([]);
   });
 });
