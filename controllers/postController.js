@@ -61,7 +61,7 @@ const createPost = async (req, res) => {
             headline: user.headline || "",
             postDescription: newPost.description,
             attachments: newPost.attachments,
-            impressionTypes: [], // You'll need to implement this based on your data structure
+            impressionTypes: [],
             impressionCounts: newPost.impressionCounts,
             commentCount: newPost.commentCount,
             repostCount: newPost.repostCount,
@@ -135,6 +135,11 @@ const getPost = async (req, res) => {
         const isSaved = currentUser && currentUser.savedPosts && 
                         currentUser.savedPosts.some(savedId => savedId.toString() === postId);
         
+        const isLiked = await impressionModel.findOne({
+            targetId: postId,
+            userId
+        });
+
         // Check if post is a repost
         const repost = await repostModel.findOne({
             postId,
@@ -163,6 +168,7 @@ const getPost = async (req, res) => {
             whoCanComment: post.whoCanComment, // Include comment setting in response
             isRepost,
             isSaved,
+            isLiked: isLiked,
             // Include repost details if applicable
             ...(isRepost && {
                 repostId: repost._id,
@@ -425,7 +431,7 @@ const getAllPosts = async (req, res) => {
         });
         
         // Format posts and add repost information
-        const formattedPosts = posts.map(post => {
+        const formattedPosts = await Promise.all(posts.map(async post => {
             // Check if this post was reposted by a connection
             const repostInfo = repostMap[post._id.toString()];
             const isRepost = !!repostInfo;
@@ -434,6 +440,10 @@ const getAllPosts = async (req, res) => {
             // (e.g., first one in the array, which could be sorted by date if needed)
             const repostDetails = repostInfo ? repostInfo[0] : null;
             const isSaved = savedPostsSet.has(post._id.toString());
+            const isLiked = await impressionModel.findOne({
+                targetId: post._id,
+                userId
+            });
             return {
                 postId: post._id,
                 userId: post.userId._id,
@@ -450,6 +460,7 @@ const getAllPosts = async (req, res) => {
                 taggedUsers: post.taggedUsers,
                 isRepost: isRepost,
                 isSaved: isSaved,
+                isLiked: isLiked,
                 // Only include repost details if this is a repost
                 ...(isRepost && {
                     repostId: repostDetails.repostId,
@@ -462,7 +473,7 @@ const getAllPosts = async (req, res) => {
                     repostDate: repostDetails.repostDate
                 })
             };
-        });
+        }));
         const hasNextPage = parseInt(pageNumber) < total;
         const hasPrevPage = parseInt(pageNumber) > 1;
         res.status(200).json({

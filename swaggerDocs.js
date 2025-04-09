@@ -787,6 +787,35 @@
  *                       isSaved:
  *                         type: boolean
  *                         example: true
+ *                       isLiked:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "67f6e9cb34a9b18adec3b744"
+ *                           userId:
+ *                             type: string
+ *                             example: "e6ade1a5da7abe26b8bf0b22"
+ *                           targetId:
+ *                             type: string
+ *                             example: "d28373f0a7de2e82da302a5e"
+ *                           targetType:
+ *                             type: string
+ *                             example: "Post"
+ *                           type:
+ *                             type: string
+ *                             example: "like"
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-04-09T21:42:35.825Z"
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-04-09T21:42:35.825Z"
+ *                           __v:
+ *                             type: number
+ *                             example: 0
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -1000,6 +1029,35 @@
  *                     isSaved:
  *                       type: boolean
  *                       example: true
+ *                     isLiked:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: "67f6e9cb34a9b18adec3b744"
+ *                         userId:
+ *                           type: string
+ *                           example: "e6ade1a5da7abe26b8bf0b22"
+ *                         targetId:
+ *                           type: string
+ *                           example: "d28373f0a7de2e82da302a5e"
+ *                         targetType:
+ *                           type: string
+ *                           example: "Post"
+ *                         type:
+ *                           type: string
+ *                           example: "like"
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-04-09T21:42:35.825Z"
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-04-09T21:42:35.825Z"
+ *                         __v:
+ *                           type: number
+ *                           example: 0
  *                     isRepost:
  *                       type: boolean
  *                       example: true
