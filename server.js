@@ -27,7 +27,7 @@ connectDB();
 const corsOptions = {
   origin: "*", // Allow all origins
   credentials: true, // Allow credentials (cookies, authorization headers)
-  methods: "GET,POST,PUT,DELETE,OPTIONS",
+  methods: "GET,POST,PUT,DELETE,OPTIONS,PATCH",
 };
 
 app.use(cors(corsOptions));
