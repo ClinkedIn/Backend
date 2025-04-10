@@ -169,6 +169,10 @@ const getPost = async (req, res) => {
       currentUser.savedPosts &&
       currentUser.savedPosts.some((savedId) => savedId.toString() === postId);
 
+    const isLiked = await impressionModel.findOne({
+      targetId: postId,
+      userId,
+    });
     // Check if post is a repost
     const repost = await repostModel
       .findOne({
@@ -199,6 +203,7 @@ const getPost = async (req, res) => {
       whoCanComment: post.whoCanComment, // Include comment setting in response
       isRepost,
       isSaved,
+      isLiked,
       // Include repost details if applicable
       ...(isRepost && {
         repostId: repost._id,
