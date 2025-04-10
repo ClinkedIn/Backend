@@ -484,44 +484,51 @@ const getAllPosts = async (req, res) => {
     });
 
     // Format posts and add repost information
-    const formattedPosts = posts.map((post) => {
-      // Check if this post was reposted by a connection
-      const repostInfo = repostMap[post._id.toString()];
-      const isRepost = !!repostInfo;
+    const formattedPosts = await Promise.all(
+      posts.map(async (post) => {
+        // Check if this post was reposted by a connection
+        const repostInfo = repostMap[post._id.toString()];
+        const isRepost = !!repostInfo;
 
-      // For posts that have multiple reposters, use the most relevant one
-      // (e.g., first one in the array, which could be sorted by date if needed)
-      const repostDetails = repostInfo ? repostInfo[0] : null;
-      const isSaved = savedPostsSet.has(post._id.toString());
-      return {
-        postId: post._id,
-        userId: post.userId._id,
-        firstName: post.userId.firstName,
-        lastName: post.userId.lastName,
-        headline: post.userId.headline || "",
-        profilePicture: post.userId.profilePicture,
-        postDescription: post.description,
-        attachments: post.attachments,
-        impressionCounts: post.impressionCounts,
-        commentCount: post.commentCount || 0,
-        repostCount: post.repostCount || 0,
-        createdAt: post.createdAt,
-        taggedUsers: post.taggedUsers,
-        isRepost: isRepost,
-        isSaved: isSaved,
-        // Only include repost details if this is a repost
-        ...(isRepost && {
-          repostId: repostDetails.repostId,
-          reposterId: repostDetails.reposterId,
-          reposterFirstName: repostDetails.reposterFirstName,
-          reposterLastName: repostDetails.reposterLastName,
-          reposterProfilePicture: repostDetails.reposterProfilePicture,
-          reposterHeadline: repostDetails.reposterHeadline,
-          repostDescription: repostDetails.repostDescription,
-          repostDate: repostDetails.repostDate,
-        }),
-      };
-    });
+        // For posts that have multiple reposters, use the most relevant one
+        // (e.g., first one in the array, which could be sorted by date if needed)
+        const repostDetails = repostInfo ? repostInfo[0] : null;
+        const isSaved = savedPostsSet.has(post._id.toString());
+        const isLiked = await impressionModel.findOne({
+          targetId: post._id,
+          userId,
+        });
+        return {
+          postId: post._id,
+          userId: post.userId._id,
+          firstName: post.userId.firstName,
+          lastName: post.userId.lastName,
+          headline: post.userId.headline || "",
+          profilePicture: post.userId.profilePicture,
+          postDescription: post.description,
+          attachments: post.attachments,
+          impressionCounts: post.impressionCounts,
+          commentCount: post.commentCount || 0,
+          repostCount: post.repostCount || 0,
+          createdAt: post.createdAt,
+          taggedUsers: post.taggedUsers,
+          isRepost: isRepost,
+          isSaved: isSaved,
+          isLiked: isLiked,
+          // Only include repost details if this is a repost
+          ...(isRepost && {
+            repostId: repostDetails.repostId,
+            reposterId: repostDetails.reposterId,
+            reposterFirstName: repostDetails.reposterFirstName,
+            reposterLastName: repostDetails.reposterLastName,
+            reposterProfilePicture: repostDetails.reposterProfilePicture,
+            reposterHeadline: repostDetails.reposterHeadline,
+            repostDescription: repostDetails.repostDescription,
+            repostDate: repostDetails.repostDate,
+          }),
+        };
+      })
+    );
     const hasNextPage = parseInt(pageNumber) < total;
     const hasPrevPage = parseInt(pageNumber) > 1;
     res.status(200).json({

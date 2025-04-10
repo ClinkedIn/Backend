@@ -467,93 +467,6 @@
  *
  */
 
-/**
- * @swagger
- * tags:
- *   - name: Impressions
- *     description: API endpoints for managing impressions
- */
-
-/**
- * @swagger
- * /impressions:
- *   post:
- *     summary: Add an impression
- *     tags: [Impressions]
- *     description: Add a new impression
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       $ref: '#/components/requestBodies/CreateImpressionRequest'
- *     responses:
- *       201:
- *         description: Post created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Impression'
- *       400:
- *         description: Bad request, invalid input
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       500:
- *         description: Internal server error
- *
- */
-
-/**
- * @swagger
- * /impressions/{id}:
- *   get:
- *     summary: Retrieve all impression for a specific post or comment
- *     tags: [Impressions]
- *     description: Retrieve all impression for a specific post or comment
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: targetId
- *         required: true
- *         schema:
- *           type: string
- *         description: The target post or comment ID
- *     responses:
- *       200:
- *         description: List of posts retrieved successfully
- *         content:
- *           application/json:
- *            schema:
- *             type: array
- *             items:
- *              $ref: '#/components/schemas/Impression'
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *        description: No Impressions found
- *       500:
- *        description: Internal server error
- *
- *   delete:
- *     summary: Delete an impression
- *     tags: [Impressions]
- *     description: Remove an impression by its ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: impressionId
- *         required: true
- *         schema:
- *           type: string
- *         description: The impression ID
- *     responses:
- *       200:
- *         description: Impression deleted successfully
- *       401:
- *         description: Unauthorized, invalid or missing token
- *       404:
- *         description: Impression not found
- */
 
 // ******************************************* Posts APIs ************************************* //
 
@@ -874,6 +787,35 @@
  *                       isSaved:
  *                         type: boolean
  *                         example: true
+ *                       isLiked:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "67f6e9cb34a9b18adec3b744"
+ *                           userId:
+ *                             type: string
+ *                             example: "e6ade1a5da7abe26b8bf0b22"
+ *                           targetId:
+ *                             type: string
+ *                             example: "d28373f0a7de2e82da302a5e"
+ *                           targetType:
+ *                             type: string
+ *                             example: "Post"
+ *                           type:
+ *                             type: string
+ *                             example: "like"
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-04-09T21:42:35.825Z"
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-04-09T21:42:35.825Z"
+ *                           __v:
+ *                             type: number
+ *                             example: 0
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -1087,6 +1029,35 @@
  *                     isSaved:
  *                       type: boolean
  *                       example: true
+ *                     isLiked:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: "67f6e9cb34a9b18adec3b744"
+ *                         userId:
+ *                           type: string
+ *                           example: "e6ade1a5da7abe26b8bf0b22"
+ *                         targetId:
+ *                           type: string
+ *                           example: "d28373f0a7de2e82da302a5e"
+ *                         targetType:
+ *                           type: string
+ *                           example: "Post"
+ *                         type:
+ *                           type: string
+ *                           example: "like"
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-04-09T21:42:35.825Z"
+ *                         updatedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-04-09T21:42:35.825Z"
+ *                         __v:
+ *                           type: number
+ *                           example: 0
  *                     isRepost:
  *                       type: boolean
  *                       example: true
@@ -4401,7 +4372,7 @@
  * @swagger
  * /jobs:
  *   post:
- *     summary: Create a new job
+ *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
  *     tags: [Jobs]
  *     description: Create a new job posting
  *     security:
@@ -4425,9 +4396,10 @@
  *   get:
  *     summary: Retrieve all jobs
  *     tags: [Jobs]
- *     description: Retrieve a list of all job postings
- *     security:
- *       - BearerAuth: []
+ *     description: |
+ *       Retrieves all job listings from the database.
+ *       Returns job details along with associated company information.
+ *       Jobs are sorted by creation date (newest first).
  *     responses:
  *       200:
  *         description: List of jobs retrieved successfully
@@ -4436,11 +4408,73 @@
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Job'
- *       401:
- *         description: Unauthorized, invalid or missing token
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     description: Unique identifier for the job
+ *                     example: "60d21b4667d0d8992e610c85"
+ *                   title:
+ *                     type: string
+ *                     description: Job title
+ *                     example: "Senior Software Engineer"
+ *                   companyId:
+ *                     type: object
+ *                     description: Details of the company offering the job
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c84"
+ *                       name:
+ *                         type: string
+ *                         example: "Tech Solutions Inc."
+ *                       logo:
+ *                         type: string
+ *                         example: "https://example.com/logo.png"
+ *                       industry:
+ *                         type: string
+ *                         example: "Software Development"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                   workplaceType:
+ *                     type: string
+ *                     enum: [Onsite, Hybrid, Remote]
+ *                     example: "Remote"
+ *                   jobLocation:
+ *                     type: string
+ *                     example: "New York, NY"
+ *                   jobType:
+ *                     type: string
+ *                     enum: [Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship]
+ *                     example: "Full Time"
+ *                   description:
+ *                     type: string
+ *                     example: "We are looking for a talented software engineer..."
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2023-09-30T14:48:00.000Z"
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2023-10-05T09:12:00.000Z"
+ *                   isActive:
+ *                     type: boolean
+ *                     example: true
  *       500:
- *         description: Internal server error
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to retrieve jobs"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
 
 /**
@@ -5729,33 +5763,6 @@
  *               message: "Internal server error"
  */
 
-/**
- * @swagger
- * /user/in/{userId}:
- *    get:
- *      summary: Get a logged-in user's public profile data by ID
- *      tags: [Users]
- *      description: Retrieve a logged-in user's public profile data by their ID
- *      parameters:
- *        - name: userId
- *          in: path
- *          required: true
- *          schema:
- *            type: string
- *      responses:
- *        200:
- *          description: User data retrieved successfully
- *          content:
- *            application/json:
- *              schema:
- *                $ref: "#/components/schemas/LoggedInUser"
- *        401:
- *          description: Unauthorized, user must be logged in
- *        404:
- *          description: User not found
- *        500:
- *          description: Internal server error
- */
 
 /**
  * @swagger
@@ -11012,7 +11019,7 @@
  * /search/jobs:
  *   get:
  *     summary: Search for jobs with advanced filters
- *     tags: [Search]
+ *     tags: [Search, Jobs]
  *     description: |
  *       Search for jobs using multiple filter criteria including keyword search, location,
  *       industry, company, and minimum work experience requirements. Results are sorted
