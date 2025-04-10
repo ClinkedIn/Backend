@@ -12209,38 +12209,6 @@
 /**
  * @swagger
  * /admin/jobs/{jobId}:
- *   patch:
- *     summary: Moderate job
- *     tags: [Admin]
- *     description: Update job moderation status
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: jobId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the job to moderate
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - action
- *             properties:
- *               action:
- *                 type: string
- *                 enum: [approve, reject]
- *               reason:
- *                 type: string
- *                 example: "Job posting violates guidelines"
- *     responses:
- *       200:
- *         description: Job moderated successfully
- *
  *   delete:
  *     summary: Remove job
  *     tags: [Admin]
@@ -12265,9 +12233,9 @@
  * @swagger
  * /admin/analytics/overview:
  *   get:
- *     summary: Get analytics overview
+ *     summary: Get analytics overview (Admin only)
  *     tags: [Admin]
- *     description: Retrieve platform-wide analytics overview
+ *     description: Retrieve platform-wide analytics overview including user, post, job, and company statistics. Requires admin privileges.
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -12278,143 +12246,231 @@
  *             schema:
  *               type: object
  *               properties:
- *                 users:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                   description: Status of the request
+ *                 data:
  *                   type: object
  *                   properties:
- *                     total:
- *                       type: number
- *                       example: 1000
- *                     active:
- *                       type: number
- *                       example: 800
- *                     premium:
- *                       type: number
- *                       example: 200
- *                 posts:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: number
- *                       example: 5000
- *                     totalImpressions:
- *                       type: number
- *                       example: 50000
- *                     totalComments:
- *                       type: number
- *                       example: 2500
- *                     totalShares:
- *                       type: number
- *                       example: 1000
- *                 jobs:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: number
- *                       example: 200
- *                     active:
- *                       type: number
- *                       example: 150
- *                     totalApplications:
- *                       type: number
- *                       example: 1000
- */
-
-/**
- * @swagger
- * /admin/analytics/users:
- *   get:
- *     summary: Get user analytics
- *     tags: [Admin]
- *     description: Retrieve detailed user-related analytics
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: range
- *         schema:
- *           type: string
- *         description: Time range in days (default 30)
- *         example: "30"
- *     responses:
- *       200:
- *         description: User analytics retrieved successfully
+ *                     userStats:
+ *                       type: object
+ *                       description: Statistics about users
+ *                       properties:
+ *                         totalUsers:
+ *                           type: number
+ *                           example: 1000
+ *                           description: Total number of users
+ *                         activeUsers:
+ *                           type: number
+ *                           example: 800
+ *                           description: Number of active users
+ *                         premiumUsers:
+ *                           type: number
+ *                           example: 200
+ *                           description: Number of premium users
+ *                         usersByIndustry:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "Technology"
+ *                                 description: Industry name
+ *                               count:
+ *                                 type: number
+ *                                 example: 300
+ *                                 description: Number of users in the industry
+ *                           description: Distribution of users across different industries
+ *                         averageConnections:
+ *                           type: number
+ *                           example: 50
+ *                           description: Average number of connections per user
+ *                         usersByProfilePrivacy:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "public"
+ *                                 description: Profile privacy setting
+ *                               count:
+ *                                 type: number
+ *                                 example: 600
+ *                                 description: Number of users with this privacy setting
+ *                           description: Distribution of users based on profile privacy settings
+ *                         usersByConnectionRequestPrivacy:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "everyone"
+ *                                 description: Connection request privacy setting
+ *                               count:
+ *                                 type: number
+ *                                 example: 700
+ *                                 description: Number of users with this connection request privacy setting
+ *                           description: Distribution of users based on connection request privacy settings
+ *                         usersByDefaultMode:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "light"
+ *                                 description: Default mode (light or dark)
+ *                               count:
+ *                                 type: number
+ *                                 example: 750
+ *                                 description: Number of users with this default mode
+ *                           description: Distribution of users based on default mode
+ *                         employmentTypeCounts:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "Full Time"
+ *                                 description: Employment type
+ *                               count:
+ *                                 type: number
+ *                                 example: 500
+ *                                 description: Number of users with this employment type
+ *                           description: Distribution of users based on employment type
+ *                     postStats:
+ *                       type: object
+ *                       description: Statistics about posts
+ *                       properties:
+ *                         totalPosts:
+ *                           type: number
+ *                           example: 5000
+ *                           description: Total number of posts
+ *                         activePosts:
+ *                           type: number
+ *                           example: 4500
+ *                           description: Number of active posts
+ *                         totalImpressions:
+ *                           type: number
+ *                           example: 50000
+ *                           description: Total number of impressions on all posts
+ *                         averageEngagement:
+ *                           type: object
+ *                           description: Average engagement metrics for posts
+ *                           properties:
+ *                             impressions:
+ *                               type: number
+ *                               example: 10
+ *                               description: Average number of impressions per post
+ *                             comments:
+ *                               type: number
+ *                               example: 5
+ *                               description: Average number of comments per post
+ *                             reposts:
+ *                               type: number
+ *                               example: 2
+ *                               description: Average number of reposts per post
+ *                     jobStats:
+ *                       type: object
+ *                       description: Statistics about jobs
+ *                       properties:
+ *                         totalJobs:
+ *                           type: number
+ *                           example: 200
+ *                           description: Total number of jobs
+ *                         activeJobs:
+ *                           type: number
+ *                           example: 150
+ *                           description: Number of active jobs
+ *                         jobsByType:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "Full Time"
+ *                                 description: Job type
+ *                               count:
+ *                                 type: number
+ *                                 example: 120
+ *                                 description: Number of jobs of this type
+ *                           description: Distribution of jobs by type
+ *                         jobsByWorkplaceType:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "Remote"
+ *                                 description: Workplace type
+ *                               count:
+ *                                 type: number
+ *                                 example: 80
+ *                                 description: Number of jobs with this workplace type
+ *                           description: Distribution of jobs by workplace type
+ *                         averageApplications:
+ *                           type: number
+ *                           example: 10
+ *                           description: Average number of applications per job
+ *                     companyStats:
+ *                       type: object
+ *                       description: Statistics about companies
+ *                       properties:
+ *                         totalCompanies:
+ *                           type: number
+ *                           example: 150
+ *                           description: Total number of companies
+ *                         activeCompanies:
+ *                           type: number
+ *                           example: 130
+ *                           description: Number of active companies
+ *                         companiesBySize:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "1-10"
+ *                                 description: Company size
+ *                               count:
+ *                                 type: number
+ *                                 example: 50
+ *                                 description: Number of companies of this size
+ *                           description: Distribution of companies by size
+ *                         companiesByIndustry:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "Technology"
+ *                                 description: Industry
+ *                               count:
+ *                                 type: number
+ *                                 example: 60
+ *                                 description: Number of companies in this industry
+ *                           description: Distribution of companies by industry
+ *                         averageFollowers:
+ *                           type: number
+ *                           example: 25
+ *                           description: Average number of followers per company
+ *       403:
+ *         description: Forbidden - Admin access required
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 timeRange:
- *                   type: object
- *                   properties:
- *                     start:
- *                       type: string
- *                       format: date-time
- *                     end:
- *                       type: string
- *                       format: date-time
- *                 growth:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: object
- *                       newUsers:
- *                         type: number
- *                       premiumUsers:
- *                         type: number
- */
-
-/**
- * @swagger
- * /admin/analytics/content:
- *   get:
- *     summary: Get content analytics
- *     tags: [Admin]
- *     description: Retrieve detailed content-related analytics
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: range
- *         schema:
- *           type: string
- *         description: Time range in days (default 30)
- *         example: "30"
- *     responses:
- *       200:
- *         description: Content analytics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 timeRange:
- *                   type: object
- *                   properties:
- *                     start:
- *                       type: string
- *                       format: date-time
- *                     end:
- *                       type: string
- *                       format: date-time
- *                 posts:
- *                   type: object
- *                   properties:
- *                     daily:
- *                       type: array
- *                       items:
- *                         type: object
- *                     engagementByType:
- *                       type: array
- *                       items:
- *                         type: object
- *                     distributionByIndustry:
- *                       type: array
- *                       items:
- *                         type: object
- *                 jobs:
- *                   type: array
- *                   items:
- *                     type: object
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized, Admin access required"
  */
