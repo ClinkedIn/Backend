@@ -8,7 +8,7 @@ const customError = require('../utils/customError');
 const { validateUser, validateChatType, validateChatId, validateMessageContent,
      validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts,
      validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount, markMessageReadByUser} = require('../utils/chatUtils');
-
+const { sendNotification } = require('../utils/Notification');
 
 // Create a new message.
 const sendMessage = async (req, res) => {
@@ -79,6 +79,16 @@ const sendMessage = async (req, res) => {
         if (!chat) {
             console.error('Chat not found:', chatId);
             return res.status(404).json({ message: `${type === 'direct' ? 'Direct' : 'Group'} chat not found` });
+        }
+        // send notification to user if direct chat
+        if (type === 'direct') {
+            sendNotification(sender, receiverId, "message", savedMessage)
+            .then(() => {
+                console.log("Notification sent successfully");
+            })
+            .catch(error => {
+                console.error("Failed to send notification:", error);
+            });
         }
 
         res.status(200).json({ message: 'Message created successfully', data: savedMessage});
