@@ -2,15 +2,20 @@ const Report = require('../models/reportModel');
 const Job = require('../models/jobModel');
 const User = require('../models/userModel');
 const Post = require('../models/postModel');
+const Company = require('../models/companyModel');
 
 
 // Reports monitoring
 exports.getAllReports = async (req, res) => {
     try {
+        // console.log(req.params.reportId);
         const reports = await Report.find()
-            .populate('userId', 'name email')
-            .sort('-createdAt');
-        
+            .populate({
+                path: 'userId',
+                select: 'firstName lastName email'
+            })
+            
+
         res.status(200).json({
             status: 'success',
             data: reports
@@ -25,9 +30,12 @@ exports.getAllReports = async (req, res) => {
 
 exports.getReport = async (req, res) => {
     try {
-        const report = await Report.findById(req.params.reportId)
-            .populate('userId', 'name email')
-            .populate('reportedId');
+        console.log(req.params.reportId);
+        const report = await Report.findOne({ _id: req.params.reportId })
+            .populate({
+                path: 'userId',
+                select: 'firstName lastName email'
+            });
 
         if (!report) {
             return res.status(404).json({
@@ -51,19 +59,31 @@ exports.getReport = async (req, res) => {
 exports.handleReport = async (req, res) => {
     try {
         const { action, reason } = req.body;
-        const report = await Report.findByIdAndUpdate(
-            req.params.reportId,
-            { 
-                status: action,
-                moderationReason: reason,
-                moderatedAt: Date.now()
-            },
-            { new: true }
-        );
+        console.log(action, reason);
+
+        const report = await Report.findById(req.params.reportId);
+
+        if (!report) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Report not found'
+            });
+        }
+
+        report.status = action;
+        report.moderationReason = reason;
+        report.moderatedAt = Date.now();
+
+        await report.save();
+
+        const populatedReport = await Report.findById(req.params.reportId).populate({
+            path: 'userId',
+            select: 'firstName lastName email'
+        });
 
         res.status(200).json({
             status: 'success',
-            data: report
+            data: populatedReport
         });
     } catch (error) {
         res.status(500).json({
@@ -115,30 +135,7 @@ exports.getFlaggedJobs = async (req, res) => {
     }
 };
 
-exports.moderateJob = async (req, res) => {
-    try {
-        const { action, reason } = req.body;
-        const job = await Job.findByIdAndUpdate(
-            req.params.jobId,
-            {
-                status: action,
-                moderationReason: reason,
-                moderatedAt: Date.now()
-            },
-            { new: true }
-        );
 
-        res.status(200).json({
-            status: 'success',
-            data: job
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-};
 exports.removeJob = async (req, res) => {
     try {
         const job = await Job.findById(req.params.jobId);
@@ -169,125 +166,227 @@ exports.removeJob = async (req, res) => {
 };
 
 
-// Analytics
+
 exports.getAnalyticsOverview = async (req, res) => {
+    ;
     try {
-        const [
-            userStats,
-            postStats,
-            jobStats,
-            connectionStats,
-            companyStats
-        ] = await Promise.all([
-            // User Statistics
+        const [userStatsAggregation, postStatsAggregation, jobStatsAggregation, companyStatsAggregation] = await Promise.all([
             User.aggregate([
                 {
-                    $group: {
-                        _id: null,
-                        totalUsers: { $sum: 1 },
-                        activeUsers: {
-                            $sum: {
-                                $cond: [{ $eq: ["$status", "active"] }, 1, 0]
-                            }
-                        },
-                        premiumUsers: {
-                            $sum: {
-                                $cond: [{ $eq: ["$accountType", "premium"] }, 1, 0]
-                            }
-                        }
+                    $facet: {
+                        totalUsers: [{ $count: 'count' }],
+                        activeUsers: [{ $match: { isActive: true } }, { $count: 'count' }],
+                        premiumUsers: [{ $match: { isPremium: true } }, { $count: 'count' }],
+                        usersByIndustry: [{ $group: { _id: "$industry", count: { $sum: 1 } } }],
+                        averageConnections: [
+                            { $project: { connectionCount: { $size: "$connectionList" } } },
+                            { $group: { _id: null, average: { $avg: "$connectionCount" } } }
+                        ],
+                        usersByProfilePrivacy: [{ $group: { _id: "$profilePrivacySettings", count: { $sum: 1 } } }],
+                        usersByConnectionRequestPrivacy: [{ $group: { _id: "$connectionRequestPrivacySetting", count: { $sum: 1 } } }],
+                        usersByDefaultMode: [{ $group: { _id: "$defaultMode", count: { $sum: 1 } } }],
+                        employmentTypeCounts: [
+                            { $unwind: "$workExperience" },
+                            { $group: { _id: "$workExperience.employmentType", count: { $sum: 1 } } }
+                        ]
+                    }
+                },
+                {
+                    $project: {
+                        totalUsers: { $arrayElemAt: ["$totalUsers.count", 0] },
+                        activeUsers: { $arrayElemAt: ["$activeUsers.count", 0] },
+                        premiumUsers: { $arrayElemAt: ["$premiumUsers.count", 0] },
+                        usersByIndustry: 1,
+                        averageConnections: { $arrayElemAt: ["$averageConnections.average", 0] },
+                        usersByProfilePrivacy: 1,
+                        usersByConnectionRequestPrivacy: 1,
+                        usersByDefaultMode: 1,
+                        employmentTypeCounts: 1
                     }
                 }
             ]),
-
-            // Post Statistics
             Post.aggregate([
                 {
-                    $group: {
-                        _id: null,
-                        totalPosts: { $sum: 1 },
-                        totalImpressions: { $sum: "$impressionCount" },
-                        totalComments: { $sum: "$commentCount" },
-                        totalShares: { $sum: "$shareCount" }
+                    $facet: {
+                        totalPosts: [{ $count: "count" }],
+                        activePosts: [{ $match: { isActive: true } }, { $count: "count" }],
+                        totalImpressions: [
+                            {
+                                $group: {
+                                    _id: null,
+                                    total: {
+                                        $sum: "$impressionCounts.total"
+                                    }
+                                }
+                            }
+                        ],
+                        averageEngagement: [
+                            {
+                                $group: {
+                                    _id: null,
+                                    avgImpressions: { $avg: "$impressionCounts.total" },
+                                    avgComments: { $avg: "$commentCount" },
+                                    avgReposts: { $avg: "$repostCount" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $project: {
+                        totalPosts: { $arrayElemAt: ["$totalPosts.count", 0] },
+                        activePosts: { $arrayElemAt: ["$activePosts.count", 0] },
+                        totalImpressions: { $arrayElemAt: ["$totalImpressions.total", 0] },
+                        averageEngagement: { $arrayElemAt: ["$averageEngagement", 0] }
                     }
                 }
             ]),
-
-            // Job Statistics
             Job.aggregate([
                 {
-                    $group: {
-                        _id: null,
-                        totalJobs: { $sum: 1 },
-                        activeJobs: {
-                            $sum: {
-                                $cond: [{ $eq: ["$status", "active"] }, 1, 0]
+                    $facet: {
+                        totalJobs: [{ $count: "count" }],
+                        activeJobs: [{ $match: { isActive: true } }, { $count: "count" }],
+                        jobsByType: [
+                            {
+                                $group: {
+                                    _id: "$jobType",
+                                    count: { $sum: 1 }
+                                }
                             }
-                        },
-                        totalApplications: { $sum: "$applicationCount" }
+                        ],
+                        jobsByWorkplaceType: [
+                            {
+                                $group: {
+                                    _id: "$workplaceType",
+                                    count: { $sum: 1 }
+                                }
+                            }
+                        ],
+                        averageApplications: [
+                            {
+                                $project: {
+                                    applicationCount: { $size: "$applicants" }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    average: { $avg: "$applicationCount" }
+                                }
+                            }
+                        ]
                     }
-                }
-            ]),
-
-            // Connection Statistics
-            Connection.aggregate([
+                },
                 {
-                    $group: {
-                        _id: null,
-                        totalConnections: { $sum: 1 },
-                        pendingConnections: {
-                            $sum: {
-                                $cond: [{ $eq: ["$status", "pending"] }, 1, 0]
-                            }
-                        }
+                    $project: {
+                        totalJobs: { $arrayElemAt: ["$totalJobs.count", 0] },
+                        activeJobs: { $arrayElemAt: ["$activeJobs.count", 0] },
+                        jobsByType: 1,
+                        jobsByWorkplaceType: 1,
+                        averageApplications: { $arrayElemAt: ["$averageApplications.average", 0] }
                     }
                 }
             ]),
-
-            // Company Statistics
             Company.aggregate([
                 {
-                    $group: {
-                        _id: null,
-                        totalCompanies: { $sum: 1 },
-                        verifiedCompanies: {
-                            $sum: {
-                                $cond: [{ $eq: ["$isVerified", true] }, 1, 0]
+                    $facet: {
+                        totalCompanies: [{ $count: "count" }],
+                        activeCompanies: [{ $match: { isActive: true } }, { $count: "count" }],
+                        companiesBySize: [
+                            {
+                                $group: {
+                                    _id: "$organizationSize",
+                                    count: { $sum: 1 }
+                                }
                             }
-                        }
+                        ],
+                        companiesByIndustry: [
+                            {
+                                $group: {
+                                    _id: "$industry",
+                                    count: { $sum: 1 }
+                                }
+                            }
+                        ],
+                        averageFollowers: [
+                            {
+                                $project: {
+                                    followerCount: { $size: "$followers" }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    average: { $avg: "$followerCount" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $project: {
+                        totalCompanies: { $arrayElemAt: ["$totalCompanies.count", 0] },
+                        activeCompanies: { $arrayElemAt: ["$activeCompanies.count", 0] },
+                        companiesBySize: 1,
+                        companiesByIndustry: 1,
+                        averageFollowers: { $arrayElemAt: ["$averageFollowers.average", 0] }
                     }
                 }
             ])
         ]);
 
+        const userStats = {
+            totalUsers: userStatsAggregation[0]?.totalUsers || 0,
+            activeUsers: userStatsAggregation[0]?.activeUsers || 0,
+            premiumUsers: userStatsAggregation[0]?.premiumUsers || 0,
+            usersByIndustry: userStatsAggregation[0]?.usersByIndustry || [],
+            averageConnections: Math.round(userStatsAggregation[0]?.averageConnections || 0),
+            usersByProfilePrivacy: userStatsAggregation[0]?.usersByProfilePrivacy || [],
+            usersByConnectionRequestPrivacy: userStatsAggregation[0]?.usersByConnectionRequestPrivacy || [],
+            usersByDefaultMode: userStatsAggregation[0]?.usersByDefaultMode || [],
+            employmentTypeCounts: userStatsAggregation[0]?.employmentTypeCounts || []
+        };
+
+        const postStats = {
+            totalPosts: postStatsAggregation[0]?.totalPosts || 0,
+            activePosts: postStatsAggregation[0]?.activePosts || 0,
+            totalImpressions: postStatsAggregation[0]?.totalImpressions || 0,
+            averageEngagement: {
+                impressions: Math.round(postStatsAggregation[0]?.averageEngagement?.avgImpressions || 0),
+                comments: Math.round(postStatsAggregation[0]?.averageEngagement?.avgComments || 0),
+                reposts: Math.round(postStatsAggregation[0]?.averageEngagement?.avgReposts || 0)
+            }
+        };
+
+        const jobStats = {
+            totalJobs: jobStatsAggregation[0]?.totalJobs || 0,
+            activeJobs: jobStatsAggregation[0]?.activeJobs || 0,
+            jobsByType: jobStatsAggregation[0]?.jobsByType || [],
+            jobsByWorkplaceType: jobStatsAggregation[0]?.jobsByWorkplaceType || [],
+            averageApplications: Math.round(jobStatsAggregation[0]?.averageApplications || 0)
+        };
+
+        const companyStats = {
+            totalCompanies: companyStatsAggregation[0]?.totalCompanies || 0,
+            activeCompanies: companyStatsAggregation[0]?.activeCompanies || 0,
+            companiesBySize: companyStatsAggregation[0]?.companiesBySize || [],
+            companiesByIndustry: companyStatsAggregation[0]?.companiesByIndustry || [],
+            averageFollowers: Math.round(companyStatsAggregation[0]?.averageFollowers || 0)
+        };
+
+        // Format response data
+        const analyticsOverview = {
+            userStats: userStats,
+            postStats: postStats,
+            jobStats: jobStats,
+            companyStats: companyStats
+        };
+
         res.status(200).json({
             status: 'success',
-            data: {
-                users: {
-                    total: userStats[0]?.totalUsers || 0,
-                    active: userStats[0]?.activeUsers || 0,
-                    premium: userStats[0]?.premiumUsers || 0
-                },
-                posts: {
-                    total: postStats[0]?.totalPosts || 0,
-                    totalImpressions: postStats[0]?.totalImpressions || 0,
-                    totalComments: postStats[0]?.totalComments || 0,
-                    totalShares: postStats[0]?.totalShares || 0
-                },
-                jobs: {
-                    total: jobStats[0]?.totalJobs || 0,
-                    active: jobStats[0]?.activeJobs || 0,
-                    totalApplications: jobStats[0]?.totalApplications || 0
-                },
-                connections: {
-                    total: connectionStats[0]?.totalConnections || 0,
-                    pending: connectionStats[0]?.pendingConnections || 0
-                },
-                companies: {
-                    total: companyStats[0]?.totalCompanies || 0,
-                    verified: companyStats[0]?.verifiedCompanies || 0
-                }
-            }
+            data: analyticsOverview
         });
+
     } catch (error) {
         res.status(500).json({
             status: 'error',
@@ -295,297 +394,3 @@ exports.getAnalyticsOverview = async (req, res) => {
         });
     }
 };
-
-exports.getUserAnalytics = async (req, res) => {
-    try {
-        const timeRange = req.query.range || '30'; // days
-        const endDate = new Date();
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - parseInt(timeRange));
-
-        const [
-            userGrowth,
-            userEngagement,
-            userDistribution,
-            connectionMetrics
-        ] = await Promise.all([
-            // User Growth
-            User.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" },
-                            day: { $dayOfMonth: "$createdAt" }
-                        },
-                        newUsers: { $sum: 1 },
-                        premiumUsers: {
-                            $sum: {
-                                $cond: [{ $eq: ["$accountType", "premium"] }, 1, 0]
-                            }
-                        }
-                    }
-                },
-                { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
-            ]),
-
-            // User Engagement
-            User.aggregate([
-                {
-                    $match: {
-                        lastActive: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            year: { $year: "$lastActive" },
-                            month: { $month: "$lastActive" },
-                            day: { $dayOfMonth: "$lastActive" }
-                        },
-                        dailyActiveUsers: { $sum: 1 },
-                        postingUsers: {
-                            $sum: { $cond: [{ $gt: ["$postCount", 0] }, 1, 0] }
-                        },
-                        commentingUsers: {
-                            $sum: { $cond: [{ $gt: ["$commentCount", 0] }, 1, 0] }
-                        }
-                    }
-                },
-                { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
-            ]),
-
-            // User Distribution
-            User.aggregate([
-                {
-                    $group: {
-                        _id: "$industry",
-                        count: { $sum: 1 },
-                        averageConnections: { $avg: "$connectionCount" },
-                        averagePostCount: { $avg: "$postCount" }
-                    }
-                },
-                { $sort: { count: -1 } }
-            ]),
-
-            // Connection Metrics
-            Connection.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" },
-                            day: { $dayOfMonth: "$createdAt" }
-                        },
-                        newConnections: { $sum: 1 },
-                        acceptedConnections: {
-                            $sum: {
-                                $cond: [{ $eq: ["$status", "accepted"] }, 1, 0]
-                            }
-                        }
-                    }
-                },
-                { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
-            ])
-        ]);
-
-        res.status(200).json({
-            status: 'success',
-            data: {
-                timeRange: {
-                    start: startDate,
-                    end: endDate
-                },
-                growth: userGrowth,
-                engagement: userEngagement,
-                industryDistribution: userDistribution,
-                connections: connectionMetrics
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-};
-
-exports.getContentAnalytics = async (req, res) => {
-    try {
-        const timeRange = req.query.range || '30'; // days
-        const endDate = new Date();
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - parseInt(timeRange));
-
-        const [
-            postAnalytics,
-            jobAnalytics,
-            engagementMetrics,
-            contentDistribution
-        ] = await Promise.all([
-            // Post Analytics
-            Post.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" },
-                            day: { $dayOfMonth: "$createdAt" }
-                        },
-                        totalPosts: { $sum: 1 },
-                        textPosts: {
-                            $sum: { $cond: [{ $eq: ["$type", "text"] }, 1, 0] }
-                        },
-                        imagePosts: {
-                            $sum: { $cond: [{ $eq: ["$type", "image"] }, 1, 0] }
-                        },
-                        videoPosts: {
-                            $sum: { $cond: [{ $eq: ["$type", "video"] }, 1, 0] }
-                        },
-                        articlePosts: {
-                            $sum: { $cond: [{ $eq: ["$type", "article"] }, 1, 0] }
-                        },
-                        avgImpressions: { $avg: "$impressionCount" },
-                        avgComments: { $avg: "$commentCount" },
-                        avgShares: { $avg: "$shareCount" }
-                    }
-                },
-                { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
-            ]),
-
-            // Job Analytics
-            Job.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" },
-                            day: { $dayOfMonth: "$createdAt" }
-                        },
-                        newJobs: { $sum: 1 },
-                        totalApplications: { $sum: "$applicationCount" },
-                        avgApplicationsPerJob: { $avg: "$applicationCount" },
-                        remoteJobs: {
-                            $sum: { $cond: [{ $eq: ["$locationType", "remote"] }, 1, 0] }
-                        }
-                    }
-                },
-                { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
-            ]),
-
-            // Engagement Metrics
-            Post.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$type",
-                        count: { $sum: 1 },
-                        avgEngagement: {
-                            $avg: {
-                                $add: [
-                                    "$impressionCount",
-                                    "$commentCount",
-                                    "$shareCount"
-                                ]
-                            }
-                        },
-                        topReactions: {
-                            $push: {
-                                $cond: [
-                                    { $gt: ["$impressionCount", 100] },
-                                    {
-                                        postId: "$_id",
-                                        reactions: "$impressionCount"
-                                    },
-                                    null
-                                ]
-                            }
-                        }
-                    }
-                }
-            ]),
-
-            // Content Distribution by Industry/Category
-            Post.aggregate([
-                {
-                    $match: {
-                        createdAt: { $gte: startDate, $lte: endDate }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "userId",
-                        foreignField: "_id",
-                        as: "user"
-                    }
-                },
-                {
-                    $unwind: "$user"
-                },
-                {
-                    $group: {
-                        _id: "$user.industry",
-                        postCount: { $sum: 1 },
-                        avgEngagement: {
-                            $avg: {
-                                $add: [
-                                    "$impressionCount",
-                                    "$commentCount",
-                                    "$shareCount"
-                                ]
-                            }
-                        }
-                    }
-                },
-                { $sort: { postCount: -1 } }
-            ])
-        ]);
-
-        res.status(200).json({
-            status: 'success',
-            data: {
-                timeRange: {
-                    start: startDate,
-                    end: endDate
-                },
-                posts: {
-                    daily: postAnalytics,
-                    engagementByType: engagementMetrics,
-                    distributionByIndustry: contentDistribution
-                },
-                jobs: jobAnalytics
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-};
-
