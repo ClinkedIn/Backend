@@ -31,10 +31,17 @@ const createJob = async (req, res) => {
 // Get all jobs
 const getAllJobs = async (req, res) => {
     try {
-        const jobs = await jobModel.find();
-        res.status(200).json(jobs);
+        // Only include active jobs and populate company information
+        const jobs = await jobModel.find()
+            .populate('companyId', 'name logo industry location')
+            .sort({ createdAt: -1 });
+            res.status(200).json(jobs);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error getting jobs:', error);
+        res.status(500).json({ 
+            message: 'Failed to retrieve jobs',
+            error: error.message 
+        });
     }
 };
 
@@ -74,17 +81,32 @@ const updateJob = async (req, res) => {
     }
 };
 
-// Delete a job by ID
 const deleteJob = async (req, res) => {
     try {
-        const job = await jobModel.findById(req.params.jobId);
-        if (!job) {
+        // Using findByIdAndUpdate to soft delete instead of findByIdAndDelete
+        const deletedJob = await jobModel.findByIdAndUpdate(
+            req.params.jobId,
+            { isActive: false },
+            { new: true } // Return the updated document
+        );
+        
+        if (!deletedJob) {
             return res.status(404).json({ message: 'Job not found' });
         }
-        await job.remove();
-        res.status(200).json({ message: 'Job deleted successfully' });
+        
+        res.status(200).json({ 
+            message: 'Job deleted successfully',
+            deletedJob: {
+                id: deletedJob._id,
+                title: deletedJob.title
+            }
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error deleting job:', error);
+        res.status(500).json({ 
+            message: 'Failed to delete job', 
+            error: error.message 
+        });
     }
 };
 
