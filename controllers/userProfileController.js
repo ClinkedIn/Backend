@@ -2,7 +2,7 @@ const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
-const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences} = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences, validateConnectionStatus, handlePagination } = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
@@ -2008,6 +2008,410 @@ const getUserActivity = async (req, res) => {
         });
     }
 };
+
+
+// Search Controllers
+const searchUsers = async (req, res) => {
+    try {
+        const { query, company, industry, page = 1, limit = 10 } = req.query;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const searchQuery = {};
+        if (query) {
+            searchQuery.$or = [
+                { firstName: { $regex: query, $options: 'i' } },
+                { lastName: { $regex: query, $options: 'i' } }
+            ];
+        }
+        if (company) searchQuery.company = { $regex: company, $options: 'i' };
+        if (industry) searchQuery.industry = { $regex: industry, $options: 'i' };
+
+        const users = await userModel
+            .find(searchQuery)
+            .select('firstName lastName company industry profilePicture')
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await userModel.countDocuments(searchQuery);
+
+        res.status(200).json({
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const searchUsersByName = async (req, res) => {
+    try {
+        const { name, page = 1, limit = 10 } = req.query;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const searchQuery = {
+            $or: [
+                { firstName: { $regex: name, $options: 'i' } },
+                { lastName: { $regex: name, $options: 'i' } }
+            ]
+        };
+
+        const users = await userModel
+            .find(searchQuery)
+            .select('firstName lastName profilePicture')
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await userModel.countDocuments(searchQuery);
+
+        res.status(200).json({
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Connection Controllers
+const sendConnectionRequest = async (req, res) => {
+    try {
+        const { targetUserId } = req.params;
+        const userId = req.user.id;
+
+        const validationResult = await validateConnectionStatus(userId, targetUserId, userModel);
+        if (!validationResult.isValid) {
+            return res.status(validationResult.statusCode).json({ message: validationResult.message });
+        }
+
+        const { user, targetUser } = validationResult;
+
+        // Check if request already pending
+        if (targetUser.pendingConnections.includes(userId)) {
+            return res.status(400).json({ message: 'Connection request already sent' });
+        }
+
+        // Add to pending connections
+        await userModel.findByIdAndUpdate(targetUserId, {
+            $addToSet: { pendingConnections: userId }
+        });
+
+        res.status(200).json({ message: 'Connection request sent successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const handleConnectionRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { action } = req.body;
+        const userId = req.user.id;
+
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        const user = await userModel.findById(userId);
+        if (!user.pendingConnections.includes(requestId)) {
+            return res.status(404).json({ message: 'Connection request not found' });
+        }
+
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { pendingConnections: requestId }
+        });
+
+        if (action === 'accept') {
+            await Promise.all([
+                userModel.findByIdAndUpdate(userId, {
+                    $addToSet: { connectionList: requestId }
+                }),
+                userModel.findByIdAndUpdate(requestId, {
+                    $addToSet: { connectionList: userId }
+                })
+            ]);
+        }
+
+        res.status(200).json({
+            message: `Connection request ${action}ed successfully`
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+/**
+ * Cancel a sent connection request
+ * @route DELETE /user/connections/requests/:requestId
+ */
+const cancelConnectionRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const userId = req.user.id;
+
+        // Find the target user who received the connection request
+        const targetUser = await userModel.findById(requestId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+
+        // Check if there's actually a pending request
+        const requestExists = targetUser.pendingConnections.includes(userId);
+        if (!requestExists) {
+            return res.status(400).json({
+                message: 'No pending connection request found to cancel'
+            });
+        }
+
+        // Remove the request from target user's pending connections
+        await userModel.findByIdAndUpdate(requestId, {
+            $pull: { pendingConnections: userId }
+        });
+
+        res.status(200).json({
+            message: 'Connection request cancelled successfully'
+        });
+
+    } catch (error) {
+        console.error('Error cancelling connection request:', error);
+        res.status(500).json({
+            message: 'Failed to cancel connection request',
+            error: error.message
+        });
+    }
+};
+
+const getConnections = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'connectionList',
+                select: 'firstName lastName profilePicture company position',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.connectionList.length;
+
+        res.status(200).json({
+            connections: user.connectionList,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getPendingRequests = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'pendingConnections',
+                select: 'firstName lastName profilePicture company position',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.pendingConnections.length;
+
+        res.status(200).json({
+            pendingRequests: user.pendingConnections,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const removeConnection = async (req, res) => {
+    try {
+        const { connectionId } = req.params;
+        const userId = req.user.id;
+
+        await Promise.all([
+            userModel.findByIdAndUpdate(userId, {
+                $pull: { connectionList: connectionId }
+            }),
+            userModel.findByIdAndUpdate(connectionId, {
+                $pull: { connectionList: userId }
+            })
+        ]);
+
+        res.status(200).json({ message: 'Connection removed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Blocking Controllers
+const blockUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const blockerId = req.user.id;
+
+        await Promise.all([
+            // Remove from connections if connected
+            userModel.findByIdAndUpdate(blockerId, {
+                $pull: { connectionList: userId },
+                $addToSet: { blockedUsers: userId }
+            }),
+            userModel.findByIdAndUpdate(userId, {
+                $pull: { connectionList: blockerId }
+            })
+        ]);
+
+        res.status(200).json({ message: 'User blocked successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const unblockUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const blockerId = req.user.id;
+
+        await userModel.findByIdAndUpdate(blockerId, {
+            $pull: { blockedUsers: userId }
+        });
+
+        res.status(200).json({ message: 'User unblocked successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getBlockedUsers = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'blockedUsers',
+                select: 'firstName lastName profilePicture',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.blockedUsers.length;
+
+        res.status(200).json({
+            blockedUsers: user.blockedUsers,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Message Request Controllers
+const sendMessageRequest = async (req, res) => {
+    try {
+        const { targetUserId } = req.body;
+        const userId = req.user.id;
+
+        const validationResult = await validateConnectionStatus(userId, targetUserId, userModel);
+        if (!validationResult.isValid) {
+            return res.status(validationResult.statusCode).json({ message: validationResult.message });
+        }
+
+        await userModel.findByIdAndUpdate(targetUserId, {
+            $addToSet: { messageRequests: userId }
+        });
+
+        res.status(200).json({ message: 'Message request sent successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getMessageRequests = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'messageRequests',
+                select: 'firstName lastName profilePicture',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.messageRequests.length;
+
+        res.status(200).json({
+            messageRequests: user.messageRequests,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const handleMessageRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { action } = req.body;
+        const userId = req.user.id;
+
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { messageRequests: requestId }
+        });
+
+        if (action === 'accept') {
+            // Add logic here for enabling messaging between users
+            // This might involve updating a separate messages collection or permissions
+        }
+
+        res.status(200).json({
+            message: `Message request ${action}ed successfully`
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
 module.exports = {
     getAllUsers,
     getMe,
@@ -2046,5 +2450,19 @@ module.exports = {
     editContactInfo,
     editAbout,
     uploadPicture,
-    getUserActivity
+    getUserActivity,
+    searchUsers,
+    searchUsersByName,
+    sendConnectionRequest,
+    handleConnectionRequest,
+    cancelConnectionRequest,
+    getConnections,
+    getPendingRequests,
+    removeConnection,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
+    sendMessageRequest,
+    getMessageRequests,
+    handleMessageRequest
 };

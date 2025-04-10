@@ -37,6 +37,7 @@ const { createRandomIds } = require('./init');
         await impressionSeeder();
         await companySeeder();
         await jobSeeder();
+        await reportSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');

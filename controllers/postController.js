@@ -111,111 +111,118 @@ const createPost = async (req, res) => {
 };
 
 const getPost = async (req, res) => {
-    try {
-        const postId = req.params.postId;
-        const userId = req.user.id;
-        
-        // Validate input
-        if (!postId) {
-            return res.status(400).json({ message: 'Post ID is required' });
-        }
-        
-        // Get the post and check if it's active
-        const post = await postModel.findOne({ 
-            _id: postId, 
-            isActive: true 
-        }).populate('userId', 'firstName lastName headline profilePicture connections');
-        
-        // Check if post exists
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
-        
-        // Check privacy settings - if post is connections only
-        if (post.whoCanSee === 'connections') {
-            // If user is not the post owner
-            if (post.userId.toString() !== userId) {
-                // Get the post owner's connections
-                const connections = post.userId.connections || [];
-                
-                // Check if current user is in the connections
-                const isConnected = connections.some(
-                    connectionId => connectionId.toString() === userId
-                );
-                
-                if (!isConnected) {
-                    return res.status(403).json({ 
-                        message: 'This post is only visible to the author\'s connections' 
-                    });
-                }
-            }
-            // If user is the post owner, they can see it regardless of privacy settings
-        }
-        
-        // Check if current user has saved this post
-        const currentUser = await userModel.findById(userId).select('savedPosts');
-        const isSaved = currentUser && currentUser.savedPosts && 
-                        currentUser.savedPosts.some(savedId => savedId.toString() === postId);
-        
-        const isLiked = await impressionModel.findOne({
-            targetId: postId,
-            userId
-        });
+  try {
+    const postId = req.params.postId;
+    const userId = req.user.id;
 
-        // Check if post is a repost
-        const repost = await repostModel.findOne({
-            postId,
-            isActive: true
-        }).populate('userId', 'firstName lastName profilePicture headline');
-        
-        const isRepost = !!repost;
-        
-        // Format post response
-        const postResponse = {
-            postId: post._id,
-            userId: post.userId._id,
-            firstName: post.userId.firstName,
-            lastName: post.userId.lastName,
-            headline: post.userId.headline || "",
-            profilePicture: post.userId.profilePicture,
-            postDescription: post.description,
-            attachments: post.attachments,
-            impressionCounts: post.impressionCounts,
-            commentCount: post.commentCount || 0,
-            repostCount: post.repostCount || 0,
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt,
-            taggedUsers: post.taggedUsers,
-            whoCanSee: post.whoCanSee, // Include privacy setting in response
-            whoCanComment: post.whoCanComment, // Include comment setting in response
-            isRepost,
-            isSaved,
-            isLiked: isLiked,
-            // Include repost details if applicable
-            ...(isRepost && {
-                repostId: repost._id,
-                reposterId: repost.userId._id,
-                reposterFirstName: repost.userId.firstName,
-                reposterLastName: repost.userId.lastName,
-                reposterProfilePicture: repost.userId.profilePicture,
-                reposterHeadline: repost.userId.headline || "",
-                repostDescription: repost.description,
-                repostDate: repost.createdAt
-            })
-        };
-        
-        res.status(200).json({
-            message: 'Post retrieved successfully',
-            post: postResponse
-        });
-        
-    } catch (error) {
-        console.error('Error retrieving post:', error);
-        res.status(500).json({
-            message: 'Failed to retrieve post',
-            error: error.message
-        });
+    // Validate input
+    if (!postId) {
+      return res.status(400).json({ message: "Post ID is required" });
     }
+
+    // Get the post and check if it's active
+    const post = await postModel
+      .findOne({
+        _id: postId,
+        isActive: true,
+      })
+      .populate(
+        "userId",
+        "firstName lastName headline profilePicture connections"
+      );
+
+    // Check if post exists
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check privacy settings - if post is connections only
+    if (post.whoCanSee === "connections") {
+      // If user is not the post owner
+      if (post.userId.toString() !== userId) {
+        // Get the post owner's connections
+        const connections = post.userId.connections || [];
+
+        // Check if current user is in the connections
+        const isConnected = connections.some(
+          (connectionId) => connectionId.toString() === userId
+        );
+
+        if (!isConnected) {
+          return res.status(403).json({
+            message: "This post is only visible to the author's connections",
+          });
+        }
+      }
+      // If user is the post owner, they can see it regardless of privacy settings
+    }
+
+    // Check if current user has saved this post
+    const currentUser = await userModel.findById(userId).select("savedPosts");
+    const isSaved =
+      currentUser &&
+      currentUser.savedPosts &&
+      currentUser.savedPosts.some((savedId) => savedId.toString() === postId);
+
+    const isLiked = await impressionModel.findOne({
+      targetId: postId,
+      userId,
+    });
+    // Check if post is a repost
+    const repost = await repostModel
+      .findOne({
+        postId,
+        isActive: true,
+      })
+      .populate("userId", "firstName lastName profilePicture headline");
+
+    const isRepost = !!repost;
+
+    // Format post response
+    const postResponse = {
+      postId: post._id,
+      userId: post.userId._id,
+      firstName: post.userId.firstName,
+      lastName: post.userId.lastName,
+      headline: post.userId.headline || "",
+      profilePicture: post.userId.profilePicture,
+      postDescription: post.description,
+      attachments: post.attachments,
+      impressionCounts: post.impressionCounts,
+      commentCount: post.commentCount || 0,
+      repostCount: post.repostCount || 0,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      taggedUsers: post.taggedUsers,
+      whoCanSee: post.whoCanSee, // Include privacy setting in response
+      whoCanComment: post.whoCanComment, // Include comment setting in response
+      isRepost,
+      isSaved,
+      isLiked,
+      // Include repost details if applicable
+      ...(isRepost && {
+        repostId: repost._id,
+        reposterId: repost.userId._id,
+        reposterFirstName: repost.userId.firstName,
+        reposterLastName: repost.userId.lastName,
+        reposterProfilePicture: repost.userId.profilePicture,
+        reposterHeadline: repost.userId.headline || "",
+        repostDescription: repost.description,
+        repostDate: repost.createdAt,
+      }),
+    };
+
+    res.status(200).json({
+      message: "Post retrieved successfully",
+      post: postResponse,
+    });
+  } catch (error) {
+    console.error("Error retrieving post:", error);
+    res.status(500).json({
+      message: "Failed to retrieve post",
+      error: error.message,
+    });
+  }
 };
 
 const deletePost = async (req, res) => {
@@ -363,167 +370,185 @@ const updatePost = async (req, res) => {
 
 // Get all posts
 const getAllPosts = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { pageNumber = 1, limit = 10 } = req.query;
-        const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
-        
-        // Get current user's connections and following
-        const currentUser = await userModel.findById(userId)
-            .select('connections following savedPosts');
-        
-        if (!currentUser) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
-        // Extract IDs with proper null checks
-        const connectionIds = (currentUser.connections || []).map(conn => conn.toString());
-        const followedUserIds = (currentUser.following || [])
-            .filter(follow => follow.entityType === 'User')
-            .map(follow => follow.entity.toString());
-        const followedCompanyIds = (currentUser.following || [])
-            .filter(follow => follow.entityType === 'Company')
-            .map(follow => follow.entity.toString());
-        
-        // Combine all relevant user IDs (connections + followed users + self)
-        const relevantUserIds = [...new Set([...connectionIds, ...followedUserIds, userId])];
-        
-        // Get post IDs that were reposted by connections and followed users
-        const repostInfo = await repostModel.find({
-            userId: { $in: relevantUserIds },
-            isActive: true
-        })
-        .populate('userId', 'firstName lastName profilePicture headline')
-        .lean();
-        
-        // Extract just the post IDs from reposts
-        const repostedPostIds = repostInfo.map(repost => repost.postId);
-        
-        // Create a map of postId -> repost info for quick lookup later
-        const repostMap = {};
-        repostInfo.forEach(repost => {
-            if (!repostMap[repost.postId]) {
-                repostMap[repost.postId] = [];
-            }
-            repostMap[repost.postId].push({
-                isRepost: true,
-                repostId: repost._id,
-                reposterId: repost.userId._id,
-                reposterFirstName: repost.userId.firstName,
-                reposterLastName: repost.userId.lastName,
-                reposterProfilePicture: repost.userId.profilePicture,
-                reposterHeadline: repost.userId.headline || "",
-                repostDescription: repost.description,
-                repostDate: repost.createdAt
-            });
-        });
-        
-        // Query posts that are either created by relevant users or reposted by them
-        const posts = await postModel.find({
-            $and: [
-                { isActive: true },
-                {
-                    $or: [
-                        // Original posts from connections and followed users
-                        { userId: { $in: relevantUserIds.length ? relevantUserIds : [userId] } },
-                        
-                        // Posts from followed companies
-                        { 
-                            userId: { $in: followedCompanyIds.length ? followedCompanyIds : ['000000000000000000000000'] },
-                            entityType: 'Company'
-                        },
-                        
-                        // Posts that were reposted by connections or followed users
-                        { _id: { $in: repostedPostIds } }
-                    ]
-                }
-            ]
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .populate('userId', 'firstName lastName headline profilePicture')
-        .lean();
-        
-        // Count total posts for pagination
-        const total = await postModel.countDocuments({
-            $and: [
-                { isActive: true },
-                {
-                    $or: [
-                        { userId: { $in: relevantUserIds } },
-                        { userId: { $in: followedCompanyIds }, entityType: 'Company' },
-                        { _id: { $in: repostedPostIds } }
-                    ]
-                }
-            ]
-        });
-        
-        // Format posts and add repost information
-        const formattedPosts = await Promise.all(posts.map(async post => {
-            // Check if this post was reposted by a connection
-            const repostInfo = repostMap[post._id.toString()];
-            const isRepost = !!repostInfo;
-            
-            // For posts that have multiple reposters, use the most relevant one 
-            // (e.g., first one in the array, which could be sorted by date if needed)
-            const repostDetails = repostInfo ? repostInfo[0] : null;
-            const isSaved = savedPostsSet.has(post._id.toString());
-            const isLiked = await impressionModel.findOne({
-                targetId: post._id,
-                userId
-            });
-            return {
-                postId: post._id,
-                userId: post.userId._id,
-                firstName: post.userId.firstName,
-                lastName: post.userId.lastName,
-                headline: post.userId.headline || "",
-                profilePicture: post.userId.profilePicture,
-                postDescription: post.description,
-                attachments: post.attachments,
-                impressionCounts: post.impressionCounts,
-                commentCount: post.commentCount || 0,
-                repostCount: post.repostCount || 0,
-                createdAt: post.createdAt,
-                taggedUsers: post.taggedUsers,
-                isRepost: isRepost,
-                isSaved: isSaved,
-                isLiked: isLiked,
-                // Only include repost details if this is a repost
-                ...(isRepost && {
-                    repostId: repostDetails.repostId,
-                    reposterId: repostDetails.reposterId,
-                    reposterFirstName: repostDetails.reposterFirstName,
-                    reposterLastName: repostDetails.reposterLastName,
-                    reposterProfilePicture: repostDetails.reposterProfilePicture,
-                    reposterHeadline: repostDetails.reposterHeadline,
-                    repostDescription: repostDetails.repostDescription,
-                    repostDate: repostDetails.repostDate
-                })
-            };
-        }));
-        const hasNextPage = parseInt(pageNumber) < total;
-        const hasPrevPage = parseInt(pageNumber) > 1;
-        res.status(200).json({
-            posts: formattedPosts,
-            pagination: {
-                total,
-                page: parseInt(pageNumber),
-                limit: parseInt(limit),
-                pages: Math.ceil(total / parseInt(limit)),
-                hasNextPage,
-                hasPrevPage
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error fetching posts:', error);
-        res.status(500).json({
-            message: 'Failed to fetch posts',
-            error: error.message
-        });
+  try {
+    const userId = req.user.id;
+    const { pageNumber = 1, limit = 10 } = req.query;
+    const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+
+    // Get current user's connections and following
+    const currentUser = await userModel
+      .findById(userId)
+      .select("connections following savedPosts");
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
     }
+    const savedPostsSet = new Set(
+      (currentUser.savedPosts || []).map((id) => id.toString())
+    );
+    // Extract IDs with proper null checks
+    const connectionIds = (currentUser.connections || []).map((conn) =>
+      conn.toString()
+    );
+    const followedUserIds = (currentUser.following || [])
+      .filter((follow) => follow.entityType === "User")
+      .map((follow) => follow.entity.toString());
+    const followedCompanyIds = (currentUser.following || [])
+      .filter((follow) => follow.entityType === "Company")
+      .map((follow) => follow.entity.toString());
+
+    // Combine all relevant user IDs (connections + followed users + self)
+    const relevantUserIds = [
+      ...new Set([...connectionIds, ...followedUserIds, userId]),
+    ];
+
+    // Get post IDs that were reposted by connections and followed users
+    const repostInfo = await repostModel
+      .find({
+        userId: { $in: relevantUserIds },
+        isActive: true,
+      })
+      .populate("userId", "firstName lastName profilePicture headline")
+      .lean();
+
+    // Extract just the post IDs from reposts
+    const repostedPostIds = repostInfo.map((repost) => repost.postId);
+
+    // Create a map of postId -> repost info for quick lookup later
+    const repostMap = {};
+    repostInfo.forEach((repost) => {
+      if (!repostMap[repost.postId]) {
+        repostMap[repost.postId] = [];
+      }
+      repostMap[repost.postId].push({
+        isRepost: true,
+        repostId: repost._id,
+        reposterId: repost.userId._id,
+        reposterFirstName: repost.userId.firstName,
+        reposterLastName: repost.userId.lastName,
+        reposterProfilePicture: repost.userId.profilePicture,
+        reposterHeadline: repost.userId.headline || "",
+        repostDescription: repost.description,
+        repostDate: repost.createdAt,
+      });
+    });
+
+    // Query posts that are either created by relevant users or reposted by them
+    const posts = await postModel
+      .find({
+        $and: [
+          { isActive: true },
+          {
+            $or: [
+              // Original posts from connections and followed users
+              {
+                userId: {
+                  $in: relevantUserIds.length ? relevantUserIds : [userId],
+                },
+              },
+
+              // Posts from followed companies
+              {
+                userId: {
+                  $in: followedCompanyIds.length
+                    ? followedCompanyIds
+                    : ["000000000000000000000000"],
+                },
+                entityType: "Company",
+              },
+
+              // Posts that were reposted by connections or followed users
+              { _id: { $in: repostedPostIds } },
+            ],
+          },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("userId", "firstName lastName headline profilePicture")
+      .lean();
+
+    // Count total posts for pagination
+    const total = await postModel.countDocuments({
+      $and: [
+        { isActive: true },
+        {
+          $or: [
+            { userId: { $in: relevantUserIds } },
+            { userId: { $in: followedCompanyIds }, entityType: "Company" },
+            { _id: { $in: repostedPostIds } },
+          ],
+        },
+      ],
+    });
+
+    // Format posts and add repost information
+    const formattedPosts = await Promise.all(
+      posts.map(async (post) => {
+        // Check if this post was reposted by a connection
+        const repostInfo = repostMap[post._id.toString()];
+        const isRepost = !!repostInfo;
+
+        // For posts that have multiple reposters, use the most relevant one
+        // (e.g., first one in the array, which could be sorted by date if needed)
+        const repostDetails = repostInfo ? repostInfo[0] : null;
+        const isSaved = savedPostsSet.has(post._id.toString());
+        const isLiked = await impressionModel.findOne({
+          targetId: post._id,
+          userId,
+        });
+        return {
+          postId: post._id,
+          userId: post.userId._id,
+          firstName: post.userId.firstName,
+          lastName: post.userId.lastName,
+          headline: post.userId.headline || "",
+          profilePicture: post.userId.profilePicture,
+          postDescription: post.description,
+          attachments: post.attachments,
+          impressionCounts: post.impressionCounts,
+          commentCount: post.commentCount || 0,
+          repostCount: post.repostCount || 0,
+          createdAt: post.createdAt,
+          taggedUsers: post.taggedUsers,
+          isRepost: isRepost,
+          isSaved: isSaved,
+          isLiked: isLiked,
+          // Only include repost details if this is a repost
+          ...(isRepost && {
+            repostId: repostDetails.repostId,
+            reposterId: repostDetails.reposterId,
+            reposterFirstName: repostDetails.reposterFirstName,
+            reposterLastName: repostDetails.reposterLastName,
+            reposterProfilePicture: repostDetails.reposterProfilePicture,
+            reposterHeadline: repostDetails.reposterHeadline,
+            repostDescription: repostDetails.repostDescription,
+            repostDate: repostDetails.repostDate,
+          }),
+        };
+      })
+    );
+    const hasNextPage = parseInt(pageNumber) < total;
+    const hasPrevPage = parseInt(pageNumber) > 1;
+    res.status(200).json({
+      posts: formattedPosts,
+      pagination: {
+        total,
+        page: parseInt(pageNumber),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    res.status(500).json({
+      message: "Failed to fetch posts",
+      error: error.message,
+    });
+  }
 };
 
 // Save a post
