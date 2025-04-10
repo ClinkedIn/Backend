@@ -98,6 +98,26 @@ const protect = async (req, res, next) => {
     return res.status(401).json({ error: "Invalid Token" });
   }
 };
+const checkAdmin = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const currentUser = await userModel.findById(req.user.id);
+
+  if (!currentUser) {
+    return res.status(401).json({ message: "Unauthorized, the user no longer exists" });
+  }
+
+  if (!currentUser.isSuperAdmin) {
+    return res.status(403).json({ message: "Unauthorized, Admin access required" });
+  }
+
+
+  next();
+
+
+};
 
 const mockUser = {
   id: "473c0bddfacd1f8a541cb0d2", // Use an ID from your seeded users
@@ -127,4 +147,5 @@ module.exports = {
   verifyGoogleToken,
   mockVerifyToken,
   protect,
+  checkAdmin
 };

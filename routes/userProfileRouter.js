@@ -80,7 +80,54 @@ router.route('/resume')
 router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
+    router.route('/search')
+    .get(protect, user.searchUsers);  // Search for users by name, company, or industry
 
+router.route('/search/users')
+    .get(protect, user.searchUsersByName);  // Specific endpoint for name search
+
+// Connection management (as per /connections endpoints in Swagger)
+router.route('/connections/request/:targetUserId')
+    .post(protect, user.sendConnectionRequest);  // Send connection request
+
+router.route('/connections/requests')
+    .get(protect, user.getPendingRequests);  // Get pending connection requests
+
+router.route('/connections/requests/:requestId')
+    .patch(protect, user.handleConnectionRequest)  // Accept/Decline connection request
+    .delete(protect, user.cancelConnectionRequest);  // Cancel sent request
+
+router.route('/connections/:connectionId')
+    .delete(protect, user.removeConnection);  // Remove an existing connection
+
+router.route('/connections')
+    .get(protect, user.getConnections);  // Get list of connections
+
+// Following/Unfollowing (existing implementation matches Swagger)
+router.route('/follow/:userId')
+    .post(protect, user.followEntity)
+    .delete(protect, user.unfollowEntity);
+
+// Blocking functionality
+router.route('/block/:userId')
+    .post(protect, user.blockUser)
+    .delete(protect, user.unblockUser);
+
+router.route('/blocked')
+    .get(protect, user.getBlockedUsers);
+
+// Messaging requests for non-connections (as per /user/message-requests in Swagger)
+router.route('/message-requests')
+    .post(protect, user.sendMessageRequest)  // Send message request to non-connection
+    .get(protect, user.getMessageRequests);  // Get list of message requests
+
+router.route('/message-requests/:requestId')
+    .patch(protect, user.handleMessageRequest);  // Accept/decline message request
+
+// Keep existing routes...
+router.route('/education')
+    .post(protect, upload.single('file'), user.addEducation)
+    .get(protect, user.getEducations);
 // 7. USER PROFILE ROUTES WITH PARAMETERS (MOST GENERAL)
 router.route('/:userId/user-activity')
     .get(protect, user.getUserActivity);
@@ -88,4 +135,15 @@ router.route('/:userId/user-activity')
 router.route('/:userId')
     .get(protect, user.getUserProfile);
 
+
+
+
+// #################################
+// Search routes (as per /search and / search / users endpoints in Swagger)
+
+
+
+
+
+    
 module.exports = router;
