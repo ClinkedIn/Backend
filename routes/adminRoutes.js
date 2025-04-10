@@ -1,33 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { protect} = require('../middlewares/auth');
+const { protect, checkAdmin } = require('../middlewares/auth');
 
 // Reports monitoring
 router.route('/reports')
-    .get(protect,  adminController.getAllReports);
+    // .get(protect,checkAdmin,  adminController.getAllReports);
+    .get(  adminController.getAllReports);
 
 router.route('/reports/:reportId')
-    .get(protect,  adminController.getReport)
-    .patch(protect,  adminController.handleReport)
-    .delete(protect,  adminController.deleteReport);
+.get( adminController.getReport)
+.patch( adminController.handleReport)
+.delete(  adminController.deleteReport);
+// .get(protect, checkAdmin, adminController.getReport)
+// .patch(protect, checkAdmin, adminController.handleReport)
+// .delete(protect, checkAdmin, adminController.deleteReport);
 
-// Job management
+// Job management 
 router.route('/jobs')
-    .get(protect,  adminController.getFlaggedJobs);
+    // .get(protect, checkAdmin, adminController.getFlaggedJobs);
+    .get( adminController.getFlaggedJobs);
 
 router.route('/jobs/:jobId')
-    .patch(protect,  adminController.moderateJob)
-    .delete(protect,  adminController.removeJob);
+//     .delete(protect, checkAdmin,  adminController.removeJob);
+    .delete( adminController.removeJob);
 
 // Analytics
 router.route('/analytics/overview')
-    .get(protect,  adminController.getAnalyticsOverview);
+    // .get(protect,checkAdmin,  adminController.getAnalyticsOverview);
+    .get( adminController.getAnalyticsOverview);
 
-router.route('/analytics/users')
-    .get(protect,  adminController.getUserAnalytics);
 
-router.route('/analytics/content')
-    .get(protect,  adminController.getContentAnalytics);
 
 module.exports = router;
