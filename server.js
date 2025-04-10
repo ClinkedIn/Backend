@@ -2,6 +2,7 @@ require("dotenv").config();
 const yaml = require("js-yaml"); // Add this import at the top
 const process = require("process");
 const express = require("express");
+const cors = require('cors');
 const swaggerUI = require("swagger-ui-express");
 const { swaggerSpec } = require("./swagger");
 
@@ -22,6 +23,13 @@ const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
 const app = express();
 connectDB();
+const corsOptions = {
+  origin: "*", // Allow all origins
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -39,7 +47,7 @@ app.use("/search", searchRouter);
 app.use("/notifications", notificationRouter);
 
 app.use(
-  "/api-docs",
+  "/",
   swaggerUI.serve,
   swaggerUI.setup(swaggerSpec, {
     swaggerOptions: {
@@ -73,10 +81,11 @@ app.use(
     customSiteTitle: "Your API Documentation",
   })
 );
+
 app.get("/swagger.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
-});
+}); // <-- Properly close this route handler
 
 // Serve Swagger spec as YAML
 app.get("/swagger.yaml", (req, res) => {
@@ -85,6 +94,5 @@ app.get("/swagger.yaml", (req, res) => {
   res.send(yamlString);
 });
 
-app.listen(3000, () => {
-  console.log(`server started: http://localhost:3000`);
-});
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server running on port ${port}`));
