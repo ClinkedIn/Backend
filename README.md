@@ -37,7 +37,7 @@ Module 1: Authentication & User Management
 
 
 Module 14: Admin Panel
-●	Monitor reports of inappropriate content
+●	Monitor reports of inappropriate content ✅
 ●	Manage job postings and flagged job listings
-●	View platform analytics
+●	View platform analytics ✅
 
