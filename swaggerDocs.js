@@ -5060,8 +5060,10 @@
  *   post:
  *     summary: Register a new user
  *     tags: [Users]
- *     description: Creates a new user account, sends an email confirmation link, and returns authentication tokens in cookies.
- *     operationId: createUser
+ *     description: >
+ *       Registers a new user account. Validates input, checks for duplicates, verifies reCAPTCHA, stores optional FCM token,
+ *       and sends an email confirmation link. If a deactivated user with the same email exists, it is deleted.
+ *     operationId: registerUser
  *     requestBody:
  *       required: true
  *       content:
@@ -5084,16 +5086,19 @@
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john.doe@example.com"
+ *                 example: "john@example.com"
  *               password:
  *                 type: string
  *                 format: password
  *                 example: "Password123!"
- *                 description: "Must contain at least 1 digit, 1 lowercase, 1 uppercase letter, and be at least 8 characters long."
+ *                 description: "At least 8 characters, with 1 digit, 1 lowercase, and 1 uppercase letter."
  *               recaptchaResponseToken:
  *                 type: string
- *                 description: "Google reCAPTCHA response token"
  *                 example: "03AFcWeA5..."
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       201:
  *         description: User registered successfully, email confirmation sent.
@@ -5102,58 +5107,49 @@
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 status:
+ *                   type: string
+ *                   example: "success"
  *                 message:
  *                   type: string
  *                   example: "User registered successfully. Please check your email to confirm your account."
  *       400:
- *         description: Bad Request - Missing required fields.
+ *         description: Missing required fields.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "All fields are required."
+ *             example:
+ *               message: "all fields are required"
  *       409:
- *         description: Conflict - User already exists.
+ *         description: User already exists and is active.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "The User already exists, use another email."
+ *             example:
+ *               message: "The User already exist use another email"
  *       422:
- *         description: Unprocessable Entity - Invalid email, weak password, or CAPTCHA failure.
+ *         description: Invalid email, weak password, or reCAPTCHA failure.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
+ *             examples:
+ *               invalidEmail:
+ *                 summary: Invalid email format
+ *                 value:
+ *                   message: "Email not valid, Write a valid email"
+ *               weakPassword:
+ *                 summary: Weak password
+ *                 value:
+ *                   message: "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long."
+ *               captchaFailed:
+ *                 summary: reCAPTCHA failure
+ *                 value:
+ *                   message: "reCAPTCHA verification failed. Please try again."
  *       500:
- *         description: Internal Server Error - Registration failed.
+ *         description: Server error during registration
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Registration failed"
- *                 error:
- *                   type: string
- *                   example: "Internal server error message."
+ *             example:
+ *               success: false
+ *               message: "Registration failed"
+ *               error: "Internal server error message"
  *
  *   delete:
  *     summary: Deactivate a user account
@@ -5210,6 +5206,10 @@
  *                 format: password
  *                 example: StrongPass123!
  *                 description: The password associated with the email.
+ *               fcmToken:
+ *                 type: string
+ *                 example: "fcm123abc456"
+ *                 description: Firebase Cloud Messaging token for push notifications.
  *     responses:
  *       200:
  *         description: Successfully logged in, returns JWT token in cookies.
@@ -5284,8 +5284,19 @@
  *         required: true
  *         schema:
  *           type: string
- *           example: "Bearer <GOOGLE_ID_TOKEN>"
- *         description: "Google ID token obtained from Firebase Authentication."
+ *           example: "Bearer <Firebase_token>"
+ *         description: "Firebase token obtained from Firebase Authentication."
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       200:
  *         description: User logged in successfully.
@@ -5320,6 +5331,17 @@
  *     summary: Logout user
  *     tags: [Users]
  *     description: Logout a user
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       200:
  *        description: User logged out successfully
