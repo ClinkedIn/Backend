@@ -80,20 +80,7 @@ router.route('/resume')
 router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
-
-// 7. USER PROFILE ROUTES WITH PARAMETERS (MOST GENERAL)
-router.route('/:userId/user-activity')
-    .get(protect, user.getUserActivity);
-
-router.route('/:userId')
-    .get(protect, user.getUserProfile);
-
-
-
-
-// #################################
-// Search routes (as per /search and / search / users endpoints in Swagger)
-router.route('/search')
+    router.route('/search')
     .get(protect, user.searchUsers);  // Search for users by name, company, or industry
 
 router.route('/search/users')
@@ -141,6 +128,19 @@ router.route('/message-requests/:requestId')
 router.route('/education')
     .post(protect, upload.single('file'), user.addEducation)
     .get(protect, user.getEducations);
+// 7. USER PROFILE ROUTES WITH PARAMETERS (MOST GENERAL)
+router.route('/:userId/user-activity')
+    .get(protect, user.getUserActivity);
+
+router.route('/:userId')
+    .get(protect, user.getUserProfile);
+
+
+
+
+// #################################
+// Search routes (as per /search and / search / users endpoints in Swagger)
+
 
 
 
