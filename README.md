@@ -27,17 +27,17 @@ Module 1: Authentication & User Management
 ●	Send connection requests to other users✅
 ●	Accept/Decline connection requests✅
 ●	Remove a connection ✅
-●	Follow users (without connecting)
+●	Follow users (without connecting) ✅
 ●	Get a list of connections✅
-●	Get a list of pending connection requests✅
-●	Block/Unblock users
-●	Manage blocked users list
-●	Messaging requests for non-connections
+●	Get a list of pending connection requests ✅
+●	Block/Unblock users ✅
+●	Manage blocked users list ✅
+●	Messaging requests for non-connections ✅
 
 
 
 Module 14: Admin Panel
 ●	Monitor reports of inappropriate content ✅
-●	Manage job postings and flagged job listings
+●	Manage job postings and flagged job listings ✅
 ●	View platform analytics ✅
 
