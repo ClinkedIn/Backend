@@ -12445,9 +12445,8 @@
  * @swagger
  * /admin/reports/{reportId}:
  *   get:
- *     summary: Get specific report
- *     tags: [Admin]
- *     description: Retrieve details of a specific report
+ *     summary: Get a specific report
+ *     tags: [Admin - Reports]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -12456,16 +12455,121 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: ID of the report to retrieve
+ *         description: The ID of the report to retrieve
  *     responses:
  *       200:
  *         description: Report retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Report'
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   description: The report data, containing either reportedUser or reportedPost along with the report
+ *                   oneOf:
+ *                     - type: object
+ *                       properties:
+ *                         report:
+ *                           type: object
+ *                           description: The report object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                               description: The ID of the report
+ *                               example: "64b8e3499b594928f8a934a2"
+ *                             userId:
+ *                               type: string
+ *                               description: The ID of the user who created the report
+ *                               example: "64b8e3499b594928f8a934a1"
+ *                             reportedType:
+ *                               type: string
+ *                               description: The type of content reported (User or Post)
+ *                               example: "User"
+ *                             reportedId:
+ *                               type: string
+ *                               description: The ID of the reported user or post
+ *                               example: "64b8e3499b594928f8a934a3"
+ *                             policy:
+ *                               type: string
+ *                               description: The policy that was violated
+ *                               example: "Harassment"
+ *                             status:
+ *                               type: string
+ *                               description: The status of the report (pending, approved, rejected)
+ *                               example: "pending"
+ *                         reportedUser:
+ *                           type: object
+ *                           description: The reported user object (if reportedType is User)
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                               description: The ID of the reported user
+ *                               example: "64b8e3499b594928f8a934a3"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Jane"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Smith"
+ *                             email:
+ *                               type: string
+ *                               example: "jane.smith@example.com"
+ *                     - type: object
+ *                       properties:
+ *                         report:
+ *                           type: object
+ *                           description: The report object
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                               description: The ID of the report
+ *                               example: "64b8e3499b594928f8a934a2"
+ *                             userId:
+ *                               type: string
+ *                               description: The ID of the user who created the report
+ *                               example: "64b8e3499b594928f8a934a1"
+ *                             reportedType:
+ *                               type: string
+ *                               description: The type of content reported (User or Post)
+ *                               example: "Post"
+ *                             reportedId:
+ *                               type: string
+ *                               description: The ID of the reported user or post
+ *                               example: "64b8e3499b594928f8a934a3"
+ *                             policy:
+ *                               type: string
+ *                               description: The policy that was violated
+ *                               example: "Harassment"
+ *                             status:
+ *                               type: string
+ *                               description: The status of the report (pending, approved, rejected)
+ *                               example: "pending"
+ *                         reportedPost:
+ *                           type: object
+ *                           description: The reported post object (if reportedType is Post)
+ *                           properties:
+ *                             _id:
+ *                               type: string
+ *                               description: The ID of the reported post
+ *                               example: "64b8e3499b594928f8a934a4"
+ *                             description:
+ *                               type: string
+ *                               example: "This is the description of the reported post."
+ *                             attachments:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               example: ["url_to_attachment1", "url_to_attachment2"]
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
  *       404:
  *         description: Report not found
+ *       500:
+ *         description: Server error
  *
  *   patch:
  *     summary: Handle report
