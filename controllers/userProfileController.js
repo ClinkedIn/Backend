@@ -1451,7 +1451,7 @@ const followEntity = async (req, res) => {
         if (entityType === 'User' && followerId === targetId) {
             return res.status(400).json({ message: 'You cannot follow yourself' });
         }
-        
+
         // Check if already following
         const alreadyFollowing = followerUser.following.some(
             follow => follow.entity.toString() === targetId || follow.entityType === entityType
@@ -2328,15 +2328,15 @@ const getBlockedUsers = async (req, res) => {
 // Message Request Controllers
 const sendMessageRequest = async (req, res) => {
     try {
-        const { targetUserId } = req.body;
+        const { requestId } = req.params;
         const userId = req.user.id;
 
-        const validationResult = await validateConnectionStatus(userId, targetUserId, userModel);
+        const validationResult = await validateConnectionStatus(userId, requestId, userModel);
         if (!validationResult.isValid) {
             return res.status(validationResult.statusCode).json({ message: validationResult.message });
         }
 
-        await userModel.findByIdAndUpdate(targetUserId, {
+        await userModel.findByIdAndUpdate(requestId, {
             $addToSet: { messageRequests: userId }
         });
 
