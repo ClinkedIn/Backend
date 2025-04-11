@@ -80,7 +80,11 @@ router.route('/resume')
 router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
-    router.route('/search')
+
+// #################################
+// Search routes (as per /search and / search / users endpoints in Swagger)
+
+router.route('/search')
     .get(protect, user.searchUsers);  // Search for users by name, company, or industry
 
 router.route('/search/users')
@@ -91,17 +95,17 @@ router.route('/connections/request/:targetUserId')
     .post(protect, user.sendConnectionRequest);  // Send connection request
 
 router.route('/connections/requests')
-    .get(protect, user.getPendingRequests);  // Get pending connection requests
+    .get( protect,user.getPendingRequests);  // Get pending connection requests
 
-router.route('/connections/requests/:requestId')
+router.route('/connections/requests/:senderId')
     .patch(protect, user.handleConnectionRequest)  // Accept/Decline connection request
-    .delete(protect, user.cancelConnectionRequest);  // Cancel sent request
+    
+    
+router.route('/connections')
+        .get(protect, user.getConnections);  // Get list of connections
 
 router.route('/connections/:connectionId')
     .delete(protect, user.removeConnection);  // Remove an existing connection
-
-router.route('/connections')
-    .get(protect, user.getConnections);  // Get list of connections
 
 // Following/Unfollowing (existing implementation matches Swagger)
 router.route('/follow/:userId')
@@ -138,8 +142,7 @@ router.route('/:userId')
 
 
 
-// #################################
-// Search routes (as per /search and / search / users endpoints in Swagger)
+
 
 
 

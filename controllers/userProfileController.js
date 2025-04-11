@@ -1441,17 +1441,32 @@ const followEntity = async (req, res) => {
                 message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
             });
         }
-
-        // If following a user, prevent self-following
-        if (entityType === 'User' && followerId === targetId) {
-            return res.status(400).json({ message: 'You cannot follow yourself' });
-        }
-
         // Get follower user
         const followerUser = await userModel.findById(followerId);
         if (!followerUser) {
             return res.status(404).json({ message: 'Your user account not found' });
         }
+
+        // If following a user, prevent self-following
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You cannot follow yourself' });
+        }
+        
+        // Check if already following
+        const alreadyFollowing = followerUser.following.some(
+            follow => follow.entity.toString() === targetId || follow.entityType === entityType
+        );
+        // If following a user, prevent following again
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You already followed the user' });
+        }
+
+        if (alreadyFollowing) {
+            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
+        }
+
+
+
 
         // Get target entity
         let targetEntity;
@@ -1472,14 +1487,6 @@ const followEntity = async (req, res) => {
             return res.status(400).json({ message: 'Cannot follow this user' });
         }
 
-        // Check if already following
-        const alreadyFollowing = followerUser.following.some(
-            follow => follow.entity.toString() === targetId && follow.entityType === entityType
-        );
-
-        if (alreadyFollowing) {
-            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
-        }
 
         // Update follower's following list
         followerUser.following.push({
@@ -2093,25 +2100,64 @@ const sendConnectionRequest = async (req, res) => {
 
         const { user, targetUser } = validationResult;
 
+        if (!targetUser || !user) {
+            return res.status(404).json({ message: 'User or Target User not found' });
+        }
+
         // Check if request already pending
-        if (targetUser.pendingConnections.includes(userId)) {
+        const [userWithSentRequest, targetUserWithReceivedRequest] = await Promise.all([
+            userModel.exists({ _id: userId, sentConnectionRequests: targetUserId }),
+            userModel.exists({ _id: targetUserId, receivedConnectionRequests: userId })
+        ]);
+
+        if (userWithSentRequest  && targetUserWithReceivedRequest) {
             return res.status(400).json({ message: 'Connection request already sent' });
         }
 
-        // Add to pending connections
-        await userModel.findByIdAndUpdate(targetUserId, {
-            $addToSet: { pendingConnections: userId }
-        });
+        // Update both users in parallel
+        await Promise.all([
+            userModel.findByIdAndUpdate(targetUserId, {
+                $addToSet: { receivedConnectionRequests: userId }
+            }),
+            userModel.findByIdAndUpdate(userId, {
+                $addToSet: { sentConnectionRequests: targetUserId }
+            })
+        ]);
 
         res.status(200).json({ message: 'Connection request sent successfully' });
     } catch (error) {
+        console.error('Error sending connection request:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+const getPendingRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'receivedConnectionRequests',
+                select: 'firstName lastName profilePicture' // Populate fields you want to return
+            })
+            .select('receivedConnectionRequests');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            pendingRequests: user.receivedConnectionRequests,
+        });
+    } catch (error) {
+        console.error('Error getting pending requests:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
 const handleConnectionRequest = async (req, res) => {
     try {
-        const { requestId } = req.params;
+        const { senderId } = req.params;
         const { action } = req.body;
         const userId = req.user.id;
 
@@ -2120,20 +2166,32 @@ const handleConnectionRequest = async (req, res) => {
         }
 
         const user = await userModel.findById(userId);
-        if (!user.pendingConnections.includes(requestId)) {
+        if (!user || !user.receivedConnectionRequests.includes(senderId)) {
             return res.status(404).json({ message: 'Connection request not found' });
         }
 
+        // Remove the senderId from receivedConnectionRequests regardless of accept or decline
         await userModel.findByIdAndUpdate(userId, {
-            $pull: { pendingConnections: requestId }
+            $pull: { receivedConnectionRequests: senderId }
+        });
+        // await userModel.findByIdAndUpdate(userId, {
+        //     $pull: { sentConnectionRequests: senderId }
+        // });
+
+        // Remove the userId from sentConnectionRequests of the sender regardless of accept or decline
+        // await userModel.findByIdAndUpdate(senderId, {
+        //     $pull: { receivedConnectionRequests: userId }
+        // });
+        await userModel.findByIdAndUpdate(senderId, {
+            $pull: { sentConnectionRequests: userId }
         });
 
         if (action === 'accept') {
             await Promise.all([
                 userModel.findByIdAndUpdate(userId, {
-                    $addToSet: { connectionList: requestId }
+                    $addToSet: { connectionList: senderId }
                 }),
-                userModel.findByIdAndUpdate(requestId, {
+                userModel.findByIdAndUpdate(senderId, {
                     $addToSet: { connectionList: userId }
                 })
             ]);
@@ -2147,46 +2205,7 @@ const handleConnectionRequest = async (req, res) => {
     }
 };
 
-/**
- * Cancel a sent connection request
- * @route DELETE /user/connections/requests/:requestId
- */
-const cancelConnectionRequest = async (req, res) => {
-    try {
-        const { requestId } = req.params;
-        const userId = req.user.id;
 
-        // Find the target user who received the connection request
-        const targetUser = await userModel.findById(requestId);
-        if (!targetUser) {
-            return res.status(404).json({ message: 'Target user not found' });
-        }
-
-        // Check if there's actually a pending request
-        const requestExists = targetUser.pendingConnections.includes(userId);
-        if (!requestExists) {
-            return res.status(400).json({
-                message: 'No pending connection request found to cancel'
-            });
-        }
-
-        // Remove the request from target user's pending connections
-        await userModel.findByIdAndUpdate(requestId, {
-            $pull: { pendingConnections: userId }
-        });
-
-        res.status(200).json({
-            message: 'Connection request cancelled successfully'
-        });
-
-    } catch (error) {
-        console.error('Error cancelling connection request:', error);
-        res.status(500).json({
-            message: 'Failed to cancel connection request',
-            error: error.message
-        });
-    }
-};
 
 const getConnections = async (req, res) => {
     try {
@@ -2217,34 +2236,7 @@ const getConnections = async (req, res) => {
     }
 };
 
-const getPendingRequests = async (req, res) => {
-    try {
-        const { page = 1, limit = 10 } = req.query;
-        const userId = req.user.id;
-        const { skip, limit: limitNum } = handlePagination(page, limit);
 
-        const user = await userModel
-            .findById(userId)
-            .populate({
-                path: 'pendingConnections',
-                select: 'firstName lastName profilePicture company position',
-                options: { skip, limit: limitNum }
-            });
-
-        const total = user.pendingConnections.length;
-
-        res.status(200).json({
-            pendingRequests: user.pendingConnections,
-            pagination: {
-                total,
-                page: parseInt(page),
-                pages: Math.ceil(total / limitNum)
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
 
 const removeConnection = async (req, res) => {
     try {
@@ -2455,7 +2447,6 @@ module.exports = {
     searchUsersByName,
     sendConnectionRequest,
     handleConnectionRequest,
-    cancelConnectionRequest,
     getConnections,
     getPendingRequests,
     removeConnection,

@@ -15,7 +15,7 @@ router
 
 router
   .route("/confirm-email/:emailVerificationToken")
-  .patch(userController.confirmEmail);
+  .get(userController.confirmEmail);
 router.route("/login").post(userController.login);
 router.route("/logout").post(userController.logout);
 router.route("/forgot-password").post(userController.forgotPassword);
