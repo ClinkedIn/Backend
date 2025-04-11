@@ -4119,3 +4119,263 @@ describe('GET /me - Get Current User Profile', () => {
         expect(response.body.error).toBe('Database error');
     });
 });
+
+describe('Search Functionality', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('GET /user/search', () => {
+    test('should search users by name successfully', async () => {
+      const mockUsers = [
+        { firstName: 'John', lastName: 'Doe', industry: 'Tech' },
+        { firstName: 'Jane', lastName: 'Smith', industry: 'Finance' }
+      ];
+
+      userModel.find = jest.fn().mockResolvedValue(mockUsers);
+
+      const response = await request(app)
+        .get('/user/search?query=john')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should search users by company successfully', async () => {
+      const mockUsers = [
+        { firstName: 'John', lastName: 'Doe', company: 'Google' }
+      ];
+
+      userModel.find = jest.fn().mockResolvedValue(mockUsers);
+
+      const response = await request(app)
+        .get('/user/search?company=Google')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.users).toEqual(mockUsers);
+    });
+
+    test('should search users by industry successfully', async () => {
+      const mockUsers = [
+        { firstName: 'John', lastName: 'Doe', industry: 'Technology' }
+      ];
+
+      userModel.find = jest.fn().mockResolvedValue(mockUsers);
+
+      const response = await request(app)
+        .get('/user/search?industry=Technology')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.users).toEqual(mockUsers);
+    });
+  });
+});
+
+describe('Connection Management', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('POST /user/connections/request/:targetUserId', () => {
+    test('should send connection request successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        sentConnectionRequests: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      const mockTargetUser = {
+        _id: 'targetId',
+        receivedConnectionRequests: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn()
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(mockTargetUser);
+
+      const response = await request(app)
+        .post('/user/connections/request/targetId')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Connection request sent successfully');
+    });
+  });
+
+  describe('PATCH /user/connections/requests/:senderId', () => {
+    test('should accept connection request successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        receivedConnectionRequests: ['senderId'],
+        connectionList: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      const mockSender = {
+        _id: 'senderId',
+        sentConnectionRequests: ['userId'],
+        connectionList: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn()
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(mockSender);
+
+      const response = await request(app)
+        .patch('/user/connections/requests/senderId')
+        .send({ action: 'accept' })
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Connection request accepted');
+    });
+
+    test('should decline connection request successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        receivedConnectionRequests: ['senderId'],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn().mockResolvedValue(mockUser);
+
+      const response = await request(app)
+        .patch('/user/connections/requests/senderId')
+        .send({ action: 'decline' })
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Connection request declined');
+    });
+  });
+
+  describe('DELETE /user/connections/:connectionId', () => {
+    test('should remove connection successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        connectionList: ['connectionId'],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      const mockConnection = {
+        _id: 'connectionId',
+        connectionList: ['userId'],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn()
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(mockConnection);
+
+      const response = await request(app)
+        .delete('/user/connections/connectionId')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Connection removed successfully');
+    });
+  });
+});
+
+describe('Following Management', () => {
+  // Your existing follow/unfollow tests can be moved here
+  // Add any additional tests needed
+});
+
+describe('Blocking Management', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('POST /user/block/:userId', () => {
+    test('should block user successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        blockedUsers: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn().mockResolvedValue(mockUser);
+
+      const response = await request(app)
+        .post('/user/block/targetId')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('User blocked successfully');
+    });
+  });
+
+  describe('GET /user/blocked', () => {
+    test('should get list of blocked users', async () => {
+      const mockBlockedUsers = [
+        { _id: 'user1', firstName: 'John' },
+        { _id: 'user2', firstName: 'Jane' }
+      ];
+
+      userModel.findById = jest.fn().mockResolvedValue({
+        blockedUsers: ['user1', 'user2']
+      });
+
+      userModel.find = jest.fn().mockResolvedValue(mockBlockedUsers);
+
+      const response = await request(app)
+        .get('/user/blocked')
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.blockedUsers).toEqual(mockBlockedUsers);
+    });
+  });
+});
+
+describe('Message Requests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('POST /user/message-requests', () => {
+    test('should send message request successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        messageRequests: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn().mockResolvedValue(mockUser);
+
+      const response = await request(app)
+        .post('/user/message-requests')
+        .send({ targetUserId: 'targetId' })
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Message request sent successfully');
+    });
+  });
+
+  describe('PATCH /user/message-requests/:requestId', () => {
+    test('should accept message request successfully', async () => {
+      const mockUser = {
+        _id: 'userId',
+        messageRequests: ['requestId'],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userModel.findById = jest.fn().mockResolvedValue(mockUser);
+
+      const response = await request(app)
+        .patch('/user/message-requests/requestId')
+        .send({ action: 'accept' })
+        .set('Authorization', 'Bearer mockToken');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Message request accepted');
+    });
+  });
+});
