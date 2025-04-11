@@ -172,12 +172,18 @@ const searchJobs = async (req, res) => {
                             vars: {
                                 expAnswer: { $arrayElemAt: ["$workExpQuestion.idealAnswer", 0] }
                             },
-                            in: { $toDouble: "$$expAnswer" }
+                            in: {
+                                $convert: {
+                                    input: "$$expAnswer",
+                                    to: "double",
+                                    onError: null, // Fallback to null if conversion fails
+                                    onNull: null   // Fallback to null if the value is null
+                                }
+                            }
                         }
                     }
                 }
             });
-            
             // Filter by minimum experience
             pipeline.push({
                 $match: {
@@ -211,7 +217,6 @@ const searchJobs = async (req, res) => {
                 }
             }
         );
-        
         // Execute the pipeline
         const jobs = await jobModel.aggregate(pipeline);
         
@@ -240,7 +245,8 @@ const searchJobs = async (req, res) => {
             screeningQuestions: job.screeningQuestions?.map(q => ({
                 question: q.question,
                 specification: q.specification,
-                mustHave: q.mustHave
+                mustHave: q.mustHave,
+                idealAnswer: q.idealAnswer
             })),
             createdAt: job.createdAt,
             updatedAt: job.updatedAt
