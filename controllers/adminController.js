@@ -30,24 +30,44 @@ exports.getAllReports = async (req, res) => {
 
 exports.getReport = async (req, res) => {
     try {
-        console.log(req.params.reportId);
+        // console.log(req.params.reportId);
         const report = await Report.findOne({ _id: req.params.reportId })
-            .populate({
-                path: 'userId',
-                select: 'firstName lastName email'
-            });
+        .populate({
+        path: 'userId',
+        select: 'firstName lastName email'
+    })
+        // console.log(report.reportedType);
 
-        if (!report) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'Report not found'
-            });
+        let  upreport = {};
+        if (report.reportedType === 'User') {
+            
+            const reportedUser = await User.findById(report.reportedId, 'firstName lastName email');
+             upreport = {
+                 reportedUser: reportedUser,
+                 report: report
+            }
+            
+        } else if (report.reportedType === 'Post') {
+            const reportedPost = await Post.findById(report.reportedId, 'attachments description')
+             upreport = {
+                 reportedPost: reportedPost,
+                 report: report
+            }
         }
-
-        res.status(200).json({
-            status: 'success',
-            data: report
+        
+        
+    if (!report) {
+        return res.status(404).json({
+            status: 'fail',
+            message: 'Report not found'
         });
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: upreport
+    });
+            
     } catch (error) {
         res.status(500).json({
             status: 'error',
