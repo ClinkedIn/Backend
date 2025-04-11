@@ -2212,22 +2212,22 @@
  *               policy:
  *                 type: string
  *                 enum: [
- *                   "Harassment", 
- *                   "Fraud or scam", 
- *                   "Spam", 
- *                   "Misinformation", 
- *                   "Hateful speech", 
- *                   "Threats or violence", 
- *                   "Self-harm", 
- *                   "Graphic content", 
- *                   "Dangerous or extremist organizations", 
- *                   "Sexual content", 
- *                   "Fake account", 
- *                   "Child exploitation", 
- *                   "Illegal goods and services", 
+ *                   "Harassment",
+ *                   "Fraud or scam",
+ *                   "Spam",
+ *                   "Misinformation",
+ *                   "Hateful speech",
+ *                   "Threats or violence",
+ *                   "Self-harm",
+ *                   "Graphic content",
+ *                   "Dangerous or extremist organizations",
+ *                   "Sexual content",
+ *                   "Fake account",
+ *                   "Child exploitation",
+ *                   "Illegal goods and services",
  *                   "Infringement",
- *                   "This person is impersonating someone", 
- *                   "This account has been hacked", 
+ *                   "This person is impersonating someone",
+ *                   "This account has been hacked",
  *                   "This account is not a real person"
  *                 ]
  *                 description: Reason for reporting the post (policy violation type)
@@ -2235,11 +2235,11 @@
  *               dontWantToSee:
  *                 type: string
  *                 enum: [
- *                   "I'm not interested in the author", 
- *                   "I'm not interested in this topic", 
- *                   "I've seen too many posts on this topic", 
- *                   "I've seen this post before", 
- *                   "This post is old", 
+ *                   "I'm not interested in the author",
+ *                   "I'm not interested in this topic",
+ *                   "I've seen too many posts on this topic",
+ *                   "I've seen this post before",
+ *                   "This post is old",
  *                   "It's something else"
  *                 ]
  *                 description: Optional reason why the user doesn't want to see similar content
@@ -3210,7 +3210,7 @@
  *                 error:
  *                   type: string
  *                   example: "Error details"
- * 
+ *
  *   delete:
  *     summary: Remove an impression from a comment
  *     tags: [Comments]
@@ -3657,7 +3657,6 @@
  *         description: Message not found
  */
 
-
 /**
  * @swagger
  * /messages/block/{userId}:
@@ -3945,7 +3944,7 @@
  *                      isActive: true
  *                      createdAt: "2023-10-01T12:00:00Z"
  *                      updatedAt: "2023-10-01T12:00:00Z"
- *                      
+ *
  *       400:
  *         description: Invalid input data or validation error
  *       401:
@@ -5407,8 +5406,10 @@
  *   post:
  *     summary: Register a new user
  *     tags: [Users]
- *     description: Creates a new user account, sends an email confirmation link, and returns authentication tokens in cookies.
- *     operationId: createUser
+ *     description: >
+ *       Registers a new user account. Validates input, checks for duplicates, verifies reCAPTCHA, stores optional FCM token,
+ *       and sends an email confirmation link. If a deactivated user with the same email exists, it is deleted.
+ *     operationId: registerUser
  *     requestBody:
  *       required: true
  *       content:
@@ -5431,16 +5432,19 @@
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "john.doe@example.com"
+ *                 example: "john@example.com"
  *               password:
  *                 type: string
  *                 format: password
  *                 example: "Password123!"
- *                 description: "Must contain at least 1 digit, 1 lowercase, 1 uppercase letter, and be at least 8 characters long."
+ *                 description: "At least 8 characters, with 1 digit, 1 lowercase, and 1 uppercase letter."
  *               recaptchaResponseToken:
  *                 type: string
- *                 description: "Google reCAPTCHA response token"
  *                 example: "03AFcWeA5..."
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       201:
  *         description: User registered successfully, email confirmation sent.
@@ -5449,58 +5453,49 @@
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 status:
+ *                   type: string
+ *                   example: "success"
  *                 message:
  *                   type: string
  *                   example: "User registered successfully. Please check your email to confirm your account."
  *       400:
- *         description: Bad Request - Missing required fields.
+ *         description: Missing required fields.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "All fields are required."
+ *             example:
+ *               message: "all fields are required"
  *       409:
- *         description: Conflict - User already exists.
+ *         description: User already exists and is active.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "The User already exists, use another email."
+ *             example:
+ *               message: "The User already exist use another email"
  *       422:
- *         description: Unprocessable Entity - Invalid email, weak password, or CAPTCHA failure.
+ *         description: Invalid email, weak password, or reCAPTCHA failure.
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Ensure the password contains at least 1 digit, 1 lowercase, 1 uppercase letter, and is at least 8 characters long."
+ *             examples:
+ *               invalidEmail:
+ *                 summary: Invalid email format
+ *                 value:
+ *                   message: "Email not valid, Write a valid email"
+ *               weakPassword:
+ *                 summary: Weak password
+ *                 value:
+ *                   message: "Ensure the password contains at least 1 digit, 1 lowercase,1 uppercase letter, and is at least 8 characters long."
+ *               captchaFailed:
+ *                 summary: reCAPTCHA failure
+ *                 value:
+ *                   message: "reCAPTCHA verification failed. Please try again."
  *       500:
- *         description: Internal Server Error - Registration failed.
+ *         description: Server error during registration
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Registration failed"
- *                 error:
- *                   type: string
- *                   example: "Internal server error message."
+ *             example:
+ *               success: false
+ *               message: "Registration failed"
+ *               error: "Internal server error message"
  *
  *   delete:
  *     summary: Deactivate a user account
@@ -5557,6 +5552,10 @@
  *                 format: password
  *                 example: StrongPass123!
  *                 description: The password associated with the email.
+ *               fcmToken:
+ *                 type: string
+ *                 example: "fcm123abc456"
+ *                 description: Firebase Cloud Messaging token for push notifications.
  *     responses:
  *       200:
  *         description: Successfully logged in, returns JWT token in cookies.
@@ -5631,8 +5630,19 @@
  *         required: true
  *         schema:
  *           type: string
- *           example: "Bearer <GOOGLE_ID_TOKEN>"
- *         description: "Google ID token obtained from Firebase Authentication."
+ *           example: "Bearer <Firebase_token>"
+ *         description: "Firebase token obtained from Firebase Authentication."
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       200:
  *         description: User logged in successfully.
@@ -5667,6 +5677,17 @@
  *     summary: Logout user
  *     tags: [Users]
  *     description: Logout a user
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *                 description: "Firebase Cloud Messaging token for push notifications"
+ *                 example: "fcm123abc456"
  *     responses:
  *       200:
  *        description: User logged out successfully
@@ -6667,7 +6688,7 @@
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's profile picture.
- *     tags: 
+ *     tags:
  *       - Users
  *     security:
  *       - BearerAuth: []
@@ -6723,7 +6744,7 @@
  *   delete:
  *     summary: Delete the user's profile picture
  *     description: Removes the user's profile picture by setting the profilePicture field to null.
- *     tags: 
+ *     tags:
  *       - Users
  *     security:
  *       - BearerAuth: []
@@ -6862,7 +6883,7 @@
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's cover picture.
- *     tags: 
+ *     tags:
  *       - Users
  *     security:
  *       - BearerAuth: []
@@ -6918,7 +6939,7 @@
  *   delete:
  *     summary: Delete the user's cover picture
  *     description: Removes the user's cover picture by setting the coverPicture field to null.
- *     tags: 
+ *     tags:
  *       - Users
  *     security:
  *       - BearerAuth: []
@@ -6968,11 +6989,9 @@
  *                   example: "Unexpected failure"
  */
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// RESUME DOCUMENTATION //////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
-
 
 /**
  * @swagger
@@ -7099,7 +7118,6 @@
  *       500:
  *         description: Server error
  */
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// EXPERIENCE DOCUMENTATION //////////////////////////////////
@@ -7305,7 +7323,6 @@
  *                   type: string
  *                   example: "Internal server error"
  */
-
 
 /**
  * @swagger
@@ -8532,7 +8549,7 @@
  *               properties:
  *                 error:
  *                   type: string
- *                   example: | 
+ *                   example: |
  *                      "Skill not found" OR "User not found"
  *       500:
  *         description: Internal server error.
@@ -8734,7 +8751,6 @@
  *         description: Internal Server Error
  */
 
-
 /**
  * @swagger
  * /user/privacy-settings:
@@ -8920,7 +8936,6 @@
  *       404:
  *         description: User not found
  */
-
 
 /**
  * @swagger
@@ -9683,87 +9698,116 @@
  * @swagger
  * tags:
  *   name: Notifications
- *   description: Notification management API
- *
+ *   description: Endpoints for managing user notifications
+ */
+
+/**
+ * @swagger
  * /notifications:
  *   get:
- *     summary: Get notifications for likes, comments, connection requests, and messages
+ *     summary: Get all notifications
  *     tags: [Notifications]
- *     description: Retrieve a list of notifications for the logged-in user.
- *     security:
- *       - BearerAuth: []
+ *     description: Retrieve all notifications for the logged-in user, with filtering, sorting, field limiting, and pagination.
  *     responses:
  *       200:
- *         description: Notifications retrieved successfully
+ *         description: List of notifications retrieved successfully
  *         content:
  *           application/json:
  *             example:
  *               notifications: [
  *                 {
- *                   id: "notif123",
- *                   from: "user456",
- *                   subject: "like",
- *                   text: "Alice liked your post",
- *                   isRead: false
- *                 },
- *                 {
- *                   id: "notif456",
- *                   from: "user789",
- *                   subject: "message",
- *                   text: "Bob sent you a message",
- *                   isRead: false
+ *                   _id: "67f6fcb4f4276632a73d295e",
+ *                   from: "67f3e4b8cca3c5a20c729ca3",
+ *                   to: "67e7e99bf3748823be551756",
+ *                   subject: "impression",
+ *                   content: "omar elshereef reacted with like to your comment",
+ *                   resourceId: "67f6fcb4f4276632a73d2957",
+ *                   relatedPostId: "67f3e4c5cca3c5a20c729ca8",
+ *                   relatedCommentId: "67f6fc59f4276632a73d2940",
+ *                   isRead: false,
+ *                   createdAt: "2025-04-09T23:03:16.525Z",
+ *                   updatedAt: "2025-04-10T13:12:46.142Z",
+ *                   sendingUser: {
+ *                     email: "omarelshereef@gmail.com",
+ *                     firstName: "omar",
+ *                     lastName: "elshereef",
+ *                     profilePicture: null
+ *                   }
  *                 }
  *               ]
- *       401:
- *         description: Unauthorized, user must be logged in
- *
- * /notifications/{notificationId}/read:
+ *       404:
+ *         description: No notifications found
+ */
+
+/**
+ * @swagger
+ * /notifications/mark-read/{id}:
  *   patch:
  *     summary: Mark a notification as read
  *     tags: [Notifications]
- *     description: Updates a specific notification to mark it as read.
- *     security:
- *       - BearerAuth: []
+ *     description: Mark a specific notification as read.
  *     parameters:
- *       - name: notificationId
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: Notification ID
  *     responses:
  *       200:
- *         description: Notification marked as read successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Notification marked as read"
+ *         description: Notification marked as read
+ *       403:
+ *         description: Unauthorized to update this notification
  *       404:
  *         description: Notification not found
- *
- * /notifications/unseenCount:
- *   get:
- *     summary: Get unseen notifications count
+ */
+
+/**
+ * @swagger
+ * /notifications/mark-unread/{id}:
+ *   patch:
+ *     summary: Mark a notification as unread
  *     tags: [Notifications]
- *     description: Returns the count of unseen notifications for the logged-in user.
- *     security:
- *       - BearerAuth: []
+ *     description: Mark a specific notification as unread.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
  *     responses:
  *       200:
- *         description: Unseen notifications count retrieved successfully
+ *         description: Notification marked as unread
+ *       403:
+ *         description: Unauthorized to update this notification
+ *       404:
+ *         description: Notification not found
+ */
+
+/**
+ * @swagger
+ * /notifications/unread-count:
+ *   get:
+ *     summary: Get count of unread notifications
+ *     tags: [Notifications]
+ *     description: Retrieve the number of unread notifications for the logged-in user.
+ *     responses:
+ *       200:
+ *         description: Count retrieved successfully
  *         content:
  *           application/json:
  *             example:
- *               unseenCount: 5
- *       401:
- *         description: Unauthorized, user must be logged in
- *
- * /notifications/pushToken:
- *   post:
- *     summary: Register or update push notification token
+ *               unreadCount: 3
+ */
+
+/**
+ * @swagger
+ * /notifications/pause-notifications:
+ *   patch:
+ *     summary: Pause receiving notifications
  *     tags: [Notifications]
- *     description: Allows users to register or update their Firebase Cloud Messaging (FCM) token for push notifications.
- *     security:
- *       - BearerAuth: []
+ *     description: Temporarily pause notifications for a specific duration.
  *     requestBody:
  *       required: true
  *       content:
@@ -9771,18 +9815,74 @@
  *           schema:
  *             type: object
  *             properties:
- *               fcmToken:
+ *               duration:
  *                 type: string
- *                 example: "exampleFcmToken12345"
+ *                 example: "1h"
  *     responses:
  *       200:
- *         description: Push notification token registered successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "Push notification token registered"
+ *         description: Notifications paused
  *       400:
- *         description: Invalid request body
+ *         description: Duration is required or invalid
+ */
+
+/**
+ * @swagger
+ * /notifications/resume-notifications:
+ *   patch:
+ *     summary: Resume receiving notifications
+ *     tags: [Notifications]
+ *     description: Resume notifications after they were paused.
+ *     responses:
+ *       200:
+ *         description: Notifications resumed
+ */
+
+/**
+ * @swagger
+ * /notifications/restore-notification/{id}:
+ *   patch:
+ *     summary: Restore a deleted notification
+ *     tags: [Notifications]
+ *     description: Restore a notification that was previously marked as deleted.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification restored
+ *       400:
+ *         description: Notification is not deleted
+ *       403:
+ *         description: Unauthorized to restore this notification
+ *       404:
+ *         description: Notification not found
+ */
+
+/**
+ * @swagger
+ * /notifications/{id}:
+ *   delete:
+ *     summary: Soft delete a notification
+ *     tags: [Notifications]
+ *     description: Mark a notification as deleted for the user.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       204:
+ *         description: Notification deleted
+ *       403:
+ *         description: Unauthorized to delete this notification
+ *       404:
+ *         description: Notification not found
  */
 
 // *********************************** Search APIs ******************************************//
@@ -11183,7 +11283,7 @@
  *                       whoCanComment:
  *                         type: string
  *                         enum: [anyone, connections]
- *                         example: "anyone" 
+ *                         example: "anyone"
  *                         description: Setting for who can comment on the post
  *                       isRepost:
  *                         type: boolean
@@ -11374,7 +11474,7 @@
  *           type: string
  *           minLength: 2
  *         description: |
- *           General search term that matches against job title, description, industry, 
+ *           General search term that matches against job title, description, industry,
  *           workplace type, job type, or company industry
  *         example: "developer"
  *       - in: query

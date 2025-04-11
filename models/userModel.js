@@ -228,6 +228,7 @@ const userSchema = new mongoose.Schema(
     passwordResetExpiresAt: { type: Date },
 
     isActive: { type: Boolean, default: true },
+    notificationPauseExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 ); // Adds createdAt & updatedAt automatically
