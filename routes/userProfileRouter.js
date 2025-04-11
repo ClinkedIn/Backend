@@ -112,21 +112,21 @@ router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
 
+    router.route('/blocked')
+        .get(protect, user.getBlockedUsers);
 // Blocking functionality
 router.route('/block/:userId')
     .post(protect, user.blockUser)
     .delete(protect, user.unblockUser);
 
-router.route('/blocked')
-    .get(protect, user.getBlockedUsers);
 
 // Messaging requests for non-connections (as per /user/message-requests in Swagger)
 router.route('/message-requests')
-    .post(protect, user.sendMessageRequest)  // Send message request to non-connection
-    .get(protect, user.getMessageRequests);  // Get list of message requests
+.get(protect, user.getMessageRequests);  // Get list of message requests
 
 router.route('/message-requests/:requestId')
-    .patch(protect, user.handleMessageRequest);  // Accept/decline message request
+.patch(protect, user.handleMessageRequest)  // Accept/decline message request
+.post(protect, user.sendMessageRequest);// Send message request to non-connection
 
 // Keep existing routes...
 router.route('/education')
