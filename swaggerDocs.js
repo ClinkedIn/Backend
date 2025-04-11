@@ -1,5 +1,315 @@
 /**
  * @swagger
+ * /user/search:
+ *   get:
+ *     summary: Search for users
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *     responses:
+ *       200:
+ *         description: List of users matching search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ * 
+ * /user/connections/request/{targetUserId}:
+ *   post:
+ *     summary: Send a connection request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: targetUserId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Connection request sent successfully
+ *       400:
+ *         description: Invalid request or already connected
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ * 
+ * /user/connections/requests:
+ *   get:
+ *     summary: Get pending connection requests
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of pending connection requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 requests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                       headline:
+ *                         type: string
+ *
+ * /user/connections/requests/{senderId}:
+ *   patch:
+ *     summary: Accept or decline a connection request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: senderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [accept, decline]
+ *     responses:
+ *       200:
+ *         description: Request handled successfully
+ *
+ * /user/connections/{connectionId}:
+ *   delete:
+ *     summary: Remove a connection
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: connectionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Connection removed successfully
+ *
+ * /user/follow/{userId}:
+ *   post:
+ *     summary: Follow a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully followed user
+ *   delete:
+ *     summary: Unfollow a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully unfollowed user
+ *
+ * /user/block/{userId}:
+ *   post:
+ *     summary: Block a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *   delete:
+ *     summary: Unblock a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *
+ * /user/blocked:
+ *   get:
+ *     summary: Get list of blocked users
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of blocked users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 blockedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *
+ * /user/message-requests:
+ *   get:
+ *     summary: Get message requests
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of message requests
+ *   post:
+ *     summary: Send a message request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               targetUserId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Message request sent successfully
+ *
+ * /user/message-requests/{requestId}:
+ *   patch:
+ *     summary: Accept or decline a message request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: requestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [accept, decline]
+ *     responses:
+ *       200:
+ *         description: Message request handled successfully
+ */
+/**
+ * @swagger
  * components:
  *
  *   securitySchemes:
@@ -2019,6 +2329,8 @@
  * tags:
  *   - name: Comments
  *     description: API endpoints for managing Comments and Replies
+ *   - name: Connections & Networking
+ *     description: API endpoints for managing user connections, follows, blocks and messaging requests
  */
 
 /**
@@ -9125,157 +9437,71 @@
  * tags:
  *   - name: Connections
  *     description: Managing connections and connection requests
- */
+*/
+/**
 /**
  * @swagger
- * /user/search:
- *   get:
- *     summary: Search users with filters
- *     tags: [Users]
- *     description: Search for users using various filters including name, company, and industry
- *     parameters:
- *       - in: query
- *         name: query
- *         schema:
- *           type: string
- *         description: General search query (searches across name)
- *       - in: query
- *         name: company
- *         schema:
- *           type: string
- *         description: Filter by company name
- *       - in: query
- *         name: industry
- *         schema:
- *           type: string
- *         description: Filter by industry
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Users found successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       firstName:
- *                         type: string
- *                       lastName:
- *                         type: string
- *                       company:
- *                         type: string
- *                       industry:
- *                         type: string
- *                       profilePicture:
- *                         type: string
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     pages:
- *                       type: integer
- *       500:
- *         description: Server error
- *
- * /user/search/users:
- *   get:
- *     summary: Search users by name
- *     tags: [Users]
- *     parameters:
- *       - in: query
- *         name: name
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Users found successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       firstName:
- *                         type: string
- *                       lastName:
- *                         type: string
- *                       profilePicture:
- *                         type: string
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     pages:
- *                       type: integer
- *       500:
- *         description: Server error
- *
  * /user/connections/request/{targetUserId}:
  *   post:
- *     summary: Send connection request
- *     tags: [Connections]
+ *     summary: Send a connection request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: targetUserId
- *         in: path
+ *       - in: path
+ *         name: targetUserId
  *         required: true
  *         schema:
  *           type: string
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Connection request sent successfully
  *       400:
- *         description: Invalid request or already pending
- *       500:
- *         description: Server error
+ *         description: Invalid request or already connected
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ * 
+ * /user/connections/requests:
+ *   get:
+ *     summary: Get pending connection requests
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of pending connection requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 requests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                       headline:
+ *                         type: string
  *
- * /user/connections/requests/{requestId}:
+ * /user/connections/requests/{senderId}:
  *   patch:
- *     summary: Handle connection request
- *     tags: [Connections]
+ *     summary: Accept or decline a connection request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: requestId
- *         in: path
+ *       - in: path
+ *         name: senderId
  *         required: true
  *         schema:
  *           type: string
@@ -9289,110 +9515,128 @@
  *               action:
  *                 type: string
  *                 enum: [accept, decline]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Request handled successfully
- *       400:
- *         description: Invalid action
- *       404:
- *         description: Request not found
- *       500:
- *         description: Server error
- *
- * /user/connections:
- *   get:
- *     summary: Get user connections
- *     tags: [Connections]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Connections retrieved successfully
- *       500:
- *         description: Server error
- *
- * /user/connections/requests:
- *   get:
- *     summary: Get pending connection requests
- *     tags: [Connections]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Pending requests retrieved successfully
- *       500:
- *         description: Server error
  *
  * /user/connections/{connectionId}:
  *   delete:
- *     summary: Remove connection
- *     tags: [Connections]
+ *     summary: Remove a connection
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: connectionId
- *         in: path
+ *       - in: path
+ *         name: connectionId
  *         required: true
  *         schema:
  *           type: string
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Connection removed successfully
- *       500:
- *         description: Server error
+ *
+ * /user/follow/{userId}:
+ *   post:
+ *     summary: Follow a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully followed user
+ *   delete:
+ *     summary: Unfollow a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully unfollowed user
  *
  * /user/block/{userId}:
  *   post:
- *     summary: Block user
- *     tags: [Users]
+ *     summary: Block a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: userId
- *         in: path
+ *       - in: path
+ *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: User blocked successfully
- *       500:
- *         description: Server error
  *   delete:
- *     summary: Unblock user
- *     tags: [Users]
+ *     summary: Unblock a user
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: userId
- *         in: path
+ *       - in: path
+ *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: User unblocked successfully
- *       500:
- *         description: Server error
  *
  * /user/blocked:
  *   get:
- *     summary: Get blocked users
- *     tags: [Users]
+ *     summary: Get list of blocked users
+ *     tags: [Connections & Networking]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Blocked users retrieved successfully
- *       500:
- *         description: Server error
+ *         description: List of blocked users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 blockedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
  *
  * /user/message-requests:
+ *   get:
+ *     summary: Get message requests
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of message requests
  *   post:
- *     summary: Send message request
- *     tags: [Messages]
+ *     summary: Send a message request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -9402,67 +9646,19 @@
  *             properties:
  *               targetUserId:
  *                 type: string
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Message request sent successfully
- *       500:
- *         description: Server error
- *   get:
- *     summary: Get message requests
- *     tags: [Messages]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Message requests retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 messageRequests:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       firstName:
- *                         type: string
- *                       lastName:
- *                         type: string
- *                       profilePicture:
- *                         type: string
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     pages:
- *                       type: integer
- *       500:
- *         description: Server error
  *
  * /user/message-requests/{requestId}:
  *   patch:
- *     summary: Handle message request
- *     tags: [Messages]
+ *     summary: Accept or decline a message request
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: requestId
- *         in: path
+ *       - in: path
+ *         name: requestId
  *         required: true
  *         schema:
  *           type: string
@@ -9476,15 +9672,9 @@
  *               action:
  *                 type: string
  *                 enum: [accept, decline]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Message request handled successfully
- *       400:
- *         description: Invalid action
- *       500:
- *         description: Server error
  */
 
 // *********************************** Notifications APIs ******************************************//
@@ -9602,48 +9792,82 @@
  *   - name: Search
  *     description: API endpoints for search
  */
-
 /**
  * @swagger
- * /search:
+ * /user/search:
  *   get:
- *     summary: Search for users by name, company, or industry
- *     tags: [Search]
- *     description: Retrieve a list of users that match the search criteria (name, company, or industry).
+ *     summary: Search for users
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - name: query
- *         in: query
- *         required: true
- *         description: Search query for user name, company, or industry
+ *       - in: query
+ *         name: query
  *         schema:
  *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
  *     responses:
  *       200:
- *         description: Users retrieved successfully
+ *         description: List of users matching search criteria
  *         content:
  *           application/json:
- *             example:
- *               users: [
- *                 {
- *                   userId: "user123",
- *                   firstName: "John",
- *                   lastName: "Doe",
- *                   company: "Example Corp",
- *                   industry: "Technology"
- *                 },
- *                 {
- *                   userId: "user456",
- *                   firstName: "Jane",
- *                   lastName: "Smith",
- *                   company: "Acme Inc",
- *                   industry: "Finance"
- *                 }
- *               ]
- *       400:
- *         description: Invalid search query
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
  *       401:
- *         description: Unauthorized, user must be logged in
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
+
 
 /**
  * @swagger
