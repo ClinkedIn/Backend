@@ -11,98 +11,85 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const createConfirmationEmail = async (resetURL, email, token) => {
-  const mailOptions = {
-    from: process.env.LOCKEDIN_EMAIL,
-    to: email,
-    subject: "Confirm Your Email - Lockedin",
-    html: `
-      <h2>Email Confirmation</h2>
-      <p>Thank you for registering with our Lockedin. Please confirm your email by clicking the link below:</p>
-      <a href="${resetURL}"
-   onclick="event.preventDefault(); fetch(this.href, {
-     method: 'PATCH',
-     headers: { 'Content-Type': 'application/json' },
-   });">
-   Confirm Email
-</a>
-
-      <p>Or use this token:</p>
-      <p><strong>${token}</strong></p>
-      <p>This token will expire in 24 hours.</p>
-    `,
-  };
-
-  return transporter.sendMail(mailOptions);
-};
-
-exports.sendEmailConfirmation = async (userId, req) => {
+exports.sendEmailConfirmation = async (otp, email) => {
   try {
-    const user = await userModel.findById(userId);
+    const mailOptions = {
+      from: process.env.LOCKEDIN_EMAIL,
+      to: email,
+      subject: "verify your account - Lockedin",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333;">🔐 account verification</h2>
+          <p style="font-size: 16px; color: #555;">
+            We received a request to verify your account. Use the OTP below to verify it. 
+          </p>
+          <div style="margin: 20px 0; text-align: center;">
+            <span style="font-size: 24px; font-weight: bold; color: #222; background: #f3f3f3; padding: 10px 20px; border-radius: 6px; display: inline-block;">
+              ${otp}
+            </span>
+          </div>
+          <p style="font-size: 14px; color: #777;">
+            This OTP will expire in 10 minutes. If you didn’t request a verification, you can safely ignore this email.
+          </p>
+          <p style="font-size: 14px; color: #999; margin-top: 30px;">- The Lockedin Team</p>
+        </div>
+      `,
+    };
 
-    if (!user) {
-      throw new Error("user not found");
-    }
-    if (user.isConfirmed) {
-      throw new Error("The email is already confirmed.");
-    }
-    user.emailVerificationToken = uuidv4(); // can be replaced by crypto.randomBytes(32).toString('hex') for more security
-    user.emailVerificationExpiresAt = new Date(
-      Date.now() + 24 * 60 * 60 * 1000
-    );
-    await user.save();
-    const resetURL = `${req.protocol}://${req.get("host")}/user/confirm-email/${
-      user.emailVerificationToken
-    }`;
-    const emailSent = await createConfirmationEmail(
-      resetURL,
-      user.email,
-      user.emailVerificationToken
-    );
+    const emailSent = await transporter.sendMail(mailOptions);
+
     if (emailSent.messageId) {
       return {
         success: true,
-        message: "Confirmation email sent successfully",
-        email: user.email,
-        emailVerificationToken: user.emailVerificationToken,
+        message: "verify account email sent successfully",
+        email,
       };
     } else {
-      throw new Error("failed to send confirmation email");
-      // throw new Error("failed to send confirmation email");
-      // Resend Confirmation email 10 times forloop
-      // await createConfirmationEmail(user.email, user.emailVerificationToken);
+      throw new Error("Failed to send verify account email");
     }
   } catch (error) {
+    console.log(error);
     return {
       success: false,
       error: error.message,
     };
   }
 };
-exports.sendForgotPasswordEmail = async (resetURL, email) => {
+exports.sendForgotPasswordEmail = async (otp, email) => {
   try {
     const mailOptions = {
       from: process.env.LOCKEDIN_EMAIL,
       to: email,
-      subject: "Forgot Your Password ? - Lockedin",
+      subject: "Forgot Your Password? - Lockedin",
       html: `
-      <h2>Email reset</h2>
-    <p>forgot your password? Submit a patch request with your new password to: ${resetURL} .\n If you didn't forget your password, ignore this email</p>
-      <a href="${resetURL}">reset Password</a>`,
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333;">🔐 Password Reset Request</h2>
+          <p style="font-size: 16px; color: #555;">
+            We received a request to reset your password. Use the OTP below to reset it. 
+          </p>
+          <div style="margin: 20px 0; text-align: center;">
+            <span style="font-size: 24px; font-weight: bold; color: #222; background: #f3f3f3; padding: 10px 20px; border-radius: 6px; display: inline-block;">
+              ${otp}
+            </span>
+          </div>
+          <p style="font-size: 14px; color: #777;">
+            This OTP will expire in 10 minutes. If you didn’t request a password reset, you can safely ignore this email.
+          </p>
+          <p style="font-size: 14px; color: #999; margin-top: 30px;">- The Lockedin Team</p>
+        </div>
+      `,
     };
 
     const emailSent = await transporter.sendMail(mailOptions);
-    // console.log('Email sent:', emailSent);
+
     if (emailSent.messageId) {
       return {
         success: true,
-        message: "forgot password email sent successfully",
+        message: "Forgot password email sent successfully",
         email,
       };
     } else {
-      throw new Error("failed to send forgot password email");
-      // Resend Forgot password email 10 times forloop
-      // await transporter.sendMail(mailOptions);
+      throw new Error("Failed to send forgot password email");
     }
   } catch (error) {
     console.log(error);
