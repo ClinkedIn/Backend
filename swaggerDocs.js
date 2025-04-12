@@ -72,7 +72,7 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
+ *
  * /user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
@@ -94,7 +94,7 @@
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ *
  * /user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
@@ -776,7 +776,6 @@
  *             $ref: '#/components/schemas/CompanyBase'
  *
  */
-
 
 // ******************************************* Posts APIs ************************************* //
 
@@ -4684,7 +4683,7 @@
  * @swagger
  * /jobs:
  *   post:
- *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
+ *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE)
  *     tags: [Jobs]
  *     description: Create a new job posting
  *     security:
@@ -5705,7 +5704,7 @@
  *   post:
  *     summary: Request a password reset link
  *     tags: [Users]
- *     description: Sends a password reset link to the user's email.
+ *     description: Sends a password reset OTP to the user's email.
  *     operationId: forgotPassword
  *     requestBody:
  *       required: true
@@ -5727,35 +5726,86 @@
  *           application/json:
  *             example:
  *               success: true
- *               message: "Forgot password email sent successfully"
+ *               message: "forgot password email sent successfully"
  *               email: "user@email.com"
  *       400:
  *         description: Missing required fields
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Please fill all required fields"
+ *       401:
+ *         description: Google account - cannot reset password
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Please login with google"
  *       422:
  *         description: Invalid email format
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Please enter a valid email"
  *       404:
  *         description: Email is not registered
  *         content:
  *           application/json:
  *             example:
- *               success: false
- *               message: "This email is not registered"
+ *               message: "This email is not registerd"
+ *       500:
+ *         description: Internal server error or email sending error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /user/verify-reset-password-otp:
+ *   post:
+ *     summary: Verify password reset OTP
+ *     tags: [Users]
+ *     description: Verifies the OTP sent to the user's email for password reset and returns a reset token if valid.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The one-time password sent to the user's email.
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "OTP verified successfully"
+ *               resetToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - missing or invalid OTP
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingOTP:
+ *                 summary: Missing OTP
+ *                 value:
+ *                   message: "Please fill all required fields"
+ *               invalidOTP:
+ *                 summary: Invalid or expired OTP
+ *                 value:
+ *                   message: "OTP is invalid or has expired"
  *       500:
  *         description: Internal server error
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Internal server error"
  */
 
@@ -5819,18 +5869,22 @@
 
 /**
  * @swagger
- * /user/reset-password/{token}:
+ * /user/reset-password:
  *   patch:
  *     summary: Reset user password
  *     tags: [Users]
- *     description: Allows a user to reset their password using a valid reset token.
+ *     description: Allows a user to reset their password using a valid reset token provided in the Authorization header.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: token
+ *       - in: header
+ *         name: Authorization
  *         required: true
- *         description: The password reset token sent via email.
  *         schema:
  *           type: string
+ *           format: Bearer {token}
+ *         description: "Reset token received via email, prefixed with 'Bearer '"
+ *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     requestBody:
  *       required: true
  *       content:
@@ -5850,7 +5904,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Password reset successfully"
+ *               message: "Password reseted successfully"
  *       400:
  *         description: Bad request, password is missing.
  *         content:
@@ -5862,7 +5916,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Token is invalid or has expired"
+ *               message: "Unauthorized"
  *       422:
  *         description: Unprocessable entity, password does not meet security requirements.
  *         content:
@@ -5874,39 +5928,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Internal server error"
- *
- *   get:
- *     summary: Verify the password reset token
- *     tags: [Users]
- *     description: Check if the reset token is valid before allowing the user to proceed with resetting their password.
- *     parameters:
- *       - in: path
- *         name: token
- *         required: true
- *         description: The password reset token sent via email.
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Token is valid.
- *         content:
- *           application/json:
- *             example:
- *               status: "success"
- *               data:
- *                 email: "user@example.com"
- *       400:
- *         description: Token is invalid or has expired.
- *         content:
- *           application/json:
- *             example:
- *               message: "Token is invalid or has expired"
- *       500:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             example:
+ *               success: false
  *               message: "Internal server error"
  */
 
@@ -6003,7 +6025,7 @@
 
 /**
  * @swagger
- * /user/confirm-email:
+ * /user/resend-confirmation-email:
  *   get:
  *     summary: Resend confirmation email
  *     description: Resends the confirmation email for a user who has not yet confirmed their account.
@@ -6033,18 +6055,24 @@
 
 /**
  * @swagger
- * /user/confirm-email/{emailVerificationToken}:
+ * /user/confirm-email:
  *   get:
  *     summary: Confirm user email
- *     description: Confirms a user's email address using the provided email verification token.
+ *     description: Confirms a user's email address using a one-time password (OTP).
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: emailVerificationToken
- *         required: true
- *         description: The email verification token sent to the user's email.
- *         schema:
- *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The OTP sent to the user's email
+ *                 example: "123456"
  *     responses:
  *       200:
  *         description: Email confirmed successfully.
@@ -6054,18 +6082,25 @@
  *               success: true
  *               message: "Email is confirmed successfully"
  *       400:
- *         description: Bad request. Either the token is missing or invalid/expired.
+ *         description: Bad request. Either the OTP is missing or invalid/expired.
  *         content:
  *           application/json:
  *             examples:
- *               missingToken:
+ *               missingOTP:
  *                 value:
  *                   success: false
- *                   message: "Verification Token is required"
- *               invalidToken:
+ *                   message: "OTP is required"
+ *               invalidOTP:
  *                 value:
  *                   success: false
- *                   message: "Invalid or expired token"
+ *                   message: "Invalid or expired OTP"
+ *       401:
+ *         description: Unauthorized. User authentication required.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Not authenticated"
  *       500:
  *         description: Internal server error.
  *         content:
@@ -6074,7 +6109,6 @@
  *               success: false
  *               message: "Internal server error"
  */
-
 
 /**
  * @swagger
@@ -9452,7 +9486,7 @@
  * tags:
  *   - name: Connections
  *     description: Managing connections and connection requests
-*/
+ */
 /**
 /**
  * @swagger
@@ -9967,7 +10001,6 @@
  *       500:
  *         description: Server error
  */
-
 
 /**
  * @swagger
