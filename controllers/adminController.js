@@ -8,17 +8,34 @@ const Company = require('../models/companyModel');
 // Reports monitoring
 exports.getAllReports = async (req, res) => {
     try {
-        // console.log(req.params.reportId);
-        const reports = await Report.find()
+        let reports = await Report.find()
             .populate({
                 path: 'userId',
                 select: 'firstName lastName email'
-            })
-            
+            });
+
+        // Process each report to add reportedUser or reportedPost
+        const processedReports = await Promise.all(reports.map(async report => {
+            let upreport = {};
+            if (report.reportedType === 'User') {
+                const reportedUser = await User.findById(report.reportedId, 'firstName lastName email');
+                upreport = {
+                    reportedUser: reportedUser,
+                    report: report
+                };
+            } else if (report.reportedType === 'Post') {
+                const reportedPost = await Post.findById(report.reportedId, 'attachments description');
+                upreport = {
+                    reportedPost: reportedPost,
+                    report: report
+                };
+            }
+            return upreport;
+        }));
 
         res.status(200).json({
             status: 'success',
-            data: reports
+            data: processedReports
         });
     } catch (error) {
         res.status(500).json({
