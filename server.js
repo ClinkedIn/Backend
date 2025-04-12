@@ -42,7 +42,7 @@ app.use("/comments", commentRouter);
 app.use("/chats", chatRouter);
 app.use("/messages", messageRouter);
 app.use("/jobs", jobRouter);
-app.use("/company", companyRouter);
+app.use("/companies", companyRouter);
 app.use("/upload", uploadRouter);
 app.use("/search", searchRouter);
 app.use("/notifications", notificationRouter);
