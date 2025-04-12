@@ -43,11 +43,11 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/${{ github.repository }}/actions/artifacts/{}
 
-    - name: Upload artifact for deployment job
-      uses: actions/upload-artifact@v4
-      with:
-        name: node-app
-        path: .
+   ## - name: Upload artifact for deployment job
+     ## uses: actions/upload-artifact@v4
+     ## with:
+       ## name: node-app
+       ## path: .
 
   deploy:
     permissions:

@@ -228,7 +228,8 @@ const isSenderBlocked = async (senderId, receiverId) => {
         console.error(`Receiver ${receiverId} not found`);
         throw new customError('Receiver not found', 404);
     }
-
+    // print blocked users by receiver
+    console.log("Blocked users by receiver:", receiver.blockedUsers);
     // Check if the sender is in the receiver's blocked list
     return receiver.blockedUsers.includes(senderId);
 };
