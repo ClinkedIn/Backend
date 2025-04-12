@@ -33,7 +33,8 @@ const createDirectChat = async (req, res) => {
         }
         // Create new chat
         const newChat = await directChatModel.create({
-            members: [userId, otherUserId],
+            firstUser: userId,
+            secondUser: otherUserId,
             messages: []
         });
         if (!newChat) {
