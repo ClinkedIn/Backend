@@ -17,10 +17,6 @@ const sendMessage = async (req, res) => {
         const { type, messageText, replyTo} = req.body;
         let { receiverId, chatId: providedChatId } = req.body;
         const messageAttachment = req.files;
-        console.log("Auth user:", req.user);
-        console.log("Sender ID:", sender);
-        console.log("Is valid ObjectId?", mongoose.Types.ObjectId.isValid(sender));
-        console.log("Request body:", { type, messageText, replyTo, receiverId, providedChatId });
         
         // Validate inputs
         try {
@@ -58,14 +54,15 @@ const sendMessage = async (req, res) => {
             validateChatId(chatId);
             await validateChatMembership(chatModel, chatId, sender, type);
             // Check for blocking in direct chats
-            if (type === 'direct') {
-                if (await isSenderBlocked(sender, receiverId)) {
-                    return res.status(403).json({ message: 'Sender is blocked by the receiver' });
-                }
-            }
         } else {
         const chat = await findOrCreateDirectChat(sender, receiverId);
         chatId = chat._id;
+        }
+
+        if (type === 'direct') {
+            if (await isSenderBlocked(sender, receiverId)) {
+                return res.status(403).json({ message: 'Sender is blocked by the receiver' });
+            }
         }
 
         // Handle file uploads
@@ -106,9 +103,11 @@ const sendMessage = async (req, res) => {
         
         // send notification to user if direct chat
         // the receiver should be the full recever model
+        
         if (type === 'direct') {
             const receiver = await userModel.findById(receiverId);
-            sendNotification(sender, receiver, "message", savedMessage)
+            const senderModel = await userModel.findById(sender);
+            sendNotification(senderModel, receiver, "message", savedMessage)
             .then(() => {
                 console.log("Notification sent successfully");
             })
@@ -116,7 +115,6 @@ const sendMessage = async (req, res) => {
                 console.error("Failed to send notification:", error);
             });
         }
-
         res.status(200).json({ message: 'Message created successfully', data: savedMessage});
     } catch (err) {
         if (err instanceof customError) {
@@ -237,38 +235,39 @@ const unblockUserFromMessaging = async (req, res) => {
     try {
         const userId = req.user.id;
         const blockedUserId = req.params.userId;
-
-        if (!blockedUserId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
+        
+        // Fetch current user
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        const blockedUser = userModel.findById(blockedUserId);
-        if (!blockedUser) {
-            return res.status(404).json({ message: 'Blocked user not found' });
-        }
-
-        // Check if the user is already blocked
-        if (!user.blockedUsers.includes(blockedUserId)) {
-            return res.status(400).json({ message: 'User is not blocked' });
-        }
-        // Block the user
-        user.blockedUsers.pull(blockedUserId);
+        
+        console.log("Before modification, blocked users:", user.blockedUsers);
+        
+        // Filter out the blocked user ID directly from the array
+        user.blockedUsers = user.blockedUsers.filter(id => 
+            id.toString() !== blockedUserId.toString()
+        );
+        
+        console.log("After filter, blocked users:", user.blockedUsers);
+        
+        // Save the updated user document
         await user.save();
-        // return
-        res.status(200).json({ message: 'User unblocked successfully'});
+        
+        // Get the most recent state of the user
+        const updatedUser = await userModel.findById(userId);
+        console.log("Final blocked users:", updatedUser.blockedUsers);
+        
+        res.status(200).json({ 
+            message: 'User unblocked successfully',
+            blockedUsers: updatedUser.blockedUsers
+        });
 
     } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error blocking user:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
+        console.error('Error unblocking user:', err);
+        res.status(500).json({ message: 'Internal server error', error: err.message });
     }
-}
+};
 
 const getTotalUnreadCount = async (req, res) => {
     try {
