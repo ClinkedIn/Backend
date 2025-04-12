@@ -484,34 +484,6 @@ const resetPassword = async (req, res) => {
   }
 };
 
-const verifyResetPasswordToken = async (req, res) => {
-  try {
-    //get user based on the token
-    const token = req.params.token;
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await userModel.findOne({
-      isActive: true,
-      passwordResetToken: hashedToken,
-      passwordResetExpiresAt: { $gt: Date.now() },
-    });
-    // if token is not expired
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Token is invalid or has expired" });
-    }
-    res.status(200).json({
-      status: "success",
-      data: {
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
 const updatePassword = async (req, res) => {
   try {
     // get the user from the collection
@@ -631,7 +603,6 @@ module.exports = {
   updatePassword,
   deleteUser,
   updateEmail,
-  verifyResetPasswordToken,
   googleLogin,
   resendConfirmationEmail,
   logout,
