@@ -22,11 +22,6 @@ router.route('/saved')
 router.route('/my-applications')
     .get(protect,jobController.getMyApplications)
 
-router.route('/:jobId')
-    .get(jobController.getJob)
-    .put(jobController.updateJob)
-    .delete(jobController.deleteJob);
-
 // Mark an applicant as accepted for the job.
 router.route('/jobId/applications/:userId/accept')
     .put(jobController.acceptApplicant);
@@ -50,4 +45,8 @@ router.route('/:jobId/apply')
     .post(protect,jobController.applyForJob)
     .get(protect,jobController.getJobApplications)
 
+router.route('/:jobId')
+    .get(jobController.getJob)
+    .put(jobController.updateJob)
+    .delete(jobController.deleteJob);
     module.exports = router;
