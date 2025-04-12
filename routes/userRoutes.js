@@ -10,18 +10,18 @@ router
   .delete(protect, userController.deleteUser);
 
 router
-  .route("/confirm-email")
+  .route("/resend-confirmation-email")
   .get(protect, userController.resendConfirmationEmail);
 
-router
-  .route("/confirm-email/:emailVerificationToken")
-  .get(userController.confirmEmail);
+router.route("/confirm-email").get(protect, userController.confirmEmail);
 router.route("/login").post(userController.login);
 router.route("/logout").post(userController.logout);
 router.route("/forgot-password").post(userController.forgotPassword);
+router.patch("/reset-password", userController.resetPassword);
+
 router
-  .patch("/reset-password/:token", userController.resetPassword)
-  .get("/reset-password/:token", userController.verifyResetPasswordToken);
+  .route("/verify-reset-password-otp")
+  .get(userController.verifyResetPasswordOTP);
 
 router.post("/auth/google", userController.googleLogin);
 router.patch("/update-password", protect, userController.updatePassword);

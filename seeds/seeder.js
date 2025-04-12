@@ -17,6 +17,7 @@ const reportSeeder = require('./report');
 const repostSeeder = require('./repost');
 const subscriptionSeeder = require('./subscription');
 const transactionSeeder = require('./transaction');
+const notificationSeeder = require('./notification');
 const { createRandomIds } = require('./init');
 
 (async () => {
@@ -27,17 +28,18 @@ const { createRandomIds } = require('./init');
 
         //await createRandomIds();
         // Run seeders
-        await userSeeder();
-        await postSeeder();
-        await commentSeeder();
-        await repostSeeder();
-        await chatGroupSeeder();
-        await directChatSeeder();
-        await chatMessageSeeder();
-        await impressionSeeder();
-        await companySeeder();
-        await jobSeeder();
-        await reportSeeder();
+        // await userSeeder();
+        // await postSeeder();
+        // await commentSeeder();
+        // await repostSeeder();
+        // await chatGroupSeeder();
+        // await directChatSeeder();
+        // await chatMessageSeeder();
+        // await impressionSeeder();
+        // await companySeeder();
+        // await jobSeeder();
+        // await reportSeeder();
+        await notificationSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');
