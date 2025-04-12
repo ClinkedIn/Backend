@@ -13,6 +13,7 @@ const { uploadPicture, uploadVideo, uploadDocument } = require('./filesHandler')
 const validateUser = async (userId) => {
     const user = await userModel.findById(userId);
     if (!user) {
+        console.error(`User ${userId} not found`);
         throw new customError('User not found', 404);
     }
     return user
@@ -200,7 +201,6 @@ const validateMessageOwner = async (messageId, userId) => {
 };
 
 
-
 const validateGroupChatData = async (userId, groupName, groupMembers) => {
     if (!groupName || !groupMembers) {
         throw new customError('Please provide all values', 400);
@@ -222,8 +222,13 @@ const validateGroupChatData = async (userId, groupName, groupMembers) => {
 }
 
 const isSenderBlocked = async (senderId, receiverId) => {
-    const count = await userModel.countDocuments({ _id: receiverId, blockedUsers: senderId });
-    return { isBlocked: count > 0 };
+    const receiver = await userModel.findById(receiverId);
+    if (!receiver) {
+        throw new customError('Receiver not found', 404);
+    }
+
+    // Check if the sender is in the receiver's blocked list
+    return receiver.blockedUsers.includes(senderId);
 };
 
 

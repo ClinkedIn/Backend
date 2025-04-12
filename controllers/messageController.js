@@ -8,17 +8,28 @@ const customError = require('../utils/customError');
 const { validateUser, validateChatType, validateChatId, validateMessageContent,
      validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts,
      validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount, markMessageReadByUser} = require('../utils/chatUtils');
-const { sendNotification } = require('../utils/Notification');
+const  sendNotification  = require('../utils/Notification');
 
 // Create a new message.
 const sendMessage = async (req, res) => {
     try {
         const sender = req.user.id;
-        const { type, messageText, replyTo, receiverId, chatId: providedChatId } = req.body;
+        const { type, messageText, replyTo} = req.body;
+        let { receiverId, chatId: providedChatId } = req.body;
         const messageAttachment = req.files;
-
+        console.log("Auth user:", req.user);
+        console.log("Sender ID:", sender);
+        console.log("Is valid ObjectId?", mongoose.Types.ObjectId.isValid(sender));
+        console.log("Request body:", { type, messageText, replyTo, receiverId, providedChatId });
+        
         // Validate inputs
-        await validateUser(sender);
+        try {
+            await validateUser(sender);
+            console.log("Sender validation passed");
+        } catch (error) {
+            console.error("Sender validation failed:", error);
+            return res.status(404).json({ message: 'Sender not found', details: 'The authenticated user does not exist' });
+        }
         validateChatType(type);
         validateMessageContent(messageText, messageAttachment);
 
@@ -29,7 +40,18 @@ const sendMessage = async (req, res) => {
         // Determine chat ID and handle chat creation if necessary
         let chatId = providedChatId;
         let chatModel = type === 'direct' ? directChatModel : chatGroupModel;
-
+        // if userId not provided, get the receiverId from the chatId
+        if (!receiverId && chatId) {
+            const chat = await chatModel.findById(chatId);
+            if (!chat) {
+                return res.status(404).json({ message: 'Chat not found' });
+            }
+            if (type === 'direct') {
+                receiverId = chat.secondUser.toString() === sender ? chat.firstUser : chat.secondUser;
+            }
+        }
+        console.log("Receiver ID:", receiverId);
+        console.log("Sender ID: ", sender)
         // Validate chatId if provided
         if (chatId) {
             validateChatId(chatId);
@@ -80,9 +102,12 @@ const sendMessage = async (req, res) => {
             console.error('Chat not found:', chatId);
             return res.status(404).json({ message: `${type === 'direct' ? 'Direct' : 'Group'} chat not found` });
         }
+        
         // send notification to user if direct chat
+        // the receiver should be the full recever model
         if (type === 'direct') {
-            sendNotification(sender, receiverId, "message", savedMessage)
+            const receiver = await userModel.findById(receiverId);
+            sendNotification(sender, receiver, "message", savedMessage)
             .then(() => {
                 console.log("Notification sent successfully");
             })

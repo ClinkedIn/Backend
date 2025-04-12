@@ -13,6 +13,7 @@ const { uploadPicture, uploadVideo, uploadDocument } = require('./filesHandler')
 const validateUser = async (userId) => {
     const user = await userModel.findById(userId);
     if (!user) {
+        console.error(`User with ID ${userId} not found`);
         throw new customError('User not found', 404);
     }
     return user

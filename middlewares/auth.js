@@ -112,15 +112,11 @@ const checkAdmin = async (req, res, next) => {
   if (!currentUser.isSuperAdmin) {
     return res.status(403).json({ message: "Unauthorized, Admin access required" });
   }
-
-
   next();
-
-
 };
 
 const mockUser = {
-  id: "473c0bddfacd1f8a541cb0d2", // Use an ID from your seeded users
+  id: "3dddd459ad9b0142faafeb7b", // Use an ID from your seeded users
   email: "Reta_Watsica78@hotmail.com",
   // Add other user properties you need
 };
