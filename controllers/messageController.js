@@ -48,6 +48,7 @@ const sendMessage = async (req, res) => {
             }
             if (type === 'direct') {
                 receiverId = chat.secondUser.toString() === sender ? chat.firstUser : chat.secondUser;
+                console.log("Receiver ID from chat:", receiverId);
             }
         }
         console.log("Receiver ID:", receiverId);

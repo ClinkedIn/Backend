@@ -222,8 +222,10 @@ const validateGroupChatData = async (userId, groupName, groupMembers) => {
 }
 
 const isSenderBlocked = async (senderId, receiverId) => {
+    console.log("Receiver ID:", receiverId);
     const receiver = await userModel.findById(receiverId);
     if (!receiver) {
+        console.error(`Receiver ${receiverId} not found`);
         throw new customError('Receiver not found', 404);
     }
 
