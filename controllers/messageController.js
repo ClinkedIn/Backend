@@ -6,8 +6,9 @@ const mongoose = require('mongoose');
 const customError = require('../utils/customError');
 
 const { validateUser, validateChatType, validateChatId, validateMessageContent,
-     validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts, validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount} = require('../utils/chat');
-
+     validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts,
+     validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount, markMessageReadByUser} = require('../utils/chatUtils');
+const { sendNotification } = require('../utils/Notification');
 
 // Create a new message.
 const sendMessage = async (req, res) => {
@@ -76,10 +77,21 @@ const sendMessage = async (req, res) => {
         console.log("chat id: ", chatId)
 
         if (!chat) {
+            console.error('Chat not found:', chatId);
             return res.status(404).json({ message: `${type === 'direct' ? 'Direct' : 'Group'} chat not found` });
         }
+        // send notification to user if direct chat
+        if (type === 'direct') {
+            sendNotification(sender, receiverId, "message", savedMessage)
+            .then(() => {
+                console.log("Notification sent successfully");
+            })
+            .catch(error => {
+                console.error("Failed to send notification:", error);
+            });
+        }
 
-        res.status(200).json({ message: 'Message created successfully', data: savedMessage, chat: chat });
+        res.status(200).json({ message: 'Message created successfully', data: savedMessage});
     } catch (err) {
         if (err instanceof customError) {
             res.status(err.statusCode).json({ message: err.message });
@@ -260,11 +272,36 @@ const getTotalUnreadCount = async (req, res) => {
     }
 };
 
+const markMessageAsRead = async (req, res) => {
+    try {
+        const messageId = req.params.messageId;
+        const userId = req.user.id;
+
+        const { updatedMessage, isNewReadReceipt } = await markMessageReadByUser(messageId, userId);
+
+        res.status(200).json({ 
+            message: 'Message marked as read successfully', 
+            data: updatedMessage,
+            isNewReadReceipt
+        });
+    }
+    catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error marking message as read:', err);
+            res.status(500).json({ message: 'Internal server error', error: err.message });
+        }
+    }
+};
+
+
 module.exports = {
     sendMessage,
     editMessage,
     deleteMessage,
     blockUserFromMessaging,
     unblockUserFromMessaging,
-    getTotalUnreadCount
+    getTotalUnreadCount,
+    markMessageAsRead
 };

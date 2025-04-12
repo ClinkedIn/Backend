@@ -5,7 +5,7 @@ const userModel = require('../models/userModel');
 const customError = require ('../utils/customError');
 const mongoose = require('mongoose');
 
-const {validateGroupChatData, calculateTotalUnreadCount} = require('../utils/chat');
+const {validateGroupChatData, calculateTotalUnreadCount, markMessageReadByUser} = require('../utils/chatUtils');
 
 const createDirectChat = async (req, res) => {
     try {
@@ -148,14 +148,13 @@ const getDirectChat = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(chatId)) {
             throw new customError('Invalid chat ID format', 400);
         }
-        console.log("User ID:", userId); // Debug log
-        console.log("Chat ID:", chatId); // Debug log
+        
         // Find user and validate existence
         const user = await userModel.findById(userId);
         if (!user) {
             throw new customError('User not found', 404);
         }
-        console.log("User found:", user); // Debug log
+        
         // Find the direct chat with populated messages
         const chat = await directChatModel.findById(chatId)
             .populate({
@@ -220,6 +219,26 @@ const getDirectChat = async (req, res) => {
             userChat.unreadCount = 0;
             userChat.lastReadAt = new Date();
             await user.save();
+        }
+        
+        // Mark all unread messages as read
+        if (chat.messages && chat.messages.length > 0) {
+            // Find messages that aren't from the current user and haven't been read by them
+            const messagesToMark = chat.messages.filter(message => 
+                message.sender && 
+                message.sender._id.toString() !== userId && 
+                (!message.readBy || !message.readBy.includes(userId))
+            );
+            
+            // Use markMessageReadByUser for each message that needs to be marked as read
+            for (const message of messagesToMark) {
+                try {
+                    await markMessageReadByUser(message._id, userId);
+                } catch (error) {
+                    console.error(`Failed to mark message ${message._id} as read:`, error);
+                    // Continue with other messages even if one fails
+                }
+            }
         }
 
         // Process messages to add isMine flag and format dates
