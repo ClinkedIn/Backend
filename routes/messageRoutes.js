@@ -4,15 +4,8 @@ const messageController = require('../controllers/messageController');
 const { protect, mockVerifyToken } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
-router.route('/')
-    .post(mockVerifyToken, upload.array('files', 10), messageController.sendMessage);
-
-router.route('/:messageId')
-    .delete(protect, messageController.deleteMessage)
-    .patch(mockVerifyToken, messageController.editMessage);
-
 router.route('/unread-count')
-    .get(mockVerifyToken, messageController.getTotalUnreadCount);
+    .get(protect, messageController.getTotalUnreadCount);
 
 router.route('/block-user/:userId')
     .patch(protect, messageController.blockUserFromMessaging);
@@ -22,6 +15,13 @@ router.route('/unblock-user/:userId')
 
 router.route('/read-receipt/:messageId')
     .patch(protect, messageController.markMessageAsRead);
+
+router.route('/:messageId')
+    .delete(protect, messageController.deleteMessage)
+    .patch(protect, messageController.editMessage);
+
+router.route('/')
+    .post(protect, upload.array('files', 10), messageController.sendMessage);
 
 module.exports = router;
 
