@@ -599,7 +599,9 @@ const updateEmail = async (req, res) => {
     user.isConfirmed = false;
     await user.save();
     try {
-      await sendEmailConfirmation(user.id);
+      const otp = user.createEmailVerificationOTP();
+      await sendEmailConfirmation(otp, user.email);
+      await user.save({ validateBeforeSave: false });
     } catch (err) {
       console.log(err);
     }
