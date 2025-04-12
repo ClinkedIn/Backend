@@ -173,6 +173,7 @@ const getPost = async (req, res) => {
       targetId: postId,
       userId,
     });
+    const commentCount = await commentModel.countDocuments({ postId: postId });
     // Check if post is a repost
     const repost = await repostModel
       .findOne({
@@ -180,7 +181,7 @@ const getPost = async (req, res) => {
         isActive: true,
       })
       .populate("userId", "firstName lastName profilePicture headline");
-
+      
     const isRepost = !!repost;
 
     // Format post response
@@ -194,7 +195,7 @@ const getPost = async (req, res) => {
       postDescription: post.description,
       attachments: post.attachments,
       impressionCounts: post.impressionCounts,
-      commentCount: post.commentCount || 0,
+      commentCount: commentCount || 0,
       repostCount: post.repostCount || 0,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
@@ -494,7 +495,7 @@ const getAllPosts = async (req, res) => {
         // Check if this post was reposted by a connection
         const repostInfo = repostMap[post._id.toString()];
         const isRepost = !!repostInfo;
-
+        const commentCount = await commentModel.countDocuments({ postId: post._id });
         // For posts that have multiple reposters, use the most relevant one
         // (e.g., first one in the array, which could be sorted by date if needed)
         const repostDetails = repostInfo ? repostInfo[0] : null;
@@ -513,7 +514,7 @@ const getAllPosts = async (req, res) => {
           postDescription: post.description,
           attachments: post.attachments,
           impressionCounts: post.impressionCounts,
-          commentCount: post.commentCount || 0,
+          commentCount: commentCount || 0,
           repostCount: post.repostCount || 0,
           createdAt: post.createdAt,
           taggedUsers: post.taggedUsers,
