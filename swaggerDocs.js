@@ -4684,26 +4684,232 @@
  * @swagger
  * /jobs:
  *   post:
- *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
+ *     summary: Create a new job
  *     tags: [Jobs]
- *     description: Create a new job posting
+ *     description: Create a new job posting for a company you own or administer
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - companyId
+ *               - title
+ *               - industry
+ *               - workplaceType
+ *               - jobLocation
+ *               - jobType
+ *               - description
+ *               - applicationEmail
+ *             properties:
+ *               companyId:
+ *                 type: string
+ *                 description: ID of the company for which the job is being created
+ *                 example: "6579e4e5aa22b80e54a0d0e6"
+ *               title:
+ *                 type: string
+ *                 description: Job title
+ *                 example: "Senior Software Engineer"
+ *               industry:
+ *                 type: string
+ *                 description: Industry category for the job
+ *                 example: "Information Technology"
+ *               workplaceType:
+ *                 type: string
+ *                 description: Type of workplace
+ *                 enum: ["Onsite", "Hybrid", "Remote"]
+ *                 example: "Remote"
+ *               jobLocation:
+ *                 type: string
+ *                 example: "San Francisco, CA"
+ *               jobType:
+ *                 type: string
+ *                 description: Type of employment
+ *                 enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                 example: "Full Time"
+ *               description:
+ *                 type: string
+ *                 description: Detailed job description
+ *                 example: "We are looking for a Senior Software Engineer with 5+ years of experience in React and Node.js..."
+ *               applicationEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email where applications will be sent
+ *                 example: "careers@techcompany.com"
+ *               screeningQuestions:
+ *                 type: array
+ *                 description: Optional screening questions for applicants
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - question
+ *                   properties:
+ *                     question:
+ *                       type: string
+ *                       description: Question type
+ *                       enum: [
+ *                         "Background Check", 
+ *                         "Driver's License", 
+ *                         "Drug Test", 
+ *                         "Education",
+ *                         "Expertise with Skill", 
+ *                         "Hybrid Work", 
+ *                         "Industry Experience", 
+ *                         "Language",
+ *                         "Location", 
+ *                         "Onsite Work", 
+ *                         "Remote Work", 
+ *                         "Urgent Hiring Need",
+ *                         "Visa Status", 
+ *                         "Work Authorization", 
+ *                         "Work Experience", 
+ *                         "Custom Question"
+ *                       ]
+ *                       example: "Work Experience"
+ *                     idealAnswer:
+ *                       type: string
+ *                       description: The ideal or required answer to the question
+ *                       example: "5"
+ *                     mustHave:
+ *                       type: boolean
+ *                       description: Whether this qualification is mandatory
+ *                       example: true
+ *               autoRejectMustHave:
+ *                 type: boolean
+ *                 description: Automatically reject applications that don't meet must-have criteria
+ *                 default: false
+ *                 example: true
+ *               rejectPreview:
+ *                 type: string
+ *                 description: Preview message for rejected applications
+ *                 example: "Thank you for your interest, but this position requires experience that matches our needs."
  *     responses:
  *       201:
  *         description: Job created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job created successfully"
+ *                 job:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     title:
+ *                       type: string
+ *                       example: "Senior Software Engineer"
+ *                     company:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: "60d21b4667d0d8992e610c84"
+ *                         name:
+ *                           type: string
+ *                           example: "Tech Solutions Inc."
+ *                     industry:
+ *                       type: string
+ *                       example: "Information Technology"
+ *                     workplaceType:
+ *                       type: string
+ *                       example: "Remote"
+ *                     jobLocation:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     jobType:
+ *                       type: string
+ *                       example: "Full Time"
+ *                     description:
+ *                       type: string
+ *                       example: "We are looking for a Senior Software Engineer with 5+ years of experience in React and Node.js..."
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-09-30T14:48:00.000Z"
  *       400:
- *         description: Bad request, invalid input
+ *         description: Bad request - validation failed
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingCompanyId:
+ *                 summary: Missing company ID
+ *                 value:
+ *                   message: "Company ID is required to create a job"
+ *               invalidCompanyId:
+ *                 summary: Invalid company ID format
+ *                 value:
+ *                   message: "Invalid company ID format"
+ *               missingRequiredField:
+ *                 summary: Missing required field
+ *                 value:
+ *                   message: "Title is required to create a job"
+ *               invalidWorkplaceType:
+ *                 summary: Invalid workplace type
+ *                 value:
+ *                   message: "Workplace type must be one of: Onsite, Hybrid, Remote"
+ *               invalidJobType:
+ *                 summary: Invalid job type
+ *                 value:
+ *                   message: "Job type must be one of: Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship"
+ *               invalidEmail:
+ *                 summary: Invalid email format
+ *                 value:
+ *                   message: "Please provide a valid application email address"
+ *               invalidQuestions:
+ *                 summary: Invalid screening questions
+ *                 value:
+ *                   message: "Screening questions must be an array"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have permission for this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized. You can only create jobs for companies you own or administer"
+ *       404:
+ *         description: Company not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Company not found"
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create job"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  *
  *   get:
  *     summary: Retrieve all jobs

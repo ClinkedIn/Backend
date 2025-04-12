@@ -13,9 +13,6 @@ const express = require('express')
 const router = express.Router();
 const jobController = require('../controllers/jobController');
 
-router.route('/')
-    .post(jobController.createJob)
-    .get(jobController.getAllJobs);
 router.route('/saved')
     .get(protect,jobController.getSavedJobs)
 
@@ -24,15 +21,15 @@ router.route('/my-applications')
 
 // Mark an applicant as accepted for the job.
 router.route('/jobId/applications/:userId/accept')
-    .put(jobController.acceptApplicant);
+    .put(protect,jobController.acceptApplicant);
 
 // Mark an applicant as rejected for the job.
 router.route('/jobId/applications/:userId/reject')
-    .put(jobController.rejectApplicant);
+    .put(protect,jobController.rejectApplicant);
 
 // get all jobs created by a specific company.
 router.route('/company/:companyId')
-    .get(jobController.getJobsByCompany)
+    .get(protect,jobController.getJobsByCompany)
     
     // get/search , Provide filtering/search capabilities (e.g., by workplace type, job location, job type).
     // Request: A GET request where query parameters (like ?workplace_type=Remote&job_type=full time) are used to filter jobs.
@@ -46,7 +43,10 @@ router.route('/:jobId/apply')
     .get(protect,jobController.getJobApplications)
 
 router.route('/:jobId')
-    .get(jobController.getJob)
-    .put(jobController.updateJob)
-    .delete(jobController.deleteJob);
+    .get(protect,jobController.getJob)
+    .put(protect,jobController.updateJob)
+    .delete(protect,jobController.deleteJob);
+router.route('/')
+    .post(protect,jobController.createJob)
+    .get(protect,jobController.getAllJobs);
     module.exports = router;

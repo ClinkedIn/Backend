@@ -7,24 +7,161 @@ const jobApplicationModel = require('../models/jobApplicationModel');
 // Create a new job
 const createJob = async (req, res) => {
     try {
+        const userId = req.user.id; // From auth middleware
+        
+        // Validate user permissions for the specified company
+        const companyId = req.body.companyId;
+        
+        // Check if company ID is provided
+        if (!companyId) {
+            return res.status(400).json({ 
+                message: 'Company ID is required to create a job'
+            });
+        }
+        
+        // Check if company ID is valid MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(companyId)) {
+            return res.status(400).json({ 
+                message: 'Invalid company ID format'
+            });
+        }
+        
+        // Verify the company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ 
+                message: 'Company not found'
+            });
+        }
+        
+        // Check if user is authorized to post for this company
+        const isOwner = company.userId && company.userId.toString() === userId;
+        const isAdmin = company.admins && company.admins.includes(userId);
+        
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ 
+                message: 'Unauthorized. You can only create jobs for companies you own or administer'
+            });
+        }
+        
+        // Validate required fields
+        const requiredFields = ['title', 'industry', 'workplaceType', 'jobLocation', 'jobType', 'description', 'applicationEmail'];
+        
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
+                return res.status(400).json({
+                    message: `${field.charAt(0).toUpperCase() + field.slice(1)} is required to create a job`
+                });
+            }
+        }
+        
+        // Validate the workplace type
+        const validWorkplaceTypes = ["Onsite", "Hybrid", "Remote"];
+        if (!validWorkplaceTypes.includes(req.body.workplaceType)) {
+            return res.status(400).json({
+                message: 'Workplace type must be one of: Onsite, Hybrid, Remote'
+            });
+        }
+        
+        // Validate the job type
+        const validJobTypes = ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"];
+        if (!validJobTypes.includes(req.body.jobType)) {
+            return res.status(400).json({
+                message: 'Job type must be one of: Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship'
+            });
+        }
+        
+        // Validate application email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(req.body.applicationEmail)) {
+            return res.status(400).json({
+                message: 'Please provide a valid application email address'
+            });
+        }
+        
+        // Validate screening questions if provided
+        if (req.body.screeningQuestions) {
+            if (!Array.isArray(req.body.screeningQuestions)) {
+                return res.status(400).json({
+                    message: 'Screening questions must be an array'
+                });
+            }
+            
+            const validQuestionTypes = [
+                "Background Check", "Driver's License", "Drug Test", "Education",
+                "Expertise with Skill", "Hybrid Work", "Industry Experience", "Language",
+                "Location", "Onsite Work", "Remote Work", "Urgent Hiring Need",
+                "Visa Status", "Work Authorization", "Work Experience", "Custom Question"
+            ];
+            
+            for (const question of req.body.screeningQuestions) {
+                if (!question.question) {
+                    return res.status(400).json({
+                        message: 'Each screening question must have a question field'
+                    });
+                }
+                
+                if (!validQuestionTypes.includes(question.question)) {
+                    return res.status(400).json({
+                        message: `Invalid question type: ${question.question}. Must be one of the valid types.`
+                    });
+                }
+                
+                // If mustHave is specified, ensure it's a boolean
+                if (question.mustHave !== undefined && typeof question.mustHave !== 'boolean') {
+                    return res.status(400).json({
+                        message: 'mustHave field must be a boolean value'
+                    });
+                }
+            }
+        }
+        
+        // Create job object
         const job = new jobModel({
-            companyId: req.body.companyId,
-            workplaceType: req.body.workplaceType, // "Onsite", "Hybrid", or "Remote"
+            companyId: companyId,
+            title: req.body.title,
+            industry: req.body.industry,
+            workplaceType: req.body.workplaceType,
             jobLocation: req.body.jobLocation,
-            jobType: req.body.jobType, // "Full Time", "Part Time", "Contract", etc.
+            jobType: req.body.jobType,
             description: req.body.description,
             applicationEmail: req.body.applicationEmail,
-            screeningQuestions: req.body.screeningQuestions, // Expected as an array of objects { question, mustHave }
-            autoRejectMustHave: req.body.autoRejectMustHave,
-            rejectPreview: req.body.rejectPreview,
+            screeningQuestions: req.body.screeningQuestions || [],
+            autoRejectMustHave: req.body.autoRejectMustHave !== undefined ? req.body.autoRejectMustHave : false,
+            rejectPreview: req.body.rejectPreview || '',
             applicants: [],
             accepted: [],
-            rejected: []
+            rejected: [],
+            isActive: true
         });
+        
+        // Save the job
         const newJob = await job.save();
-        res.status(201).json(newJob);
+        
+        // Return success response with created job
+        res.status(201).json({
+            message: 'Job created successfully',
+            job: {
+                id: newJob._id,
+                title: newJob.title,
+                company: {
+                    id: company._id,
+                    name: company.name
+                },
+                industry: newJob.industry,
+                workplaceType: newJob.workplaceType,
+                jobLocation: newJob.jobLocation,
+                jobType: newJob.jobType,
+                description: newJob.description,
+                createdAt: newJob.createdAt
+            }
+        });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error creating job:', error);
+        res.status(500).json({ 
+            message: 'Failed to create job',
+            error: error.message 
+        });
     }
 };
 
