@@ -10,28 +10,33 @@ const users = [];
 const userRelationships = [];
 
 async function createWorkExperience() {
-    return Array.from({ length: faker.number.int({ min: 0, max: 3 }) }, () => ({
-        jobTitle: faker.person.jobTitle(),
-        companyName: faker.company.name(),
-        fromDate: faker.date.past({ years: faker.number.int({ min: 1, max: 10 }) }),
-        toDate: faker.datatype.boolean() ? faker.date.recent({ days: 200 }) : null,
-        employmentType: faker.helpers.arrayElement([
-            "Full Time", "Part Time", "Freelance", "Self Employed", 
-            "Contract", "Internship", "Apprenticeship", "Seasonal"
-        ]),
-        location: faker.location.city(),
-        locationType: faker.helpers.arrayElement(["Onsite", "Hybrid", "Remote"]),
-        description: faker.lorem.sentence(),
-        foundVia: faker.helpers.arrayElement([
-            "Indeed", "LinkedIn", "Company Website", "Other job sites", 
-            "Referral", "Contracted by Recruiter", "Staffing Agency", "Other"
-        ]),
-        skills: faker.helpers.arrayElements(
-            ["JavaScript", "Python", "SQL", "AWS", "Docker"], 
-            faker.number.int({ min: 1, max: 4 })
-        ),
-        media: faker.image.url(),
-    }));
+    return Array.from({ length: faker.number.int({ min: 0, max: 3 }) }, () => {
+        const toDate = faker.datatype.boolean() ? faker.date.recent({ days: 200 }) : null;
+        return {
+            jobTitle: faker.person.jobTitle(),
+            companyName: faker.company.name(),
+            fromDate: faker.date.past({ years: faker.number.int({ min: 1, max: 10 }) }),
+            toDate,
+            // if toDate is null make currentlyWorking true, else make it false
+            currentlyWorking: toDate === null,
+            employmentType: faker.helpers.arrayElement([
+                "Full Time", "Part Time", "Freelance", "Self Employed", 
+                "Contract", "Internship", "Apprenticeship", "Seasonal"
+            ]),
+            location: faker.location.city(),
+            locationType: faker.helpers.arrayElement(["Onsite", "Hybrid", "Remote"]),
+            description: faker.lorem.sentence(),
+            foundVia: faker.helpers.arrayElement([
+                "Indeed", "LinkedIn", "Company Website", "Other job sites", 
+                "Referral", "Contracted by Recruiter", "Staffing Agency", "Other"
+            ]),
+            skills: faker.helpers.arrayElements(
+                ["JavaScript", "Python", "SQL", "AWS", "Docker"], 
+                faker.number.int({ min: 1, max: 4 })
+            ),
+            media: faker.image.url(),
+        };
+    });
 }
 
 async function createEducation() {
@@ -165,15 +170,6 @@ async function createRandomUsers() {
                 jobIds, 
                 faker.number.int({ min: 0, max: 3 })
             ),
-            appliedJobs: faker.helpers.arrayElements(
-                jobIds, 
-                faker.number.int({ min: 0, max: 2 })
-            ).map(jobId => ({
-                jobId,
-                status: faker.helpers.arrayElement([
-                    "pending", "viewed", "rejected", "accepted"
-                ])
-            })),
             sentConnectionRequests: faker.helpers.arrayElements(
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 3 })

@@ -7,6 +7,8 @@ const jobSchema = new mongoose.Schema({
     enum: ["Onsite", "Hybrid", "Remote"],
     required: true,
   }, // Work location type
+  title: { type: String, required: true }, // Job title
+  industry: { type: String, required: true }, // Industry of the job
   jobLocation: { type: String, required: true }, // Location of the job
   jobType: {
     type: String,
@@ -17,7 +19,18 @@ const jobSchema = new mongoose.Schema({
   applicationEmail: { type: String, required: true }, // Email for job applications
   screeningQuestions: [
     {
-      question: { type: String, required: true }, // Screening question
+      question: {
+        type: String,
+        required: true,
+        enum: [
+          "Background Check", "Driver's License", "Drug Test", "Education",
+          "Expertise with Skill", "Hybrid Work", "Industry Experience", "Language",
+          "Location", "Onsite Work", "Remote Work", "Urgent Hiring Need",
+          "Visa Status", "Work Authorization", "Work Experience", "Custom Question"
+        ],
+      }, // Screening question
+      specification: { type: String }, // Includes jobFunction/Skill name etc... depending on the question
+      idealAnswer: { type: String }, // Ideal(minimum) answer for the question
       mustHave: { type: Boolean, default: false }, // Must-have requirement
     },
   ],
@@ -26,6 +39,7 @@ const jobSchema = new mongoose.Schema({
   applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users who applied
   accepted: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users accepted
   rejected: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users rejected
+  isActive: { type: Boolean, default: true }, // Job status
 }, { timestamps: true }); // Adds createdAt & updatedAt timestamps
-
+jobSchema.index({ companyId: 1 }); // Index for quick access to jobs by company
 module.exports = mongoose.model("Job", jobSchema);

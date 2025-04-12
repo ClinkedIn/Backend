@@ -11,7 +11,6 @@ function createRandomComments() {
     for (let i = 0; i < commentIds.length; i++) {
         const userId = faker.helpers.arrayElement(userIds);
         const postId = faker.helpers.arrayElement(postIds); 
-        const taggedUsers = faker.helpers.arrayElements(userIds, faker.number.int({ min: 0, max: 5 }));
         const impressions = faker.helpers.arrayElements(impressionIds, faker.number.int({ min: 0, max: 10 }));
 
         // 50% chance of being a reply to an existing comment on the same post
@@ -26,7 +25,6 @@ function createRandomComments() {
             postId,
             commentContent: faker.lorem.sentence(),
             commentAttachment: faker.datatype.boolean() ? faker.image.url() : null,
-            taggedUsers,
             impressions,
             replies: [],
             parentComment,

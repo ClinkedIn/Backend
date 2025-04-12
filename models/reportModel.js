@@ -39,7 +39,20 @@ const reportSchema = new mongoose.Schema({
       "This account is not a real person"
     ], 
     required: true 
-  }
+  },
+  status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    moderationReason: {
+        type: String,
+        default: null
+    },
+    moderatedAt: {
+        type: Date,
+        default: null
+    }
 }, { timestamps: true }); // Adds createdAt & updatedAt automatically
 
 module.exports = mongoose.model("Report", reportSchema);

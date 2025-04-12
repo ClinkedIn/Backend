@@ -11,6 +11,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "10s" }
@@ -23,6 +25,8 @@ const generateTokens = (userInfo, res) => {
       firstName: userInfo.firstName,
       lastName: userInfo.lastName,
       email: userInfo.email,
+      profilePicture: userInfo.profilePicture,
+      headline: userInfo.headline,
     },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "10m" }
@@ -94,9 +98,29 @@ const protect = async (req, res, next) => {
     return res.status(401).json({ error: "Invalid Token" });
   }
 };
+const checkAdmin = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const currentUser = await userModel.findById(req.user.id);
+
+  if (!currentUser) {
+    return res.status(401).json({ message: "Unauthorized, the user no longer exists" });
+  }
+
+  if (!currentUser.isSuperAdmin) {
+    return res.status(403).json({ message: "Unauthorized, Admin access required" });
+  }
+
+
+  next();
+
+
+};
 
 const mockUser = {
-  id: "0b3169152ee6c171d25e6860", // Use an ID from your seeded users
+  id: "473c0bddfacd1f8a541cb0d2", // Use an ID from your seeded users
   email: "Reta_Watsica78@hotmail.com",
   // Add other user properties you need
 };
@@ -123,4 +147,5 @@ module.exports = {
   verifyGoogleToken,
   mockVerifyToken,
   protect,
+  checkAdmin
 };

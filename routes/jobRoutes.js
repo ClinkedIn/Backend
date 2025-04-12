@@ -8,7 +8,7 @@
 // tags
 // endpoints  /impressions/{id}:
 // security: * - BearerAuth: [];
-
+const { protect, mockVerifyToken } = require('../middlewares/auth');
 const express = require('express')
 const router = express.Router();
 const jobController = require('../controllers/jobController');
@@ -16,16 +16,11 @@ const jobController = require('../controllers/jobController');
 router.route('/')
     .post(jobController.createJob)
     .get(jobController.getAllJobs);
+router.route('/saved')
+    .get(protect,jobController.getSavedJobs)
 
-
-router.route('/:jobId')
-    .get(jobController.getJob)
-    .put(jobController.updateJob)
-    .delete(jobController.deleteJob);
-
-// Allow a user to apply for the job.
-router.route('/:jobId/apply')
-    .post(jobController.applyForJob);
+router.route('/my-applications')
+    .get(protect,jobController.getMyApplications)
 
 // Mark an applicant as accepted for the job.
 router.route('/jobId/applications/:userId/accept')
@@ -42,5 +37,16 @@ router.route('/company/:companyId')
     // get/search , Provide filtering/search capabilities (e.g., by workplace type, job location, job type).
     // Request: A GET request where query parameters (like ?workplace_type=Remote&job_type=full time) are used to filter jobs.
     // Response: A list of jobs that match the search criteria.
-    
+router.route('/:jobId/save')
+    .post(protect,jobController.saveJob)
+    .delete(protect,jobController.unsaveJob)
+
+router.route('/:jobId/apply')
+    .post(protect,jobController.applyForJob)
+    .get(protect,jobController.getJobApplications)
+
+router.route('/:jobId')
+    .get(jobController.getJob)
+    .put(jobController.updateJob)
+    .delete(jobController.deleteJob);
     module.exports = router;

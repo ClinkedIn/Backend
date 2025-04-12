@@ -198,20 +198,6 @@ const userSchema = new mongoose.Schema(
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
     isConfirmed: { type: Boolean, default: false },
-    appliedJobs: [
-      {
-        jobId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Job",
-          required: true,
-        },
-        status: {
-          type: String,
-          enum: ["pending", "viewed", "rejected", "accepted"],
-          default: "pending",
-        },
-      },
-    ],
     sentConnectionRequests: [
       { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     ],
@@ -228,18 +214,21 @@ const userSchema = new mongoose.Schema(
         chatType: { type: String, enum: ["DirectChat", "ChatGroup"] },
         unreadCount: { type: Number, default: 0 },
         lastReadAt: { type: Date },
+        muted: { type: Boolean, default: false },
+        archived: { type: Boolean, default: false },
+        starred: { type: Boolean, default: false },
       },
     ],
     defaultMode: { type: String, enum: ["light", "dark"], default: "light" },
     googleId: { type: String, default: null },
-    fcmToken: { type: String },
-
+    fcmToken: { type: [String], default: [] },
     emailVerificationToken: { type: String, default: null },
     emailVerificationExpiresAt: { type: Date },
     passwordResetToken: { type: String, default: null },
     passwordResetExpiresAt: { type: Date },
 
     isActive: { type: Boolean, default: true },
+    notificationPauseExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 ); // Adds createdAt & updatedAt automatically

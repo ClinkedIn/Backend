@@ -63,11 +63,13 @@ jest.mock('../controllers/userProfileController', () => {
     };
 });
 
-
 jest.mock('../utils/userProfileUtils', () => ({
     validateSkillName: jest.requireActual('../utils/userProfileUtils').validateSkillName,
     validateEndorsements: jest.requireActual('../utils/userProfileUtils').validateEndorsements,
-    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience
+    sortWorkExperience: jest.requireActual('../utils/userProfileUtils').sortWorkExperience,
+    uploadPicture: jest.requireActual('../utils/filesHandler').uploadPicture,
+    validatePicture: jest.requireActual('../utils/filesHandler').validatePicture,
+    updateSkillExperienceReferences: jest.requireActual('../utils/userProfileUtils').updateSkillExperienceReferences
   }));
 
 jest.mock('../models/userModel');
@@ -565,7 +567,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -584,7 +586,7 @@ describe('POST /experience - addExperience', () => {
             fromDate: '2022-01-01',
             currentlyWorking: true,
             skills: ['JavaScript', 'React'],
-            employmentType: 'Full-time',
+            employmentType: 'Full Time',
             location: 'New York',
             locationType: 'On-site',
             description: 'Developed web applications',
@@ -646,6 +648,7 @@ describe('POST /experience - addExperience', () => {
             .field('companyName', 'Tech Corp')
             .field('fromDate', '2022-01-01')
             .field('currentlyWorking', true)
+            .field('employmentType', 'Full Time')
             .attach('file', Buffer.from('mockFileContent'), { filename: 'photo.png', contentType: 'image/jpeg' });
 
         expect(response.status).toBe(400);
@@ -1842,6 +1845,12 @@ describe('DELETE /skills/:skillName', () => {
 app.post('/skills/endorsements/add-endorsement', mockVerifyToken, addEndorsement);
 app.delete('/skills/endorsements/remove-endorsement/:skillName', mockVerifyToken, deleteEndorsement);
 
+
+// Helper function to generate test JWT token
+function generateTestToken(userId) {
+    return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' });
+}
+
 describe("POST /skills/endorsements/add-endorsement", () => {
     const mockUserId = "0b3169152ee6c171d25e6860";
     const mockEndorserId = "d29ccbd4ac1b1cb9faefb867";
@@ -2041,7 +2050,6 @@ describe('POST /add-profile-picture', () => {
         );
     });
 
-
     test('should return 400 if no file is uploaded', async () => {
         const response = await request(app)
             .post('/add-profile-picture')
@@ -2051,14 +2059,13 @@ describe('POST /add-profile-picture', () => {
         expect(response.body.message).toBe('No file uploaded');
     });
 
-
     test('should return 400 for invalid file type', async () => {
         const mockTextBuffer = Buffer.from('This is a text file');
 
         const response = await request(app)
             .post('/add-profile-picture')
             .attach('file', mockTextBuffer, { filename: 'test.txt', contentType: 'text/plain' });
-
+        
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed.');
     });
@@ -3806,3 +3813,312 @@ describe('GET /me - Get Current User Profile', () => {
         expect(response.body.error).toBe('Database error');
     });
 });
+
+/////////////////////////////////////////
+
+// describe('Search Controllers', () => {
+//     beforeEach(() => {
+//         jest.clearAllMocks();
+//     });
+
+//     describe('searchUsers', () => {
+//         test('should search users with query parameters', async () => {
+//             const mockUsers = [
+//                 {
+//                     _id: '1',
+//                     firstName: 'John',
+//                     lastName: 'Doe',
+//                     company: 'Tech Corp',
+//                     industry: 'Technology',
+//                     profilePicture: 'pic1.jpg'
+//                 }
+//             ];
+
+//             userModel.find = jest.fn().mockImplementation(() => ({
+//                 select: jest.fn().mockReturnThis(),
+//                 skip: jest.fn().mockReturnThis(),
+//                 limit: jest.fn().mockResolvedValue(mockUsers)
+//             }));
+
+//             userModel.countDocuments = jest.fn().mockResolvedValue(1);
+
+//             const response = await request(app)
+//                 .get('/users/search')
+//                 .query({
+//                     query: 'john',
+//                     company: 'Tech',
+//                     industry: 'Technology',
+//                     page: 1,
+//                     limit: 10
+//                 });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.users).toEqual(mockUsers);
+//             expect(response.body.pagination).toEqual({
+//                 total: 1,
+//                 page: 1,
+//                 pages: 1
+//             });
+//         });
+//     });
+
+//     describe('searchUsersByName', () => {
+//         test('should search users by name', async () => {
+//             const mockUsers = [
+//                 {
+//                     _id: '1',
+//                     firstName: 'John',
+//                     lastName: 'Doe',
+//                     profilePicture: 'pic1.jpg'
+//                 }
+//             ];
+
+//             userModel.find = jest.fn().mockImplementation(() => ({
+//                 select: jest.fn().mockReturnThis(),
+//                 skip: jest.fn().mockReturnThis(),
+//                 limit: jest.fn().mockResolvedValue(mockUsers)
+//             }));
+
+//             userModel.countDocuments = jest.fn().mockResolvedValue(1);
+
+//             const response = await request(app)
+//                 .get('/users/search/name')
+//                 .query({
+//                     name: 'john',
+//                     page: 1,
+//                     limit: 10
+//                 });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.users).toEqual(mockUsers);
+//             expect(response.body.pagination).toEqual({
+//                 total: 1,
+//                 page: 1,
+//                 pages: 1
+//             });
+//         });
+//     });
+// });
+
+// describe('Connection Controllers', () => {
+//     const userId = 'user123';
+//     const targetUserId = 'target456';
+
+//     beforeEach(() => {
+//         jest.clearAllMocks();
+//     });
+
+//     describe('sendConnectionRequest', () => {
+//         test('should send connection request successfully', async () => {
+//             const mockUser = {
+//                 _id: userId,
+//                 connectionList: [],
+//                 blockedUsers: []
+//             };
+
+//             const mockTargetUser = {
+//                 _id: targetUserId,
+//                 pendingConnections: [],
+//                 blockedUsers: []
+//             };
+
+//             userModel.findById = jest.fn()
+//                 .mockImplementationOnce(() => Promise.resolve(mockUser))
+//                 .mockImplementationOnce(() => Promise.resolve(mockTargetUser));
+
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .post(`/connections/request/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`);
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('Connection request sent successfully');
+//         });
+
+//         test('should handle duplicate connection request', async () => {
+//             const mockUser = {
+//                 _id: userId,
+//                 connectionList: [],
+//                 blockedUsers: []
+//             };
+
+//             const mockTargetUser = {
+//                 _id: targetUserId,
+//                 pendingConnections: [userId],
+//                 blockedUsers: []
+//             };
+
+//             userModel.findById = jest.fn()
+//                 .mockImplementationOnce(() => Promise.resolve(mockUser))
+//                 .mockImplementationOnce(() => Promise.resolve(mockTargetUser));
+
+//             const response = await request(app)
+//                 .post(`/connections/request/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`);
+
+//             expect(response.status).toBe(400);
+//             expect(response.body.message).toBe('Connection request already sent');
+//         });
+//     });
+
+//     describe('handleConnectionRequest', () => {
+//         test('should accept connection request successfully', async () => {
+//             const mockUser = {
+//                 _id: userId,
+//                 pendingConnections: [targetUserId]
+//             };
+
+//             userModel.findById = jest.fn().mockResolvedValue(mockUser);
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .post(`/connections/handle/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`)
+//                 .send({ action: 'accept' });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('Connection request accepted successfully');
+//         });
+
+//         test('should decline connection request successfully', async () => {
+//             const mockUser = {
+//                 _id: userId,
+//                 pendingConnections: [targetUserId]
+//             };
+
+//             userModel.findById = jest.fn().mockResolvedValue(mockUser);
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .post(`/connections/handle/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`)
+//                 .send({ action: 'decline' });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('Connection request declined successfully');
+//         });
+//     });
+
+//     describe('getConnections', () => {
+//         test('should get user connections with pagination', async () => {
+//             const mockConnections = [
+//                 {
+//                     _id: '1',
+//                     firstName: 'John',
+//                     lastName: 'Doe',
+//                     profilePicture: 'pic1.jpg',
+//                     company: 'Tech Corp',
+//                     position: 'Developer'
+//                 }
+//             ];
+
+//             const mockUser = {
+//                 _id: userId,
+//                 connectionList: mockConnections
+//             };
+
+//             userModel.findById = jest.fn().mockImplementation(() => ({
+//                 populate: jest.fn().mockResolvedValue(mockUser)
+//             }));
+
+//             const response = await request(app)
+//                 .get('/connections')
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`)
+//                 .query({ page: 1, limit: 10 });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.connections).toEqual(mockConnections);
+//             expect(response.body.pagination).toEqual({
+//                 total: 1,
+//                 page: 1,
+//                 pages: 1
+//             });
+//         });
+//     });
+
+//     describe('removeConnection', () => {
+//         test('should remove connection successfully', async () => {
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .delete(`/connections/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`);
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('Connection removed successfully');
+//             expect(userModel.findByIdAndUpdate).toHaveBeenCalledTimes(2);
+//         });
+//     });
+// });
+
+// describe('Blocking Controllers', () => {
+//     const userId = 'user123';
+//     const targetUserId = 'target456';
+
+//     beforeEach(() => {
+//         jest.clearAllMocks();
+//     });
+
+//     describe('blockUser', () => {
+//         test('should block user successfully', async () => {
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .post(`/users/block/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`);
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('User blocked successfully');
+//             expect(userModel.findByIdAndUpdate).toHaveBeenCalledTimes(2);
+//         });
+//     });
+
+//     describe('unblockUser', () => {
+//         test('should unblock user successfully', async () => {
+//             userModel.findByIdAndUpdate = jest.fn().mockResolvedValue({});
+
+//             const response = await request(app)
+//                 .post(`/users/unblock/${targetUserId}`)
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`);
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.message).toBe('User unblocked successfully');
+//         });
+//     });
+
+//     describe('getBlockedUsers', () => {
+//         test('should get blocked users with pagination', async () => {
+//             const mockBlockedUsers = [
+//                 {
+//                     _id: '1',
+//                     firstName: 'John',
+//                     lastName: 'Doe',
+//                     profilePicture: 'pic1.jpg'
+//                 }
+//             ];
+
+//             const mockUser = {
+//                 _id: userId,
+//                 blockedUsers: mockBlockedUsers
+//             };
+
+//             userModel.findById = jest.fn().mockImplementation(() => ({
+//                 populate: jest.fn().mockResolvedValue(mockUser)
+//             }));
+
+//             const response = await request(app)
+//                 .get('/users/blocked')
+//                 .set('Authorization', `Bearer ${generateTestToken(userId)}`)
+//                 .query({ page: 1, limit: 10 });
+
+//             expect(response.status).toBe(200);
+//             expect(response.body.blockedUsers).toEqual(mockBlockedUsers);
+//             expect(response.body.pagination).toEqual({
+//                 total: 1,
+//                 page: 1,
+//                 pages: 1
+//             });
+//         });
+//     });
+// });

@@ -34,6 +34,10 @@ const { createRandomIds } = require('./init');
         await chatGroupSeeder();
         await directChatSeeder();
         await chatMessageSeeder();
+        await impressionSeeder();
+        await companySeeder();
+        await jobSeeder();
+        await reportSeeder();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');

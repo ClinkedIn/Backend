@@ -1,12 +1,16 @@
 const userModel = require('../models/userModel');
-const { sortWorkExperience, validateSkillName, validateEndorsements} = require('../utils/userProfileUtils') 
+const postModel = require('../models/postModel');
+const commentModel = require('../models/commentModel');
+const repostModel = require('../models/repostModel');
+const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences, validateConnectionStatus, handlePagination } = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
+const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
 const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
-
+const customError = require('../utils/customError');
 
 const getUserProfile = async (req, res) => {
     try {
@@ -21,8 +25,8 @@ const getUserProfile = async (req, res) => {
         
         // Check privacy settings
         const requesterId = req.user.id; // Current authenticated user
-        
-        // If not requesting own profile and profile is private
+        const requester = await userModel.findById(requesterId).select('connectionList blockedUsers profilePrivacySettings');
+        //If not requesting own profile and profile is private
         if (userId !== requesterId && user.profilePrivacySettings === 'private') {
             return res.status(403).json({ message: 'This profile is private' });
         }
@@ -36,6 +40,16 @@ const getUserProfile = async (req, res) => {
         if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
             return res.status(403).json({ message: 'This profile is not available' });
         }
+        if(requester.blockedUsers.includes(userId)) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        if(userId.isActive === false) {
+            return res.status(403).json({ message: 'This profile is not available' });
+        }
+        // const accessCheck = await checkUserAccessPermission(user, requesterId);
+        // if (!accessCheck.hasAccess) {
+        //     return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
+        // }
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
             user
@@ -138,41 +152,6 @@ const getAllUsers = async (req, res) => {
 ****************************************************
 */
 
-// PICTURE CONSTANTS
-const ALLOWED_PICTURE_MIME_TYPES = Object.freeze([
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
-    'image/heic', 'image/heif', 'image/bmp', 'image/tiff', 'image/svg+xml'
-]);
-const MAX_PICTURE_SIZE = 5 * 1024 * 1024; // 5MB
-const INVALID_PICTURE_TYPE_MESSAGE = "Invalid file type. Only JPEG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF, and SVG are allowed."
-
-
-// Validation Functions
-const validateFileType = async (ALLOWED_MIME_TYPES, mimeType, ERROR_MESSAGE) => {
-    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-        throw new Error(ERROR_MESSAGE);
-    }
-};
-
-const validateFileSize = async (maxSize, fileSize) => {
-    if (fileSize > maxSize) {
-        throw new Error('File size too large. Maximum allowed size is 5MB.');
-    }
-};
-
-const validateFile = async (mimeType, fileSize) => {
-    await Promise.all([
-        validateFileType(ALLOWED_PICTURE_MIME_TYPES, mimeType, INVALID_PICTURE_TYPE_MESSAGE),
-        validateFileSize(MAX_PICTURE_SIZE, fileSize)
-    ]);
-};
-
-// File Upload Logic
-const uploadPicture = async (fileBuffer, mimeType, fileSize) => {
-    await validateFile(mimeType, fileSize);
-    return await uploadFile(fileBuffer); // Assuming uploadFile() uploads and returns a file URL
-};
-
 // Unified User Picture Handling
 const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
     try {
@@ -191,13 +170,13 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
             }
 
             const { buffer, mimetype, size } = req.file;
-
+/*
             try {
                 await validateFile(mimetype, size); // Validate before uploading
             } catch (validationError) {
                 return res.status(400).json({ message: validationError.message });
             }
-
+*/
             const uploadResult = await uploadPicture(buffer, mimetype, size);
             updateData[fieldName] = uploadResult.url;
         }
@@ -212,12 +191,13 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
             message: `${fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} ${isDelete ? 'deleted' : 'updated'} successfully`,
             ...(isDelete ? {} : { [fieldName]: updateData[fieldName] })
         });
-    } catch (error) {
-        console.error(`Error ${isDelete ? 'deleting' : 'uploading'} ${fieldName}:`, error);
-        res.status(500).json({ 
-            message: 'Internal server error', 
-            error: error.message || 'Unexpected failure' 
-        });
+    } catch (err) {
+        if (err instanceof customError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            console.error('Error creating message:', err);
+            res.status(500).json({ message: 'Internal server error', error: err.message });
+        }
     }
 };
 
@@ -406,8 +386,7 @@ const deleteResume = async (req, res) => {
 ***************************************************
 */
 
-// Helper functions
-
+// Helper function
 const validateExperienceData = (data) => {
     if (!data.jobTitle || !data.companyName || !data.fromDate) {
         throw { status: 400, message: 'Job title, company name, and start date are required' };
@@ -423,47 +402,13 @@ const validateExperienceData = (data) => {
             throw { status: 400, message: 'End date is required and must be a valid date if you are not currently working' };
         }
     }
+   
+    if (!data.employmentType || (data.employmentType && !['Full Time', 'Part Time', 'Freelance', 'Self Employed', 'Contract', 'Internship', 'Apprenticeship', 'Seasonal'].includes(data.employmentType))) {
+        throw { status: 400, message: 'Invalid employment type' };
+    }
 };
 
 
-const updateSkillExperienceReferences = (user, experienceIndex, newSkills = [], oldSkills = []) => {
-    // Remove experienceIndex from skills that are no longer associated
-    for (const skillName of oldSkills) {
-      if (!newSkills.includes(skillName)) {
-        const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
-        if (skillIndex !== -1) {
-          user.skills[skillIndex].experience = user.skills[skillIndex].experience.filter(i => i !== experienceIndex);
-          
-          // Remove skill if it's no longer referenced anywhere
-          if (user.skills[skillIndex].experience.length === 0 && user.skills[skillIndex].education.length === 0) {
-            user.skills.splice(skillIndex, 1);
-          }
-        }
-      }
-    }
-  
-    // Add experienceIndex to newly added skills
-    for (const skillName of newSkills) {
-      if (!oldSkills.includes(skillName)) {
-        const skillIndex = user.skills.findIndex(s => s.skillName === skillName);
-        if (skillIndex !== -1) {
-          // If skill exists, add experience index if not already present
-          if (!user.skills[skillIndex].experience.includes(experienceIndex)) {
-            user.skills[skillIndex].experience.push(experienceIndex);
-          }
-        } else {
-          // If skill does not exist, create a new entry
-          user.skills.push({
-            skillName,
-            experience: [experienceIndex],
-            education: [],
-            endorsements: []
-          });
-        }
-      }
-    }
-};
-  
 const addExperience = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -490,7 +435,7 @@ const addExperience = async (req, res) => {
         };
 
         validateExperienceData(experienceData);
-        
+        console.log("Current Working: ", experienceData.currentlyWorking);
         // Handle media upload if a file is provided
         if (req.file) {
             try {
@@ -515,6 +460,7 @@ const addExperience = async (req, res) => {
 
         // Add the new experience to the user's workExperience array
         user.workExperience.push(experienceData);
+        console.log("Experience Added: ", user.workExperience);
         // Sort work experience
         user.workExperience = sortWorkExperience(user.workExperience);
         // Get the index of the newly added experience
@@ -556,6 +502,7 @@ const addExperience = async (req, res) => {
         }
     }
 };
+
 
 const getExperience = async (req, res) => {
     try {
@@ -1494,17 +1441,32 @@ const followEntity = async (req, res) => {
                 message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
             });
         }
+        // Get follower user
+        const followerUser = await userModel.findById(followerId);
+        if (!followerUser) {
+            return res.status(404).json({ message: 'Your user account not found' });
+        }
 
         // If following a user, prevent self-following
         if (entityType === 'User' && followerId === targetId) {
             return res.status(400).json({ message: 'You cannot follow yourself' });
         }
 
-        // Get follower user
-        const followerUser = await userModel.findById(followerId);
-        if (!followerUser) {
-            return res.status(404).json({ message: 'Your user account not found' });
+        // Check if already following
+        const alreadyFollowing = followerUser.following.some(
+            follow => follow.entity.toString() === targetId || follow.entityType === entityType
+        );
+        // If following a user, prevent following again
+        if (entityType === 'User' && followerId === targetId) {
+            return res.status(400).json({ message: 'You already followed the user' });
         }
+
+        if (alreadyFollowing) {
+            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
+        }
+
+
+
 
         // Get target entity
         let targetEntity;
@@ -1525,14 +1487,6 @@ const followEntity = async (req, res) => {
             return res.status(400).json({ message: 'Cannot follow this user' });
         }
 
-        // Check if already following
-        const alreadyFollowing = followerUser.following.some(
-            follow => follow.entity.toString() === targetId && follow.entityType === entityType
-        );
-
-        if (alreadyFollowing) {
-            return res.status(400).json({ message: `You are already following this ${entityType.toLowerCase()}` });
-        }
 
         // Update follower's following list
         followerUser.following.push({
@@ -1825,6 +1779,631 @@ const editAbout = async (req, res) => {
         });
     }
 };
+
+const getUserActivity = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const currentUserId = req.user.id;
+        const { filter = 'all', page = 1, limit = 10 } = req.query;
+        const requesterId = req.user.id;
+        // Validate input
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+        
+        // Validate filter
+        const validFilters = ['all', 'posts', 'reposts', 'comments'];
+        if (!validFilters.includes(filter)) {
+            return res.status(400).json({ 
+                message: 'Invalid filter',
+                validFilters 
+            });
+        }
+        // Check if user blocked the requester
+        // Check if user exists
+        const user = await userModel.findById(userId); 
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const requester = await userModel.findById(requesterId).select('connectionList blockedUsers');
+        if (!requester) {
+            return res.status(404).json({ message: 'Requester not found' });
+        }
+        const accessCheck = await checkUserAccessPermission(user, currentUserId, requester);
+        if (!accessCheck.hasAccess) {
+            return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
+        }
+
+            
+
+        // Parse pagination parameters
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skipIndex = (pageNum - 1) * limitNum;
+        
+        // Arrays to store activity data and post IDs
+        let activities = [];
+        let postIds = new Set();
+        
+        // 1. Get user's posts if needed
+        if (filter === 'all' || filter === 'posts') {
+            const userPosts = await postModel.find({ 
+                userId, 
+                isActive: true 
+            }).select('_id createdAt updatedAt').lean();
+            
+            userPosts.forEach(post => {
+                activities.push({
+                    postId: post._id,
+                    activityType: 'post',
+                    activityDate: post.createdAt,
+                    updatedAt: post.updatedAt
+                });
+                postIds.add(post._id.toString());
+            });
+        }
+        
+        // 2. Get user's reposts if needed
+        if (filter === 'all' || filter === 'reposts') {
+            const userReposts = await repostModel.find({ 
+                userId, 
+                isActive: true 
+            }).select('_id postId description createdAt').lean();
+            
+            userReposts.forEach(repost => {
+                activities.push({
+                    postId: repost.postId,
+                    repostId: repost._id,
+                    repostDescription: repost.description || "",
+                    activityType: 'repost',
+                    activityDate: repost.createdAt
+                });
+                postIds.add(repost.postId.toString());
+            });
+        }
+        
+        // 3. Get user's comments if needed
+        if (filter === 'all' || filter === 'comments') {
+            const userComments = await commentModel.find({ 
+                userId, 
+                isActive: true 
+            }).select('_id postId text createdAt').lean();
+            
+            userComments.forEach(comment => {
+                activities.push({
+                    postId: comment.postId,
+                    commentId: comment._id,
+                    commentText: comment.text,
+                    activityType: 'comment',
+                    activityDate: comment.createdAt
+                });
+                postIds.add(comment.postId.toString());
+            });
+        }
+        
+        // Sort activities by date (newest first)
+        activities.sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate));
+        
+        // Count total activities for pagination
+        const totalActivities = activities.length;
+        
+        // Apply pagination to activities array
+        const paginatedActivities = activities.slice(skipIndex, skipIndex + limitNum);
+        
+        // Get the post IDs for this page
+        const paginatedPostIds = paginatedActivities.map(activity => 
+            new mongoose.Types.ObjectId(activity.postId)
+        );
+        
+        // Fetch all post details for the current page
+        const posts = await postModel.find({ 
+            _id: { $in: paginatedPostIds }, 
+            isActive: true 
+        })
+        .populate('userId', 'firstName lastName headline profilePicture')
+        .lean();
+        
+        // Create a map for quick lookup
+        const postMap = {};
+        posts.forEach(post => {
+            postMap[post._id.toString()] = post;
+        });
+        
+        // Check if current user has saved these posts
+        const currentUser = await userModel.findById(currentUserId).select('savedPosts');
+        const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
+        
+        // Format final response with all details
+        const formattedPosts = paginatedActivities.map(activity => {
+            const post = postMap[activity.postId.toString()];
+            if (!post) return null; // Skip if post no longer exists or is inactive
+            
+            let isRepost = false;
+            let repost = null;
+            
+            // If this is a repost activity by the user we're looking at
+            if (activity.activityType === 'repost') {
+                isRepost = true;
+                repost = {
+                    _id: activity.repostId,
+                    description: activity.repostDescription,
+                    createdAt: activity.activityDate,
+                    userId: {
+                        _id: userId,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        headline: user.headline || "",
+                        profilePicture: user.profilePicture
+                    }
+                };
+            }
+            
+            // Format post response exactly like in getPost function
+            const postResponse = {
+                postId: post._id,
+                userId: post.userId._id,
+                firstName: post.userId.firstName,
+                lastName: post.userId.lastName,
+                headline: post.userId.headline || "",
+                profilePicture: post.userId.profilePicture,
+                postDescription: post.description,
+                attachments: post.attachments,
+                impressionCounts: post.impressionCounts,
+                commentCount: post.commentCount || 0,
+                repostCount: post.repostCount || 0,
+                createdAt: post.createdAt,
+                updatedAt: post.updatedAt || post.createdAt,
+                taggedUsers: post.taggedUsers,
+                whoCanSee: post.whoCanSee || 'anyone', // Include privacy setting
+                whoCanComment: post.whoCanComment || 'anyone', // Include comment setting
+                isRepost,
+                isSaved: savedPostsSet.has(post._id.toString()),
+                activityType: activity.activityType,
+                activityDate: activity.activityDate
+            };
+            
+            // Include repost details if applicable (exactly like in getPost function)
+            if (isRepost && repost) {
+                postResponse.repostId = repost._id;
+                postResponse.reposterId = repost.userId._id;
+                postResponse.reposterFirstName = repost.userId.firstName;
+                postResponse.reposterLastName = repost.userId.lastName;
+                postResponse.reposterProfilePicture = repost.userId.profilePicture;
+                postResponse.reposterHeadline = repost.userId.headline || "";
+                postResponse.repostDescription = repost.description;
+                postResponse.repostDate = repost.createdAt;
+            }
+            
+            // Add comment details if this activity is a comment (similar structure to repost)
+            if (activity.activityType === 'comment') {
+                postResponse.commentId = activity.commentId;
+                postResponse.commentText = activity.commentText;
+                postResponse.commentDate = activity.activityDate;
+                postResponse.commenterId = userId;
+                postResponse.commenterFirstName = user.firstName;
+                postResponse.commenterLastName = user.lastName;
+                postResponse.commenterProfilePicture = user.profilePicture;
+                postResponse.commenterHeadline = user.headline || "";
+            }
+            
+            return postResponse;
+        }).filter(Boolean); // Remove any null entries
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalActivities / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+        
+        // Return response
+        res.status(200).json({
+            posts: formattedPosts,
+            pagination: {
+                total: totalActivities,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error getting user activity:', error);
+        res.status(500).json({
+            message: 'Failed to get user activity',
+            error: error.message
+        });
+    }
+};
+
+
+// Search Controllers
+const searchUsers = async (req, res) => {
+    try {
+        const { query, company, industry, page = 1, limit = 10 } = req.query;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const searchQuery = {};
+        if (query) {
+            searchQuery.$or = [
+                { firstName: { $regex: query, $options: 'i' } },
+                { lastName: { $regex: query, $options: 'i' } }
+            ];
+        }
+        if (company) searchQuery.company = { $regex: company, $options: 'i' };
+        if (industry) searchQuery.industry = { $regex: industry, $options: 'i' };
+
+        const users = await userModel
+            .find(searchQuery)
+            .select('firstName lastName company industry profilePicture')
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await userModel.countDocuments(searchQuery);
+
+        res.status(200).json({
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const searchUsersByName = async (req, res) => {
+    try {
+        const { name, page = 1, limit = 10 } = req.query;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const searchQuery = {
+            $or: [
+                { firstName: { $regex: name, $options: 'i' } },
+                { lastName: { $regex: name, $options: 'i' } }
+            ]
+        };
+
+        const users = await userModel
+            .find(searchQuery)
+            .select('firstName lastName profilePicture')
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await userModel.countDocuments(searchQuery);
+
+        res.status(200).json({
+            users,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Connection Controllers
+const sendConnectionRequest = async (req, res) => {
+    try {
+        const { targetUserId } = req.params;
+        const userId = req.user.id;
+
+        const validationResult = await validateConnectionStatus(userId, targetUserId, userModel);
+        if (!validationResult.isValid) {
+            return res.status(validationResult.statusCode).json({ message: validationResult.message });
+        }
+
+        const { user, targetUser } = validationResult;
+
+        if (!targetUser || !user) {
+            return res.status(404).json({ message: 'User or Target User not found' });
+        }
+
+        // Check if request already pending
+        const [userWithSentRequest, targetUserWithReceivedRequest] = await Promise.all([
+            userModel.exists({ _id: userId, sentConnectionRequests: targetUserId }),
+            userModel.exists({ _id: targetUserId, receivedConnectionRequests: userId })
+        ]);
+
+        if (userWithSentRequest  && targetUserWithReceivedRequest) {
+            return res.status(400).json({ message: 'Connection request already sent' });
+        }
+
+        // Update both users in parallel
+        await Promise.all([
+            userModel.findByIdAndUpdate(targetUserId, {
+                $addToSet: { receivedConnectionRequests: userId }
+            }),
+            userModel.findByIdAndUpdate(userId, {
+                $addToSet: { sentConnectionRequests: targetUserId }
+            })
+        ]);
+
+        res.status(200).json({ message: 'Connection request sent successfully' });
+    } catch (error) {
+        console.error('Error sending connection request:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+const getPendingRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'receivedConnectionRequests',
+                select: 'firstName lastName profilePicture' // Populate fields you want to return
+            })
+            .select('receivedConnectionRequests');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            pendingRequests: user.receivedConnectionRequests,
+        });
+    } catch (error) {
+        console.error('Error getting pending requests:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const handleConnectionRequest = async (req, res) => {
+    try {
+        const { senderId } = req.params;
+        const { action } = req.body;
+        const userId = req.user.id;
+
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        const user = await userModel.findById(userId);
+        if (!user || !user.receivedConnectionRequests.includes(senderId)) {
+            return res.status(404).json({ message: 'Connection request not found' });
+        }
+
+        // Remove the senderId from receivedConnectionRequests regardless of accept or decline
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { receivedConnectionRequests: senderId }
+        });
+        // await userModel.findByIdAndUpdate(userId, {
+        //     $pull: { sentConnectionRequests: senderId }
+        // });
+
+        // Remove the userId from sentConnectionRequests of the sender regardless of accept or decline
+        // await userModel.findByIdAndUpdate(senderId, {
+        //     $pull: { receivedConnectionRequests: userId }
+        // });
+        await userModel.findByIdAndUpdate(senderId, {
+            $pull: { sentConnectionRequests: userId }
+        });
+
+        if (action === 'accept') {
+            await Promise.all([
+                userModel.findByIdAndUpdate(userId, {
+                    $addToSet: { connectionList: senderId }
+                }),
+                userModel.findByIdAndUpdate(senderId, {
+                    $addToSet: { connectionList: userId }
+                })
+            ]);
+        }
+
+        res.status(200).json({
+            message: `Connection request ${action}ed successfully`
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
+const getConnections = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'connectionList',
+                select: 'firstName lastName profilePicture company position',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.connectionList.length;
+
+        res.status(200).json({
+            connections: user.connectionList,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
+const removeConnection = async (req, res) => {
+    try {
+        const { connectionId } = req.params;
+        const userId = req.user.id;
+
+        await Promise.all([
+            userModel.findByIdAndUpdate(userId, {
+                $pull: { connectionList: connectionId }
+            }),
+            userModel.findByIdAndUpdate(connectionId, {
+                $pull: { connectionList: userId }
+            })
+        ]);
+
+        res.status(200).json({ message: 'Connection removed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Blocking Controllers
+const blockUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const blockerId = req.user.id;
+
+        await Promise.all([
+            // Remove from connections if connected
+            userModel.findByIdAndUpdate(blockerId, {
+                $pull: { connectionList: userId },
+                $addToSet: { blockedUsers: userId }
+            }),
+            userModel.findByIdAndUpdate(userId, {
+                $pull: { connectionList: blockerId }
+            })
+        ]);
+
+        res.status(200).json({ message: 'User blocked successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const unblockUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const blockerId = req.user.id;
+
+        await userModel.findByIdAndUpdate(blockerId, {
+            $pull: { blockedUsers: userId }
+        });
+
+        res.status(200).json({ message: 'User unblocked successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getBlockedUsers = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'blockedUsers',
+                select: 'firstName lastName profilePicture',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.blockedUsers.length;
+
+        res.status(200).json({
+            blockedUsers: user.blockedUsers,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Message Request Controllers
+const sendMessageRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const userId = req.user.id;
+
+        const validationResult = await validateConnectionStatus(userId, requestId, userModel);
+        if (!validationResult.isValid) {
+            return res.status(validationResult.statusCode).json({ message: validationResult.message });
+        }
+
+        await userModel.findByIdAndUpdate(requestId, {
+            $addToSet: { messageRequests: userId }
+        });
+
+        res.status(200).json({ message: 'Message request sent successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getMessageRequests = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
+
+        const user = await userModel
+            .findById(userId)
+            .populate({
+                path: 'messageRequests',
+                select: 'firstName lastName profilePicture',
+                options: { skip, limit: limitNum }
+            });
+
+        const total = user.messageRequests.length;
+
+        res.status(200).json({
+            messageRequests: user.messageRequests,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const handleMessageRequest = async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const { action } = req.body;
+        const userId = req.user.id;
+
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ message: 'Invalid action' });
+        }
+
+        await userModel.findByIdAndUpdate(userId, {
+            $pull: { messageRequests: requestId }
+        });
+
+        if (action === 'accept') {
+            // Add logic here for enabling messaging between users
+            // This might involve updating a separate messages collection or permissions
+        }
+
+        res.status(200).json({
+            message: `Message request ${action}ed successfully`
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
 module.exports = {
     getAllUsers,
     getMe,
@@ -1862,5 +2441,19 @@ module.exports = {
     unfollowEntity,
     editContactInfo,
     editAbout,
-    uploadPicture
+    uploadPicture,
+    getUserActivity,
+    searchUsers,
+    searchUsersByName,
+    sendConnectionRequest,
+    handleConnectionRequest,
+    getConnections,
+    getPendingRequests,
+    removeConnection,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
+    sendMessageRequest,
+    getMessageRequests,
+    handleMessageRequest
 };
