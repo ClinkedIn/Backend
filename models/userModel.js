@@ -222,11 +222,10 @@ const userSchema = new mongoose.Schema(
     defaultMode: { type: String, enum: ["light", "dark"], default: "light" },
     googleId: { type: String, default: null },
     fcmToken: { type: [String], default: [] },
-    emailVerificationToken: { type: String, default: null },
-    emailVerificationExpiresAt: { type: Date },
-    passwordResetToken: { type: String, default: null },
-    passwordResetExpiresAt: { type: Date },
-
+    emailVerificationOTP: { type: String, default: undefined },
+    emailVerificationOTPExpiresAt: { type: Date, default: undefined },
+    passwordResetOTP: { type: String, default: undefined },
+    passwordResetOTPExpiresAt: { type: Date, default: undefined },
     isActive: { type: Boolean, default: true },
     notificationPauseExpiresAt: { type: Date, default: null },
   },
@@ -254,15 +253,25 @@ userSchema.methods.correctPassword = async function (
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-userSchema.methods.createPasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString("hex");
-  this.passwordResetToken = crypto
+userSchema.methods.createPasswordResetOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.passwordResetOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+  this.passwordResetOTPExpiresAt = Date.now() + 10 * 60 * 1000;
+
+  return otp;
+};
+
+userSchema.methods.createEmailVerificationOTP = function () {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.emailVerificationOTP = crypto
     .createHash("sha256")
-    .update(resetToken)
+    .update(otp)
     .digest("hex");
 
-  this.passwordResetExpiresAt = Date.now() + 10 * 60 * 1000;
-  return resetToken;
+  this.emailVerificationOTPExpiresAt = Date.now() + 10 * 60 * 1000;
+
+  return otp;
 };
 
 module.exports = mongoose.model("User", userSchema);

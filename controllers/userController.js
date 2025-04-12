@@ -11,7 +11,7 @@ const {
 } = require("../utils/validateEmailPassword");
 const { verifyCaptcha } = require("../utils/verifyCaptcha");
 const { generateTokens } = require("./../middlewares/auth");
-
+const jwt = require("jsonwebtoken");
 const createSendToken = (user, statusCode, res, responseMessage) => {
   generateTokens(user, res);
 
@@ -97,7 +97,10 @@ const registerUser = async (req, res) => {
     // remove get confirm-email end point and directly send from here ✅
 
     try {
-      await sendEmailConfirmation(newUser.id, req);
+      const otp = newUser.createEmailVerificationOTP();
+      console.log("otp", otp);
+      await sendEmailConfirmation(otp, newUser.email);
+      await newUser.save({ validateBeforeSave: false });
     } catch (err) {
       console.log("Mail sending failed", err);
     }
@@ -123,10 +126,10 @@ const resendConfirmationEmail = async (req, res) => {
     if (user.isConfirmed) {
       return res.status(400).json({ message: "User is already confirmed!!" });
     }
-    const isSent = await sendEmailConfirmation(user.id, req);
-    if (!isSent) {
-      return res.status(500).json({ message: "Internal server error" });
-    }
+    const otp = user.createEmailVerificationOTP();
+    await user.save({ validateBeforeSave: false });
+    await sendEmailConfirmation(otp, user.email);
+
     res.status(200).json({
       success: true,
       message:
@@ -143,30 +146,30 @@ const resendConfirmationEmail = async (req, res) => {
 
 const confirmEmail = async (req, res) => {
   try {
-    const { emailVerificationToken } = req.params;
-    if (!emailVerificationToken) {
+    const { otp } = req.body;
+    if (!otp) {
       return res.status(400).json({
         success: false,
-        message: "Verification Token is required",
+        message: "OTP is required",
       });
     }
-
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
     const verificationDate = new Date(Date.now());
     const user = await userModel.findOne({
       isActive: true,
-      emailVerificationToken: emailVerificationToken,
-      emailVerificationExpiresAt: { $gt: verificationDate },
+      emailVerificationOTP: hashedOTP,
+      emailVerificationOTPExpiresAt: { $gt: verificationDate },
     });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired token",
+        message: "Invalid or expired OTP",
       });
     }
     user.isConfirmed = true;
-    user.emailVerificationToken = null;
-    user.emailVerificationExpiresAt = null;
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationOTPExpiresAt = undefined;
     await user.save();
 
     return res.status(200).json({
@@ -369,13 +372,10 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    const resetToken = user.createPasswordResetToken();
+    const otp = user.createPasswordResetOTP();
     await user.save({ validateBeforeSave: false });
 
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/user/reset-password/${resetToken} `;
-    const emailSent = await sendForgotPasswordEmail(resetURL, user.email);
+    const emailSent = await sendForgotPasswordEmail(otp, user.email);
     console.log("email sent", emailSent);
     if (emailSent.success) {
       return res.status(200).json({
@@ -395,22 +395,68 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+const verifyResetPasswordOTP = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    if (!otp) {
+      return res.status(400).json({
+        message: "Please fill all required fields",
+      });
+    }
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+    const user = await userModel.findOne({
+      isActive: true,
+      passwordResetOTP: hashedOTP,
+      passwordResetOTPExpiresAt: { $gt: Date.now() },
+    });
+    if (!user) {
+      return res.status(400).json({
+        message: "OTP is invalid or has expired",
+      });
+    }
+    // if token is not expired
+    // Generate a short-lived token to verify identity for password reset
+    const resetToken = jwt.sign(
+      { id: user._id },
+      process.env.RESET_PASSWORD_OTP_SECRET, // use a different secret if you'd like
+      { expiresIn: "15m" } // token expires in 15 minutes
+    );
+
+    return res.status(200).json({
+      message: "OTP verified successfully",
+      resetToken, // send to client, client sends it back during actual password reset
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
 const resetPassword = async (req, res) => {
   try {
     //get user based on the token
-    const token = req.params.token;
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await userModel.findOne({
-      isActive: true,
-      passwordResetToken: hashedToken,
-      passwordResetExpiresAt: { $gt: Date.now() },
-    });
-    // if token is not expired
-    if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Token is invalid or has expired" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+    const resetToken = authHeader.split("Bearer ")[1];
+    if (!resetToken) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const decoded = await jwt.verify(
+      resetToken,
+      process.env.RESET_PASSWORD_OTP_SECRET
+    );
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await userModel.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    // if token is not expired
     const { password } = req.body;
     if (!password) {
       return res.status(400).json({ message: "Password is required" });
@@ -424,9 +470,9 @@ const resetPassword = async (req, res) => {
     }
 
     user.password = req.body.password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpiresAt = undefined;
-    await user.save();
+    user.passwordResetOTP = undefined;
+    user.passwordResetOTPExpiresAt = undefined;
+    await user.save({ validateBeforeSave: false });
 
     createSendToken(user, 200, res, "Password reseted successfully");
   } catch (error) {
@@ -578,6 +624,7 @@ module.exports = {
   confirmEmail,
   login,
   forgotPassword,
+  verifyResetPasswordOTP,
   resetPassword,
   updatePassword,
   deleteUser,
