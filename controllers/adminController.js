@@ -11,7 +11,7 @@ exports.getAllReports = async (req, res) => {
         let reports = await Report.find()
             .populate({
                 path: 'userId',
-                select: 'firstName lastName email'
+                select: 'firstName lastName email profilePicture'
             });
 
         // Process each report to add reportedUser or reportedPost
