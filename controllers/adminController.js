@@ -11,7 +11,7 @@ exports.getAllReports = async (req, res) => {
         let reports = await Report.find()
             .populate({
                 path: 'userId',
-                select: 'firstName lastName email'
+                select: 'firstName lastName profilePicture email'
             });
 
         // Process each report to add reportedUser or reportedPost
@@ -24,7 +24,12 @@ exports.getAllReports = async (req, res) => {
                     report: report
                 };
             } else if (report.reportedType === 'Post') {
-                const reportedPost = await Post.findById(report.reportedId, 'attachments description');
+                const reportedPost = await Post.findById(report.reportedId, 'userId attachments description')
+                    .populate({
+                        path: 'userId',
+                    select: 'firstName lastName profilePicture email',
+                    
+                });
                 upreport = {
                     reportedPost: reportedPost,
                     report: report
@@ -66,6 +71,11 @@ exports.getReport = async (req, res) => {
             
         } else if (report.reportedType === 'Post') {
             const reportedPost = await Post.findById(report.reportedId, 'attachments description')
+                .populate({
+                path: 'userId',
+                select: 'firstName lastName profilePicture email',
+
+            });
              upreport = {
                  reportedPost: reportedPost,
                  report: report
@@ -78,7 +88,7 @@ exports.getReport = async (req, res) => {
             status: 'fail',
             message: 'Report not found'
         });
-    }
+    } 
 
     res.status(200).json({
         status: 'success',
