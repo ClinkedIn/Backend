@@ -15,7 +15,7 @@ router
 
 router.route("/confirm-email").get(protect, userController.confirmEmail);
 router.route("/login").post(userController.login);
-router.route("/logout").post(userController.logout);
+router.route("/logout").post(protect, userController.logout);
 router.route("/forgot-password").post(userController.forgotPassword);
 router.patch("/reset-password", userController.resetPassword);
 
