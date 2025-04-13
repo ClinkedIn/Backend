@@ -11,20 +11,20 @@ exports.getAllReports = async (req, res) => {
         let reports = await Report.find()
             .populate({
                 path: 'userId',
-                select: 'firstName lastName email'
+                select: 'firstName lastName email profilePicture'
             });
 
         // Process each report to add reportedUser or reportedPost
         const processedReports = await Promise.all(reports.map(async report => {
             let upreport = {};
             if (report.reportedType === 'User') {
-                const reportedUser = await User.findById(report.reportedId, 'firstName lastName email');
+                const reportedUser = await User.findById(report.reportedId, 'firstName lastName email profilePicture');
                 upreport = {
                     reportedUser: reportedUser,
                     report: report
                 };
             } else if (report.reportedType === 'Post') {
-                const reportedPost = await Post.findById(report.reportedId, 'attachments description');
+                const reportedPost = await Post.findById(report.reportedId).populate('userId', 'firstName lastName email profilePicture');
                 upreport = {
                     reportedPost: reportedPost,
                     report: report
