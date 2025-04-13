@@ -4750,21 +4750,21 @@
  *                       type: string
  *                       description: Question type
  *                       enum: [
- *                         "Background Check", 
- *                         "Driver's License", 
- *                         "Drug Test", 
+ *                         "Background Check",
+ *                         "Driver's License",
+ *                         "Drug Test",
  *                         "Education",
- *                         "Expertise with Skill", 
- *                         "Hybrid Work", 
- *                         "Industry Experience", 
+ *                         "Expertise with Skill",
+ *                         "Hybrid Work",
+ *                         "Industry Experience",
  *                         "Language",
- *                         "Location", 
- *                         "Onsite Work", 
- *                         "Remote Work", 
+ *                         "Location",
+ *                         "Onsite Work",
+ *                         "Remote Work",
  *                         "Urgent Hiring Need",
- *                         "Visa Status", 
- *                         "Work Authorization", 
- *                         "Work Experience", 
+ *                         "Visa Status",
+ *                         "Work Authorization",
+ *                         "Work Experience",
  *                         "Custom Question"
  *                       ]
  *                       example: "Work Experience"
@@ -5878,7 +5878,7 @@
 /**
  * @swagger
  * /user/logout:
- *    get:
+ *    post:
  *     summary: Logout user
  *     tags: [Users]
  *     description: Logout a user
