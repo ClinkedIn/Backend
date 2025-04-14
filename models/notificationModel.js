@@ -23,6 +23,10 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: undefined,
     }, // ID of the related comment (if applicable)
+    relatedChatId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: undefined,
+    }, // ID of the related chat (if applicable)
     isRead: { type: Boolean, default: false }, // Mark as read/unread
     isDeleted: { type: Boolean, default: false }, // Mark as deleted
   },

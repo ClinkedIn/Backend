@@ -131,8 +131,9 @@ const buildNotificationData = async (
     }
   } else if (subject === "comment") {
     baseData.relatedPostId = resource.postId;
+  } else if (subject === "message") {
+    baseData.relatedChatId = resource.chatId.toHexString();
   }
-
   return baseData;
 };
 
