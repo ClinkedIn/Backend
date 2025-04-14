@@ -21,7 +21,7 @@ router.patch("/reset-password", userController.resetPassword);
 
 router
   .route("/verify-reset-password-otp")
-  .get(userController.verifyResetPasswordOTP);
+  .post(userController.verifyResetPasswordOTP);
 
 router.post("/auth/google", userController.googleLogin);
 router.patch("/update-password", protect, userController.updatePassword);

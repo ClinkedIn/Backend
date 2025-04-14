@@ -219,7 +219,7 @@ const googleLogin = async (req, res) => {
         googleId: googleUid,
         fcmToken: fcmTokens,
       });
-      return createSendToken(newUser, 201, res, "Account created sucessfully");
+      return createSendToken(newUser, 201, res, "Account created successfully");
     }
 
     if (user.googleId === null) {
