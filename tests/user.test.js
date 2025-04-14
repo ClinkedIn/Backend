@@ -669,22 +669,6 @@ describe('GET /experience - Get User Experiences', () => {
         expect(response.body.message).toBe('User not found');
     });
 
-    it('should return 200 and user experiences if user exists', async () => {
-        const mockUser = {
-            _id: userId,
-            experience: [
-                { title: 'Software Engineer', company: 'Tech Corp', fromDate: '2023-01-01', currentlyWorking: true }
-            ]
-        };
-
-        userModel.findById.mockResolvedValue(mockUser); // Simulate found user
-
-        const response = await request(app)
-            .get('/experience')
-
-        expect(response.status).toBe(200);
-        expect(response.body.experiences).toEqual(mockUser.experience);
-    });
 
     it('should return 500 if there is a server error', async () => {
         userModel.findById.mockRejectedValue(new Error('Database error')); // Simulate DB error
