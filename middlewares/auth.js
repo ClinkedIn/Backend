@@ -15,7 +15,7 @@ const generateTokens = (userInfo, res) => {
       headline: userInfo.headline,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "10s" }
+    { expiresIn: "10m" }
   );
 
   // Generate Refresh Token (long-lived)
@@ -29,7 +29,7 @@ const generateTokens = (userInfo, res) => {
       headline: userInfo.headline,
     },
     process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: "10m" }
+    { expiresIn: "120m" }
   );
 
   // Store tokens in HTTP-only cookies
@@ -106,11 +106,15 @@ const checkAdmin = async (req, res, next) => {
   const currentUser = await userModel.findById(req.user.id);
 
   if (!currentUser) {
-    return res.status(401).json({ message: "Unauthorized, the user no longer exists" });
+    return res
+      .status(401)
+      .json({ message: "Unauthorized, the user no longer exists" });
   }
 
   if (!currentUser.isSuperAdmin) {
-    return res.status(403).json({ message: "Unauthorized, Admin access required" });
+    return res
+      .status(403)
+      .json({ message: "Unauthorized, Admin access required" });
   }
   next();
 };
@@ -143,5 +147,5 @@ module.exports = {
   verifyGoogleToken,
   mockVerifyToken,
   protect,
-  checkAdmin
+  checkAdmin,
 };
