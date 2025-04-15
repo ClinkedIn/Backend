@@ -1,4 +1,12 @@
-const { getAllReports, getReport, handleReport, deleteReport, getFlaggedJobs, removeJob, getAnalyticsOverview } = require('../controllers/adminController');
+const {
+    getAllReports,
+    getReport,
+    handleReport,
+    deleteReport,
+    getFlaggedJobs,
+    removeJob,
+    getAnalyticsOverview,
+} = require('../controllers/adminController');
 const Report = require('../models/reportModel');
 const User = require('../models/userModel');
 const Post = require('../models/postModel');
@@ -22,7 +30,7 @@ describe('AdminController - getAllReports', () => {
         mockReq = {};
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -34,11 +42,12 @@ describe('AdminController - getAllReports', () => {
                     _id: new mongoose.Types.ObjectId(),
                     firstName: 'John',
                     lastName: 'Doe',
-                    email: 'john@example.com'
+                    email: 'john@example.com',
+                    profilePicture: 'profile1.jpg',
                 },
                 reportedId: new mongoose.Types.ObjectId(),
                 reportedType: 'User',
-                status: 'pending'
+                status: 'pending',
             },
             {
                 _id: new mongoose.Types.ObjectId(),
@@ -46,39 +55,81 @@ describe('AdminController - getAllReports', () => {
                     _id: new mongoose.Types.ObjectId(),
                     firstName: 'Jane',
                     lastName: 'Doe',
-                    email: 'jane@example.com'
+                    email: 'jane@example.com',
+                    profilePicture: 'profile2.jpg',
                 },
                 reportedId: new mongoose.Types.ObjectId(),
                 reportedType: 'Post',
-                status: 'pending'
-            }
+                status: 'pending',
+            },
         ];
 
         const mockUser = {
             _id: mockReports[0].reportedId,
             firstName: 'Reported',
             lastName: 'User',
-            email: 'reported@example.com'
+            email: 'reported@example.com',
+            profilePicture: 'reported_profile.jpg',
         };
 
         const mockPost = {
             _id: mockReports[1].reportedId,
             description: 'Test post',
-            attachments: ['image1.jpg']
+            attachments: ['image1.jpg'],
+            userId: {
+                firstName: 'Post',
+                lastName: 'Author',
+                email: 'author@example.com',
+                profilePicture: 'author_profile.jpg',
+            },
         };
 
+        // Create the expected processed reports
+        const expectedProcessedReports = [
+            {
+                reportedUser: mockUser,
+                report: mockReports[0],
+            },
+            {
+                reportedPost: mockPost,
+                report: mockReports[1],
+            },
+        ];
+
         // Setup mock implementations
-        Report.find = jest.fn().mockReturnThis();
-        Report.populate = jest.fn().mockResolvedValue(mockReports);
-        User.findById = jest.fn().mockResolvedValue(mockUser);
-        Post.findById = jest.fn().mockResolvedValue(mockPost);
+        Report.find = jest.fn().mockReturnValue({
+            populate: jest.fn().mockResolvedValue(mockReports),
+        });
+
+        // Setup User.findById mock
+        User.findById = jest.fn().mockImplementation((id, fields) => {
+            if (id.toString() === mockReports[0].reportedId.toString()) {
+                return Promise.resolve(mockUser);
+            }
+            return Promise.resolve(null);
+        });
+
+        // Setup Post.findById mock with populate chaining
+        Post.findById = jest.fn().mockImplementation(() => {
+            return {
+                populate: jest.fn().mockResolvedValue(mockPost),
+            };
+        });
 
         await getAllReports(mockReq, mockRes);
 
+        // Verify correct methods were called
+        expect(Report.find).toHaveBeenCalled();
+        expect(User.findById).toHaveBeenCalledWith(
+            mockReports[0].reportedId,
+            'firstName lastName email profilePicture'
+        );
+
+        // Verify the response
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            data: expect.any(Array)
+            data: expectedProcessedReports,
         });
     });
 
@@ -91,7 +142,7 @@ describe('AdminController - getAllReports', () => {
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            data: []
+            data: [],
         });
     });
 
@@ -105,23 +156,25 @@ describe('AdminController - getAllReports', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: 'Database error'
+            message: 'Database error',
         });
     });
 
     test('should handle case when reported entity is not found', async () => {
-        const mockReports = [{
-            _id: new mongoose.Types.ObjectId(),
-            userId: {
+        const mockReports = [
+            {
                 _id: new mongoose.Types.ObjectId(),
-                firstName: 'John',
-                lastName: 'Doe',
-                email: 'john@example.com'
+                userId: {
+                    _id: new mongoose.Types.ObjectId(),
+                    firstName: 'John',
+                    lastName: 'Doe',
+                    email: 'john@example.com',
+                },
+                reportedId: new mongoose.Types.ObjectId(),
+                reportedType: 'User',
+                status: 'pending',
             },
-            reportedId: new mongoose.Types.ObjectId(),
-            reportedType: 'User',
-            status: 'pending'
-        }];
+        ];
 
         Report.find = jest.fn().mockReturnThis();
         Report.populate = jest.fn().mockResolvedValue(mockReports);
@@ -134,13 +187,12 @@ describe('AdminController - getAllReports', () => {
             status: 'success',
             data: expect.arrayContaining([
                 expect.objectContaining({
-                    reportedUser: null
-                })
-            ])
+                    reportedUser: null,
+                }),
+            ]),
         });
     });
 });
-
 
 describe('AdminController - getReport', () => {
     let mockReq;
@@ -150,12 +202,12 @@ describe('AdminController - getReport', () => {
         jest.clearAllMocks();
         mockReq = {
             params: {
-                reportId: new mongoose.Types.ObjectId().toString()
-            }
+                reportId: new mongoose.Types.ObjectId().toString(),
+            },
         };
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -166,19 +218,19 @@ describe('AdminController - getReport', () => {
                 _id: new mongoose.Types.ObjectId(),
                 firstName: 'John',
                 lastName: 'Doe',
-                email: 'john@example.com'
+                email: 'john@example.com',
             },
             reportedId: new mongoose.Types.ObjectId(),
             reportedType: 'User',
             status: 'pending',
-            policy: 'Harassment'
+            policy: 'Harassment',
         };
 
         const mockReportedUser = {
             _id: mockReport.reportedId,
             firstName: 'Reported',
             lastName: 'User',
-            email: 'reported@example.com'
+            email: 'reported@example.com',
         };
 
         Report.findOne = jest.fn().mockReturnThis();
@@ -197,20 +249,20 @@ describe('AdminController - getReport', () => {
                         _id: mockReport.userId._id,
                         firstName: 'John',
                         lastName: 'Doe',
-                        email: 'john@example.com'
+                        email: 'john@example.com',
                     },
                     reportedId: mockReport.reportedId,
                     reportedType: 'User',
                     status: 'pending',
-                    policy: 'Harassment'
+                    policy: 'Harassment',
                 },
                 reportedUser: {
                     _id: mockReportedUser._id,
                     firstName: 'Reported',
                     lastName: 'User',
-                    email: 'reported@example.com'
-                }
-            }
+                    email: 'reported@example.com',
+                },
+            },
         });
     });
 
@@ -221,18 +273,18 @@ describe('AdminController - getReport', () => {
                 _id: new mongoose.Types.ObjectId(),
                 firstName: 'John',
                 lastName: 'Doe',
-                email: 'john@example.com'
+                email: 'john@example.com',
             },
             reportedId: new mongoose.Types.ObjectId(),
             reportedType: 'Post',
             status: 'pending',
-            policy: 'Spam'
+            policy: 'Spam',
         };
 
         const mockReportedPost = {
             _id: mockReport.reportedId,
             description: 'Test post content',
-            attachments: ['image.jpg']
+            attachments: ['image.jpg'],
         };
 
         Report.findOne = jest.fn().mockReturnThis();
@@ -251,19 +303,19 @@ describe('AdminController - getReport', () => {
                         _id: mockReport.userId._id,
                         firstName: 'John',
                         lastName: 'Doe',
-                        email: 'john@example.com'
+                        email: 'john@example.com',
                     },
                     reportedId: mockReport.reportedId,
                     reportedType: 'Post',
                     status: 'pending',
-                    policy: 'Spam'
+                    policy: 'Spam',
                 },
                 reportedPost: {
                     _id: mockReportedPost._id,
                     description: 'Test post content',
-                    attachments: ['image.jpg']
-                }
-            }
+                    attachments: ['image.jpg'],
+                },
+            },
         });
     });
 
@@ -278,7 +330,7 @@ describe('AdminController - getReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: "Cannot read properties of null (reading 'reportedType')"
+            message: "Cannot read properties of null (reading 'reportedType')",
         });
     });
 
@@ -293,7 +345,7 @@ describe('AdminController - getReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: error.message
+            message: error.message,
         });
     });
 
@@ -304,11 +356,11 @@ describe('AdminController - getReport', () => {
                 _id: new mongoose.Types.ObjectId(),
                 firstName: 'John',
                 lastName: 'Doe',
-                email: 'john@example.com'
+                email: 'john@example.com',
             },
             reportedId: new mongoose.Types.ObjectId(),
             reportedType: 'User',
-            status: 'pending'
+            status: 'pending',
         };
 
         Report.findOne = jest.fn().mockReturnThis();
@@ -321,8 +373,8 @@ describe('AdminController - getReport', () => {
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
             data: expect.objectContaining({
-                reportedUser: null
-            })
+                reportedUser: null,
+            }),
         });
     });
 });
@@ -334,16 +386,16 @@ describe('AdminController - handleReport', () => {
         jest.clearAllMocks();
         mockReq = {
             params: {
-                reportId: new mongoose.Types.ObjectId().toString()
+                reportId: new mongoose.Types.ObjectId().toString(),
             },
             body: {
                 action: 'resolved',
-                reason: 'Violation confirmed and handled'
-            }
+                reason: 'Violation confirmed and handled',
+            },
         };
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -353,7 +405,7 @@ describe('AdminController - handleReport', () => {
             _id: mockReq.params.reportId,
             status: 'pending',
             moderationReason: null,
-            moderatedAt: null
+            moderatedAt: null,
         };
 
         // Add save method to the mock report object
@@ -367,18 +419,19 @@ describe('AdminController - handleReport', () => {
             userId: {
                 firstName: 'John',
                 lastName: 'Doe',
-                email: 'john@example.com'
-            }
+                email: 'john@example.com',
+            },
         };
 
         // Setup mock implementation for Report.findById
-        Report.findById = jest.fn()
+        Report.findById = jest
+            .fn()
             .mockResolvedValueOnce({
                 ...mockInitialReport,
-                save: mockInitialReport.save
+                save: mockInitialReport.save,
             })
             .mockReturnValueOnce({
-                populate: jest.fn().mockResolvedValue(mockPopulatedReport)
+                populate: jest.fn().mockResolvedValue(mockPopulatedReport),
             });
 
         await handleReport(mockReq, mockRes);
@@ -393,7 +446,7 @@ describe('AdminController - handleReport', () => {
         // expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            data: mockPopulatedReport
+            data: mockPopulatedReport,
         });
     });
 
@@ -405,7 +458,7 @@ describe('AdminController - handleReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(404);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'fail',
-            message: 'Report not found'
+            message: 'Report not found',
         });
     });
 
@@ -418,7 +471,7 @@ describe('AdminController - handleReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: dbError.message
+            message: dbError.message,
         });
     });
 
@@ -427,7 +480,7 @@ describe('AdminController - handleReport', () => {
         const mockReport = {
             _id: mockReq.params.reportId,
             status: 'pending',
-            save: jest.fn().mockRejectedValue(saveError)
+            save: jest.fn().mockRejectedValue(saveError),
         };
 
         Report.findById = jest.fn().mockResolvedValue(mockReport);
@@ -437,7 +490,7 @@ describe('AdminController - handleReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: saveError.message
+            message: saveError.message,
         });
     });
 });
@@ -449,12 +502,12 @@ describe('AdminController - deleteReport', () => {
         jest.clearAllMocks();
         mockReq = {
             params: {
-                reportId: new mongoose.Types.ObjectId().toString()
-            }
+                reportId: new mongoose.Types.ObjectId().toString(),
+            },
         };
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -465,7 +518,7 @@ describe('AdminController - deleteReport', () => {
             userId: new mongoose.Types.ObjectId(),
             reportedId: new mongoose.Types.ObjectId(),
             reportedType: 'Post',
-            policy: 'Spam'
+            policy: 'Spam',
         };
 
         // Setup mock implementations
@@ -476,11 +529,13 @@ describe('AdminController - deleteReport', () => {
 
         // Verify the response
         expect(Report.findById).toHaveBeenCalledWith(mockReq.params.reportId);
-        expect(Report.findByIdAndDelete).toHaveBeenCalledWith(mockReq.params.reportId);
+        expect(Report.findByIdAndDelete).toHaveBeenCalledWith(
+            mockReq.params.reportId
+        );
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            message: 'Report deleted successfully'
+            message: 'Report deleted successfully',
         });
     });
 
@@ -496,7 +551,7 @@ describe('AdminController - deleteReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(404);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'fail',
-            message: 'Report not found'
+            message: 'Report not found',
         });
     });
 
@@ -512,7 +567,7 @@ describe('AdminController - deleteReport', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: error.message
+            message: error.message,
         });
     });
 
@@ -523,20 +578,24 @@ describe('AdminController - deleteReport', () => {
             userId: new mongoose.Types.ObjectId(),
             reportedId: new mongoose.Types.ObjectId(),
             reportedType: 'Post',
-            policy: 'Spam'
+            policy: 'Spam',
         };
 
         Report.findById = jest.fn().mockResolvedValue(mockReport);
-        Report.findByIdAndDelete = jest.fn().mockRejectedValue(new Error('Deletion failed'));
+        Report.findByIdAndDelete = jest
+            .fn()
+            .mockRejectedValue(new Error('Deletion failed'));
 
         await deleteReport(mockReq, mockRes);
 
         expect(Report.findById).toHaveBeenCalledWith(mockReq.params.reportId);
-        expect(Report.findByIdAndDelete).toHaveBeenCalledWith(mockReq.params.reportId);
+        expect(Report.findByIdAndDelete).toHaveBeenCalledWith(
+            mockReq.params.reportId
+        );
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: 'Deletion failed'
+            message: 'Deletion failed',
         });
     });
 });
@@ -550,7 +609,7 @@ describe('AdminController - getFlaggedJobs', () => {
         mockReq = {};
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -562,8 +621,8 @@ describe('AdminController - getFlaggedJobs', () => {
                 isFlagged: true,
                 companyId: {
                     _id: new mongoose.Types.ObjectId(),
-                    name: 'Tech Corp'
-                }
+                    name: 'Tech Corp',
+                },
             },
             {
                 _id: new mongoose.Types.ObjectId(),
@@ -571,9 +630,9 @@ describe('AdminController - getFlaggedJobs', () => {
                 isFlagged: true,
                 companyId: {
                     _id: new mongoose.Types.ObjectId(),
-                    name: 'Digital Solutions'
-                }
-            }
+                    name: 'Digital Solutions',
+                },
+            },
         ];
 
         // Setup mock implementation
@@ -587,7 +646,7 @@ describe('AdminController - getFlaggedJobs', () => {
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            data: mockFlaggedJobs
+            data: mockFlaggedJobs,
         });
     });
 
@@ -602,7 +661,7 @@ describe('AdminController - getFlaggedJobs', () => {
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            data: []
+            data: [],
         });
     });
 
@@ -617,7 +676,7 @@ describe('AdminController - getFlaggedJobs', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: 'Database connection failed'
+            message: 'Database connection failed',
         });
     });
 });
@@ -629,12 +688,12 @@ describe('AdminController - removeJob', () => {
         jest.clearAllMocks();
         mockReq = {
             params: {
-                jobId: new mongoose.Types.ObjectId().toString()
-            }
+                jobId: new mongoose.Types.ObjectId().toString(),
+            },
         };
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
@@ -643,7 +702,7 @@ describe('AdminController - removeJob', () => {
             _id: mockReq.params.jobId,
             title: 'Software Engineer',
             companyId: new mongoose.Types.ObjectId(),
-            description: 'Test job description'
+            description: 'Test job description',
         };
 
         Job.findById = jest.fn().mockResolvedValue(mockJob);
@@ -652,11 +711,13 @@ describe('AdminController - removeJob', () => {
         await removeJob(mockReq, mockRes);
 
         expect(Job.findById).toHaveBeenCalledWith(mockReq.params.jobId);
-        expect(Job.findByIdAndDelete).toHaveBeenCalledWith(mockReq.params.jobId);
+        expect(Job.findByIdAndDelete).toHaveBeenCalledWith(
+            mockReq.params.jobId
+        );
         expect(mockRes.status).toHaveBeenCalledWith(200);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'success',
-            message: 'Job removed successfully'
+            message: 'Job removed successfully',
         });
     });
 
@@ -670,7 +731,7 @@ describe('AdminController - removeJob', () => {
         expect(mockRes.status).toHaveBeenCalledWith(404);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'fail',
-            message: 'Job not found'
+            message: 'Job not found',
         });
     });
 
@@ -684,14 +745,14 @@ describe('AdminController - removeJob', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: error.message
+            message: error.message,
         });
     });
 
     test('should handle deletion error', async () => {
         const mockJob = {
             _id: mockReq.params.jobId,
-            title: 'Software Engineer'
+            title: 'Software Engineer',
         };
 
         const error = new Error('Deletion failed');
@@ -701,11 +762,13 @@ describe('AdminController - removeJob', () => {
         await removeJob(mockReq, mockRes);
 
         expect(Job.findById).toHaveBeenCalledWith(mockReq.params.jobId);
-        expect(Job.findByIdAndDelete).toHaveBeenCalledWith(mockReq.params.jobId);
+        expect(Job.findByIdAndDelete).toHaveBeenCalledWith(
+            mockReq.params.jobId
+        );
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: error.message
+            message: error.message,
         });
     });
 });
@@ -718,80 +781,88 @@ describe('AdminController - getAnalyticsOverview', () => {
         mockReq = {};
         mockRes = {
             status: jest.fn().mockReturnThis(),
-            json: jest.fn()
+            json: jest.fn(),
         };
     });
 
     test('should successfully retrieve analytics overview', async () => {
         // Mock user stats aggregation
-        const mockUserStats = [{
-            totalUsers: 100,
-            activeUsers: 80,
-            premiumUsers: 20,
-            usersByIndustry: [
-                { _id: 'Technology', count: 50 },
-                { _id: 'Healthcare', count: 30 }
-            ],
-            averageConnections: 150,
-            usersByProfilePrivacy: [
-                { _id: 'public', count: 70 },
-                { _id: 'private', count: 30 }
-            ],
-            usersByConnectionRequestPrivacy: [
-                { _id: 'everyone', count: 60 },
-                { _id: 'connections', count: 40 }
-            ],
-            usersByDefaultMode: [
-                { _id: 'light', count: 55 },
-                { _id: 'dark', count: 45 }
-            ],
-            employmentTypeCounts: [
-                { _id: 'Full-time', count: 70 },
-                { _id: 'Part-time', count: 30 }
-            ]
-        }];
+        const mockUserStats = [
+            {
+                totalUsers: 100,
+                activeUsers: 80,
+                premiumUsers: 20,
+                usersByIndustry: [
+                    { _id: 'Technology', count: 50 },
+                    { _id: 'Healthcare', count: 30 },
+                ],
+                averageConnections: 150,
+                usersByProfilePrivacy: [
+                    { _id: 'public', count: 70 },
+                    { _id: 'private', count: 30 },
+                ],
+                usersByConnectionRequestPrivacy: [
+                    { _id: 'everyone', count: 60 },
+                    { _id: 'connections', count: 40 },
+                ],
+                usersByDefaultMode: [
+                    { _id: 'light', count: 55 },
+                    { _id: 'dark', count: 45 },
+                ],
+                employmentTypeCounts: [
+                    { _id: 'Full-time', count: 70 },
+                    { _id: 'Part-time', count: 30 },
+                ],
+            },
+        ];
 
         // Mock post stats aggregation
-        const mockPostStats = [{
-            totalPosts: 500,
-            activePosts: 450,
-            totalImpressions: 10000,
-            averageEngagement: {
-                avgImpressions: 20,
-                avgComments: 5,
-                avgReposts: 2
-            }
-        }];
+        const mockPostStats = [
+            {
+                totalPosts: 500,
+                activePosts: 450,
+                totalImpressions: 10000,
+                averageEngagement: {
+                    avgImpressions: 20,
+                    avgComments: 5,
+                    avgReposts: 2,
+                },
+            },
+        ];
 
         // Mock job stats aggregation
-        const mockJobStats = [{
-            totalJobs: 200,
-            activeJobs: 150,
-            jobsByType: [
-                { _id: 'Full-time', count: 120 },
-                { _id: 'Part-time', count: 80 }
-            ],
-            jobsByWorkplaceType: [
-                { _id: 'Remote', count: 100 },
-                { _id: 'On-site', count: 100 }
-            ],
-            averageApplications: 25
-        }];
+        const mockJobStats = [
+            {
+                totalJobs: 200,
+                activeJobs: 150,
+                jobsByType: [
+                    { _id: 'Full-time', count: 120 },
+                    { _id: 'Part-time', count: 80 },
+                ],
+                jobsByWorkplaceType: [
+                    { _id: 'Remote', count: 100 },
+                    { _id: 'On-site', count: 100 },
+                ],
+                averageApplications: 25,
+            },
+        ];
 
         // Mock company stats aggregation
-        const mockCompanyStats = [{
-            totalCompanies: 50,
-            activeCompanies: 45,
-            companiesBySize: [
-                { _id: '1-10', count: 20 },
-                { _id: '11-50', count: 30 }
-            ],
-            companiesByIndustry: [
-                { _id: 'Technology', count: 30 },
-                { _id: 'Finance', count: 20 }
-            ],
-            averageFollowers: 1000
-        }];
+        const mockCompanyStats = [
+            {
+                totalCompanies: 50,
+                activeCompanies: 45,
+                companiesBySize: [
+                    { _id: '1-10', count: 20 },
+                    { _id: '11-50', count: 30 },
+                ],
+                companiesByIndustry: [
+                    { _id: 'Technology', count: 30 },
+                    { _id: 'Finance', count: 20 },
+                ],
+                averageFollowers: 1000,
+            },
+        ];
 
         // Setup mock implementations
         User.aggregate = jest.fn().mockResolvedValue(mockUserStats);
@@ -812,10 +883,12 @@ describe('AdminController - getAnalyticsOverview', () => {
                     premiumUsers: 20,
                     usersByIndustry: mockUserStats[0].usersByIndustry,
                     averageConnections: 150,
-                    usersByProfilePrivacy: mockUserStats[0].usersByProfilePrivacy,
-                    usersByConnectionRequestPrivacy: mockUserStats[0].usersByConnectionRequestPrivacy,
+                    usersByProfilePrivacy:
+                        mockUserStats[0].usersByProfilePrivacy,
+                    usersByConnectionRequestPrivacy:
+                        mockUserStats[0].usersByConnectionRequestPrivacy,
                     usersByDefaultMode: mockUserStats[0].usersByDefaultMode,
-                    employmentTypeCounts: mockUserStats[0].employmentTypeCounts
+                    employmentTypeCounts: mockUserStats[0].employmentTypeCounts,
                 },
                 postStats: {
                     totalPosts: 500,
@@ -824,24 +897,25 @@ describe('AdminController - getAnalyticsOverview', () => {
                     averageEngagement: {
                         impressions: 20,
                         comments: 5,
-                        reposts: 2
-                    }
+                        reposts: 2,
+                    },
                 },
                 jobStats: {
                     totalJobs: 200,
                     activeJobs: 150,
                     jobsByType: mockJobStats[0].jobsByType,
                     jobsByWorkplaceType: mockJobStats[0].jobsByWorkplaceType,
-                    averageApplications: 25
+                    averageApplications: 25,
                 },
                 companyStats: {
                     totalCompanies: 50,
                     activeCompanies: 45,
                     companiesBySize: mockCompanyStats[0].companiesBySize,
-                    companiesByIndustry: mockCompanyStats[0].companiesByIndustry,
-                    averageFollowers: 1000
-                }
-            }
+                    companiesByIndustry:
+                        mockCompanyStats[0].companiesByIndustry,
+                    averageFollowers: 1000,
+                },
+            },
         });
     });
 
@@ -867,7 +941,7 @@ describe('AdminController - getAnalyticsOverview', () => {
                     usersByProfilePrivacy: [],
                     usersByConnectionRequestPrivacy: [],
                     usersByDefaultMode: [],
-                    employmentTypeCounts: []
+                    employmentTypeCounts: [],
                 },
                 postStats: {
                     totalPosts: 0,
@@ -876,24 +950,24 @@ describe('AdminController - getAnalyticsOverview', () => {
                     averageEngagement: {
                         impressions: 0,
                         comments: 0,
-                        reposts: 0
-                    }
+                        reposts: 0,
+                    },
                 },
                 jobStats: {
                     totalJobs: 0,
                     activeJobs: 0,
                     jobsByType: [],
                     jobsByWorkplaceType: [],
-                    averageApplications: 0
+                    averageApplications: 0,
                 },
                 companyStats: {
                     totalCompanies: 0,
                     activeCompanies: 0,
                     companiesBySize: [],
                     companiesByIndustry: [],
-                    averageFollowers: 0
-                }
-            }
+                    averageFollowers: 0,
+                },
+            },
         });
     });
 
@@ -906,18 +980,7 @@ describe('AdminController - getAnalyticsOverview', () => {
         expect(mockRes.status).toHaveBeenCalledWith(500);
         expect(mockRes.json).toHaveBeenCalledWith({
             status: 'error',
-            message: error.message
+            message: error.message,
         });
     });
 });
-
-
-
-
-
-
-
-
-
-
-
