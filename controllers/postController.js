@@ -13,7 +13,7 @@ const {
   deleteFileFromUrl,
 } = require("../utils/cloudinaryUpload");
 const { uploadPostAttachments } = require("../utils/postUtils");
-const sendNotification = require("../utils/Notification");
+const { sendNotification } = require("../utils/Notification");
 const impressionModel = require("../models/impressionModel");
 // Specific Post
 
@@ -65,49 +65,52 @@ const createPost = async (req, res) => {
       }
     }
 
-        // Create the post
-        const newPost = await postModel.create(newPostData);
-        
-        // Get user information separately without changing the post structure
-        const user = await userModel.findById(userId).select('firstName lastName headline');
-        
-        // Count impression types if needed (depends on your impression model structure)
-        // For now, we'll just provide the count of impressions
-        
-        // Create a custom response object with the requested fields
-        const postResponse = {
-            postId: newPost._id,
-            userId: userId, // Original user ID reference
-            firstName: user.firstName,
-            lastName: user.lastName,
-            headline: user.headline || "",
-            postDescription: newPost.description,
-            attachments: newPost.attachments,
-            impressionTypes: [],
-            impressionCounts: newPost.impressionCounts,
-            commentCount: newPost.commentCount,
-            repostCount: newPost.repostCount,
-            createdAt: newPost.createdAt,
-            taggedUsers: newPost.taggedUsers
-        };
-        //add the post id to the user's post array
-        await userModel.findByIdAndUpdate(userId, { $push: { posts: newPost._id } });
-        await session.commitTransaction();
-        session.endSession();
-        res.status(201).json({
-            message: 'Post created successfully',
-            post: postResponse
-        });
+    // Create the post
+    const newPost = await postModel.create(newPostData);
 
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error('Error creating post:', error);
-        res.status(500).json({
-            message: 'Failed to create post',
-            error: error.message
-        });
-    }
+    // Get user information separately without changing the post structure
+    const user = await userModel
+      .findById(userId)
+      .select("firstName lastName headline");
+
+    // Count impression types if needed (depends on your impression model structure)
+    // For now, we'll just provide the count of impressions
+
+    // Create a custom response object with the requested fields
+    const postResponse = {
+      postId: newPost._id,
+      userId: userId, // Original user ID reference
+      firstName: user.firstName,
+      lastName: user.lastName,
+      headline: user.headline || "",
+      postDescription: newPost.description,
+      attachments: newPost.attachments,
+      impressionTypes: [],
+      impressionCounts: newPost.impressionCounts,
+      commentCount: newPost.commentCount,
+      repostCount: newPost.repostCount,
+      createdAt: newPost.createdAt,
+      taggedUsers: newPost.taggedUsers,
+    };
+    //add the post id to the user's post array
+    await userModel.findByIdAndUpdate(userId, {
+      $push: { posts: newPost._id },
+    });
+    await session.commitTransaction();
+    session.endSession();
+    res.status(201).json({
+      message: "Post created successfully",
+      post: postResponse,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error creating post:", error);
+    res.status(500).json({
+      message: "Failed to create post",
+      error: error.message,
+    });
+  }
 };
 
 const getPost = async (req, res) => {
@@ -176,7 +179,7 @@ const getPost = async (req, res) => {
         isActive: true,
       })
       .populate("userId", "firstName lastName profilePicture headline");
-      
+
     const isRepost = !!repost;
 
     // Format post response
@@ -491,7 +494,9 @@ const getAllPosts = async (req, res) => {
         // Check if this post was reposted by a connection
         const repostInfo = repostMap[post._id.toString()];
         const isRepost = !!repostInfo;
-        const commentCount = await commentModel.countDocuments({ postId: post._id });
+        const commentCount = await commentModel.countDocuments({
+          postId: post._id,
+        });
         // For posts that have multiple reposters, use the most relevant one
         // (e.g., first one in the array, which could be sorted by date if needed)
         const repostDetails = repostInfo ? repostInfo[0] : null;

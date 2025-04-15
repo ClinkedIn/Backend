@@ -4,7 +4,7 @@ const userModel = require("../models/userModel");
 const notificationModel = require("../models/notificationModel");
 const impressionModel = require("../models/impressionModel");
 const { uploadFile, deleteFileFromUrl } = require("../utils/cloudinaryUpload");
-const sendNotification = require("../utils/Notification");
+const { sendNotification } = require("../utils/Notification");
 const addComment = async (req, res) => {
   try {
     const { postId, commentContent, taggedUsers, parentComment } = req.body;
@@ -279,7 +279,7 @@ const getPostComments = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
-    const userId= req.user.id;
+    const userId = req.user.id;
     // Validate post ID
     if (!postId) {
       return res.status(400).json({ message: "Post ID is required" });

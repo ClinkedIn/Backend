@@ -218,4 +218,9 @@ const sendNotification = async (
   }
 };
 
-module.exports = sendNotification;
+module.exports = {
+  sendNotification,
+  notificationTemplate,
+  generateMessage,
+  buildNotificationData,
+};
