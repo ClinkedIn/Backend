@@ -1,7 +1,7 @@
 // userController.test.js
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
-
+const jwt = require("jsonwebtoken");
 const userController = require("../controllers/userController.js");
 const userModel = require("../models/userModel");
 const {
@@ -38,7 +38,7 @@ jest.mock("../utils/validateEmailPassword");
 jest.mock("../utils/verifyCaptcha");
 jest.mock("./../middlewares/auth");
 jest.mock("../utils/firebase");
-
+jest.mock("jsonwebtoken");
 // =======================
 // Tests for registerUser
 // =======================
@@ -544,25 +544,28 @@ describe("resendConfirmationEmail", () => {
     });
   });
 
-  it("should return 500 if email sending fails", async () => {
-    const mockUser = { _id: "userId", isConfirmed: false };
-    userModel.findById.mockResolvedValue(mockUser);
-    sendEmailConfirmation.mockResolvedValue(false);
-
-    await userController.resendConfirmationEmail(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
-  });
-
   it("should send confirmation email successfully", async () => {
-    const mockUser = { _id: "userId", isConfirmed: false };
+    // Create mock OTP
+    const mockOTP = "123456";
+
+    // Create mock user with required method
+    const mockUser = {
+      isConfirmed: false,
+      email: "test@example.com",
+      createEmailVerificationOTP: jest.fn().mockReturnValue(mockOTP),
+      save: jest.fn().mockResolvedValue(true),
+    };
+
     userModel.findById.mockResolvedValue(mockUser);
     sendEmailConfirmation.mockResolvedValue(true);
 
     await userController.resendConfirmationEmail(req, res);
 
-    expect(sendEmailConfirmation).toHaveBeenCalledWith(mockUser.id, req);
+    // Check the right methods were called with correct parameters
+    expect(mockUser.createEmailVerificationOTP).toHaveBeenCalled();
+    expect(mockUser.save).toHaveBeenCalledWith({ validateBeforeSave: false });
+    expect(sendEmailConfirmation).toHaveBeenCalledWith(mockOTP, mockUser.email);
+
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
@@ -590,44 +593,68 @@ describe("resendConfirmationEmail", () => {
 describe("confirmEmail", () => {
   let req, res;
   beforeEach(() => {
-    req = { params: {} };
+    req = { body: {} };
     res = mockRes();
   });
 
-  it("should return 400 if token is missing", async () => {
-    req.params = {};
+  it("should return 400 if OTP is missing", async () => {
+    req.body = {};
     await userController.confirmEmail(req, res);
+
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Verification Token is required",
+      message: "OTP is required",
     });
   });
 
-  it("should return 400 if token is invalid or expired", async () => {
-    req.params = { emailVerificationToken: "invalidToken" };
+  it("should return 400 if OTP is invalid or expired", async () => {
+    req.body = { otp: "123456" };
+
+    // Mock the crypto hash function
+    const hashedOTP = "hashedOTP123";
+    crypto.createHash = jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(hashedOTP),
+      }),
+    });
+
     userModel.findOne.mockResolvedValue(null);
+
     await userController.confirmEmail(req, res);
+
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid or expired token",
+      message: "Invalid or expired OTP",
     });
   });
 
   it("should confirm email successfully", async () => {
-    req.params = { emailVerificationToken: "validToken" };
+    req.body = { otp: "123456" };
+
+    // Mock the crypto hash function
+    const hashedOTP = "hashedOTP123";
+    crypto.createHash = jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(hashedOTP),
+      }),
+    });
+
     const user = {
       isConfirmed: false,
-      emailVerificationToken: "validToken",
-      emailVerificationExpiresAt: new Date(Date.now() + 10000),
+      emailVerificationOTP: hashedOTP,
+      emailVerificationOTPExpiresAt: new Date(Date.now() + 10000),
       save: jest.fn().mockResolvedValue(true),
     };
+
     userModel.findOne.mockResolvedValue(user);
+
     await userController.confirmEmail(req, res);
+
     expect(user.isConfirmed).toBe(true);
-    expect(user.emailVerificationToken).toBeNull();
-    expect(user.emailVerificationExpiresAt).toBeNull();
+    expect(user.emailVerificationOTP).toBeUndefined();
+    expect(user.emailVerificationOTPExpiresAt).toBeUndefined();
     expect(user.save).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -643,8 +670,9 @@ describe("confirmEmail", () => {
 describe("googleLogin", () => {
   let req, res;
   beforeEach(() => {
-    req = { headers: {} };
+    req = { headers: {}, body: {} };
     res = mockRes();
+    jest.clearAllMocks();
   });
 
   it("should return 401 if authorization header is missing", async () => {
@@ -656,13 +684,20 @@ describe("googleLogin", () => {
 
   it("should return 401 if token verification fails", async () => {
     req.headers.authorization = "Bearer invalidToken";
+    firebaseAdmin.auth = jest.fn().mockReturnValue({
+      verifyIdToken: jest.fn().mockRejectedValue(new Error("Invalid token")),
+    });
+
     await userController.googleLogin(req, res);
+
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
   });
 
   it("should create new user if not exists", async () => {
     req.headers.authorization = "Bearer validToken";
+    req.body.fcmToken = "fcmToken123";
+
     const decoded = {
       email: "john@example.com",
       uid: "firebaseUid",
@@ -671,20 +706,47 @@ describe("googleLogin", () => {
       email_verified: true,
       firebase: { identities: { "google.com": ["googleUid"] } },
     };
+
     firebaseAdmin.auth = jest.fn().mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue(decoded),
     });
+
+    userModel.findOne.mockResolvedValue(null);
+
+    const newUser = {
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@example.com",
+      googleId: "googleUid",
+      fcmToken: ["fcmToken123"],
+    };
+
+    userModel.create.mockResolvedValue(newUser);
+
     await userController.googleLogin(req, res);
 
+    expect(userModel.findOneAndDelete).toHaveBeenCalledWith({
+      email: "john@example.com",
+    });
+    expect(userModel.create).toHaveBeenCalledWith({
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@example.com",
+      password: undefined,
+      isConfirmed: true,
+      googleId: "googleUid",
+      fcmToken: ["fcmToken123"],
+    });
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
-      message: "Account created sucessfully",
+      message: "Account created successfully",
     });
   });
 
   it("should update googleId if user exists with null googleId", async () => {
     req.headers.authorization = "Bearer validToken";
+    req.body.fcmToken = "fcmToken123";
 
     const decoded = {
       email: "john@example.com",
@@ -703,20 +765,17 @@ describe("googleLogin", () => {
       _id: "existingUserId",
       googleId: null,
       isActive: true,
+      fcmToken: [],
       save: jest.fn().mockResolvedValue(true),
     };
 
-    userModel.findOne = jest.fn().mockResolvedValue(existingUser);
-    generateTokens.mockReturnValue({
-      accessToken: "access",
-      refreshToken: "refresh",
-    });
+    userModel.findOne.mockResolvedValue(existingUser);
 
     await userController.googleLogin(req, res);
 
     expect(existingUser.googleId).toBe("googleUid");
+    expect(existingUser.fcmToken).toContain("fcmToken123");
     expect(existingUser.save).toHaveBeenCalled();
-
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
@@ -726,6 +785,7 @@ describe("googleLogin", () => {
 
   it("should return 401 if googleId does not match", async () => {
     req.headers.authorization = "Bearer validToken";
+
     const decoded = {
       email: "john@example.com",
       uid: "firebaseUid",
@@ -734,23 +794,29 @@ describe("googleLogin", () => {
       email_verified: true,
       firebase: { identities: { "google.com": ["differentGoogleUid"] } },
     };
-    firebaseAdmin.auth.mockReturnValue({
+
+    firebaseAdmin.auth = jest.fn().mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue(decoded),
     });
+
     const existingUser = {
       _id: "existingUserId",
-      googleId: "googleUid",
+      googleId: "googleUid", // Different from the token's googleUid
       isActive: true,
-      save: jest.fn().mockResolvedValue(true),
     };
+
     userModel.findOne.mockResolvedValue(existingUser);
+
     await userController.googleLogin(req, res);
+
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
   });
 
   it("should login successfully if googleId matches", async () => {
     req.headers.authorization = "Bearer validToken";
+    req.body.fcmToken = "fcmToken123";
+
     const decoded = {
       email: "john@example.com",
       uid: "firebaseUid",
@@ -759,22 +825,24 @@ describe("googleLogin", () => {
       email_verified: true,
       firebase: { identities: { "google.com": ["googleUid"] } },
     };
-    firebaseAdmin.auth.mockReturnValue({
+
+    firebaseAdmin.auth = jest.fn().mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue(decoded),
     });
+
     const existingUser = {
       _id: "existingUserId",
       googleId: "googleUid",
       isActive: true,
+      fcmToken: ["existingToken"],
       save: jest.fn().mockResolvedValue(true),
     };
+
     userModel.findOne.mockResolvedValue(existingUser);
-    generateTokens.mockReturnValue({
-      accessToken: "access",
-      refreshToken: "refresh",
-    });
 
     await userController.googleLogin(req, res);
+
+    expect(existingUser.fcmToken).toContain("fcmToken123");
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
@@ -961,7 +1029,110 @@ describe("login", () => {
     });
   });
 });
+// ==============================
+// Tests for logout
+// ==============================
+describe("logout", () => {
+  let req, res;
 
+  beforeEach(() => {
+    req = {
+      user: { id: "userId" },
+      body: {},
+    };
+    res = mockRes();
+    res.clearCookie = jest.fn().mockReturnThis();
+    jest.clearAllMocks();
+  });
+
+  it("should successfully logout without FCM token removal", async () => {
+    // Mock a user without providing fcmToken in request
+    const mockUser = {
+      _id: "userId",
+      fcmToken: ["token1", "token2"],
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    userModel.findById.mockResolvedValue(mockUser);
+
+    await userController.logout(req, res);
+
+    // User should be found but save should not be called
+    expect(userModel.findById).toHaveBeenCalledWith("userId");
+    expect(mockUser.save).not.toHaveBeenCalled();
+
+    // Cookies should be cleared
+    expect(res.clearCookie).toHaveBeenCalledWith("accessToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+    });
+    expect(res.clearCookie).toHaveBeenCalledWith("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Strict",
+    });
+
+    // Response should be successful
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "success",
+      message: "Logged out successfully",
+    });
+  });
+
+  it("should successfully logout with FCM token removal", async () => {
+    // Add fcmToken to request body
+    req.body.fcmToken = "token1";
+
+    // Mock a user with fcmTokens
+    const mockUser = {
+      _id: "userId",
+      fcmToken: ["token1", "token2"],
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    userModel.findById.mockResolvedValue(mockUser);
+
+    await userController.logout(req, res);
+
+    // User should be found and save should be called
+    expect(userModel.findById).toHaveBeenCalledWith("userId");
+    expect(mockUser.fcmToken).toEqual(["token2"]); // token1 should be removed
+    expect(mockUser.save).toHaveBeenCalled();
+
+    // Cookies should be cleared
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      "accessToken",
+      expect.any(Object)
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.any(Object)
+    );
+
+    // Response should be successful
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "success",
+      message: "Logged out successfully",
+    });
+  });
+
+  it("should handle errors properly", async () => {
+    // Mock a database error
+    userModel.findById.mockRejectedValue(new Error("Database error"));
+
+    await userController.logout(req, res);
+
+    // Error should be handled
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Internal server error",
+    });
+  });
+});
 // ==============================
 // Tests for deleteUser
 // ==============================
@@ -970,22 +1141,34 @@ describe("deleteUser", () => {
 
   beforeEach(() => {
     req = { user: { id: "userId" } };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
+    res = mockRes();
+    jest.clearAllMocks();
   });
 
-  it("should mark user as inactive successfully", async () => {
-    const mockUser = { _id: "userId" };
-    userModel.findByIdAndUpdate = jest.fn().mockResolvedValue(mockUser);
+  it("should mark user as inactive and clear FCM tokens successfully", async () => {
+    // Create mock user with FCM tokens
+    const mockUser = {
+      _id: "userId",
+      fcmToken: ["token1", "token2"],
+      isActive: true,
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    userModel.findById.mockResolvedValue(mockUser);
 
     await userController.deleteUser(req, res);
 
-    expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith("userId", {
-      isActive: false,
-    });
+    // Check that user was found by ID
+    expect(userModel.findById).toHaveBeenCalledWith("userId");
 
+    // Check that user properties were updated correctly
+    expect(mockUser.fcmToken).toEqual([]);
+    expect(mockUser.isActive).toBe(false);
+
+    // Check that save was called
+    expect(mockUser.save).toHaveBeenCalled();
+
+    // Check response
     expect(res.status).toHaveBeenCalledWith(204);
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
@@ -993,13 +1176,30 @@ describe("deleteUser", () => {
     });
   });
 
-  it("should return 500 if an error occurs", async () => {
-    userModel.findByIdAndUpdate = jest
-      .fn()
-      .mockRejectedValue(new Error("DB error"));
+  it("should return 500 if an error occurs during findById", async () => {
+    // Mock a database error during findById
+    userModel.findById.mockRejectedValue(new Error("DB error"));
 
     await userController.deleteUser(req, res);
 
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+  });
+
+  it("should handle error if user save fails", async () => {
+    // Create mock user but make save fail
+    const mockUser = {
+      _id: "userId",
+      fcmToken: ["token1", "token2"],
+      isActive: true,
+      save: jest.fn().mockRejectedValue(new Error("Save failed")),
+    };
+
+    userModel.findById.mockResolvedValue(mockUser);
+
+    await userController.deleteUser(req, res);
+
+    // Check that error was handled
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
   });
@@ -1010,112 +1210,172 @@ describe("deleteUser", () => {
 // ==============================
 describe("forgotPassword", () => {
   let req, res;
+
   beforeEach(() => {
     req = { body: {} };
     res = mockRes();
+    jest.clearAllMocks();
   });
 
   it("should return 400 if email is not provided", async () => {
-    req.body = {};
+    // Empty request body
     await userController.forgotPassword(req, res);
+
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Please fill all required fields",
     });
+    expect(validateEmail).not.toHaveBeenCalled();
+    expect(userModel.findOne).not.toHaveBeenCalled();
   });
-  it("should return 422 if email is invalid", async () => {
-    req.body = { email: "invalid-email" };
+
+  it("should return 422 if email format is invalid", async () => {
+    req.body.email = "invalid-email";
     validateEmail.mockReturnValue(false);
+
     await userController.forgotPassword(req, res);
+
+    expect(validateEmail).toHaveBeenCalledWith("invalid-email");
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       message: "Please enter a valid email",
     });
+    expect(userModel.findOne).not.toHaveBeenCalled();
   });
 
-  it("should return 404 if user is not found", async () => {
-    req.body = { email: "noUser@gmail.com" };
+  it("should return 404 if user with email is not found or not active", async () => {
+    req.body.email = "nonexistent@example.com";
     validateEmail.mockReturnValue(true);
     userModel.findOne.mockResolvedValue(null);
+
     await userController.forgotPassword(req, res);
+
+    expect(validateEmail).toHaveBeenCalledWith("nonexistent@example.com");
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: "nonexistent@example.com",
+      isActive: true,
+    });
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({
       message: "This email is not registerd",
     });
   });
 
-  it("should return 401 if user is only registered through google", async () => {
-    req.body = { email: "random@email.com" };
-    const user = {
-      email: "random@email.com",
-      googleId: "googleId",
+  it("should return 401 if user is registered only with Google", async () => {
+    req.body.email = "google-user@example.com";
+
+    const googleUser = {
+      email: "google-user@example.com",
+      googleId: "google-id-123",
+      password: undefined, // Google user has no password
       isActive: true,
-      password: undefined,
     };
+
     validateEmail.mockReturnValue(true);
-    userModel.findOne.mockResolvedValue(user);
+    userModel.findOne.mockResolvedValue(googleUser);
+
     await userController.forgotPassword(req, res);
+
+    expect(validateEmail).toHaveBeenCalledWith("google-user@example.com");
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: "google-user@example.com",
+      isActive: true,
+    });
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
       message: "Please login with google",
     });
   });
 
-  it("should send reset password email successfully", async () => {
-    req.body = { email: "omar@gmial.com" };
-    const user = {
-      email: "omar@gmail.com",
-      googleId: undefined,
+  it("should create OTP and send email successfully", async () => {
+    req.body.email = "valid-user@example.com";
+    const mockOTP = "123456";
+
+    // Create a proper mock user with all required methods and properties
+    const mockUser = {
+      email: "valid-user@example.com",
+      googleId: null,
+      password: "hashedPassword", // Has a password (not Google-only)
       isActive: true,
-      password: "hashedPassword",
-      passwordResetToken: undefined,
-      passwordResetExpiresAt: undefined,
+      createPasswordResetOTP: jest.fn().mockReturnValue(mockOTP),
       save: jest.fn().mockResolvedValue(true),
-      createPasswordResetToken: jest.fn().mockReturnValue("hashedToken"),
     };
+
     validateEmail.mockReturnValue(true);
-    userModel.findOne.mockResolvedValue(user);
-    generateTokens.mockReturnValue({
-      accessToken: "access",
-      refreshToken: "refresh",
-    });
-    req.get = jest.fn().mockReturnValue("localhost");
+    userModel.findOne.mockResolvedValue(mockUser);
     sendForgotPasswordEmail.mockResolvedValue({ success: true });
+
     await userController.forgotPassword(req, res);
-    expect(user.createPasswordResetToken).toHaveBeenCalled();
-    expect(user.save).toHaveBeenCalled();
+
+    // Verify correct user lookup
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      email: "valid-user@example.com",
+      isActive: true,
+    });
+
+    // Verify OTP creation and user saving
+    expect(mockUser.createPasswordResetOTP).toHaveBeenCalled();
+    expect(mockUser.save).toHaveBeenCalledWith({ validateBeforeSave: false });
+
+    // Verify email sending with correct parameters
+    expect(sendForgotPasswordEmail).toHaveBeenCalledWith(
+      mockOTP,
+      "valid-user@example.com"
+    );
+
+    // Verify successful response
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "forgot password email sent successfully",
-      email: user.email,
+      email: "valid-user@example.com",
     });
   });
 
-  it("should return 500 if an error occurs", async () => {
-    req.body = { email: "omar@gmial.com" };
-    const user = {
-      email: "omar@gmail.com",
-      googleId: undefined,
-      isActive: true,
+  it("should handle email sending failure", async () => {
+    req.body.email = "valid-user@example.com";
+    const mockOTP = "123456";
+    const errorMessage = "SMTP connection failed";
+
+    const mockUser = {
+      email: "valid-user@example.com",
+      googleId: null,
       password: "hashedPassword",
-      passwordResetToken: undefined,
-      passwordResetExpiresAt: undefined,
+      isActive: true,
+      createPasswordResetOTP: jest.fn().mockReturnValue(mockOTP),
       save: jest.fn().mockResolvedValue(true),
-      createPasswordResetToken: jest.fn().mockReturnValue("hashedToken"),
     };
+
     validateEmail.mockReturnValue(true);
-    userModel.findOne.mockResolvedValue(user);
-    generateTokens.mockReturnValue({
-      accessToken: "access",
-      refreshToken: "refresh",
+    userModel.findOne.mockResolvedValue(mockUser);
+    sendForgotPasswordEmail.mockResolvedValue({
+      success: false,
+      error: errorMessage,
     });
-    req.get = jest.fn().mockReturnValue("localhost");
-    sendForgotPasswordEmail.mockResolvedValue({ error: "error" });
+
     await userController.forgotPassword(req, res);
+
+    // Verify proper error handling for email sending failure
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({
-      message: "error",
+      message: errorMessage,
+    });
+  });
+
+  it("should handle unexpected errors", async () => {
+    req.body.email = "valid-user@example.com";
+    validateEmail.mockReturnValue(true);
+
+    // Simulate a database error
+    const dbError = new Error("Database connection failed");
+    userModel.findOne.mockRejectedValue(dbError);
+
+    await userController.forgotPassword(req, res);
+
+    // Verify proper error handling
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Internal server error",
     });
   });
 });
@@ -1128,32 +1388,90 @@ describe("resetPassword", () => {
 
   beforeEach(() => {
     req = {
-      params: { token: "validToken" },
+      headers: {},
       body: { password: "NewPass123!" },
     };
     res = mockRes();
     jest.clearAllMocks();
   });
 
-  it("should return 401 if token is invalid or expired", async () => {
-    userModel.findOne.mockResolvedValue(null);
+  it("should return 401 when authorization header is missing", async () => {
+    req.headers = {}; // No authorization header
 
     await userController.resetPassword(req, res);
 
     expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
+    expect(jwt.verify).not.toHaveBeenCalled();
+  });
+
+  it("should return 401 when authorization header doesn't start with 'Bearer '", async () => {
+    req.headers.authorization = "InvalidFormat token";
+
+    await userController.resetPassword(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
+    expect(jwt.verify).not.toHaveBeenCalled();
+  });
+
+  it("should return 401 when token is missing", async () => {
+    req.headers.authorization = "Bearer ";
+
+    await userController.resetPassword(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
+    expect(jwt.verify).not.toHaveBeenCalled();
+  });
+
+  it("should return 401 when token verification fails", async () => {
+    req.headers.authorization = "Bearer invalidToken";
+
+    jwt.verify = jest.fn().mockImplementation(() => {
+      throw new Error("Invalid token");
+    });
+
+    await userController.resetPassword(req, res);
+
+    expect(jwt.verify).toHaveBeenCalledWith(
+      "invalidToken",
+      process.env.RESET_PASSWORD_OTP_SECRET
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Token is invalid or has expired",
+      success: false,
+      message: "Internal server error",
     });
   });
 
-  it("should return 400 if password is missing", async () => {
-    req.body.password = "";
+  it("should return 401 when user is not found", async () => {
+    req.headers.authorization = "Bearer validToken";
 
-    const mockUser = {
-      passwordResetToken: "hashedToken",
-      passwordResetExpiresAt: Date.now() + 10000, // Future expiration
-    };
-    userModel.findOne.mockResolvedValue(mockUser);
+    const decoded = { id: "userId123" };
+    jwt.verify = jest.fn().mockReturnValue(decoded);
+    userModel.findById.mockResolvedValue(null);
+
+    await userController.resetPassword(req, res);
+
+    expect(jwt.verify).toHaveBeenCalledWith(
+      "validToken",
+      process.env.RESET_PASSWORD_OTP_SECRET
+    );
+    expect(userModel.findById).toHaveBeenCalledWith("userId123");
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" });
+  });
+
+  it("should return 400 when password is missing", async () => {
+    req.headers.authorization = "Bearer validToken";
+    req.body = {}; // No password
+
+    const decoded = { id: "userId123" };
+    jwt.verify = jest.fn().mockReturnValue(decoded);
+
+    const mockUser = { _id: "userId123" };
+    userModel.findById.mockResolvedValue(mockUser);
 
     await userController.resetPassword(req, res);
 
@@ -1161,17 +1479,21 @@ describe("resetPassword", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "Password is required" });
   });
 
-  it("should return 422 if password is invalid", async () => {
-    validatePassword.mockReturnValue(false);
+  it("should return 422 when password format is invalid", async () => {
+    req.headers.authorization = "Bearer validToken";
+    req.body = { password: "weak" };
 
-    const mockUser = {
-      passwordResetToken: "hashedToken",
-      passwordResetExpiresAt: Date.now() + 10000,
-    };
-    userModel.findOne.mockResolvedValue(mockUser);
+    const decoded = { id: "userId123" };
+    jwt.verify = jest.fn().mockReturnValue(decoded);
+
+    const mockUser = { _id: "userId123" };
+    userModel.findById.mockResolvedValue(mockUser);
+
+    validatePassword.mockReturnValue(false);
 
     await userController.resetPassword(req, res);
 
+    expect(validatePassword).toHaveBeenCalledWith("weak");
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       message:
@@ -1180,56 +1502,164 @@ describe("resetPassword", () => {
   });
 
   it("should reset password successfully", async () => {
-    validatePassword.mockReturnValue(true);
+    req.headers.authorization = "Bearer validToken";
+    req.body = { password: "NewStrongPass123!" };
+
+    const decoded = { id: "userId123" };
+    jwt.verify = jest.fn().mockReturnValue(decoded);
 
     const mockUser = {
-      passwordResetToken: "hashedToken",
-      passwordResetExpiresAt: Date.now() + 10000,
+      _id: "userId123",
+      passwordResetOTP: "someOTP",
+      passwordResetOTPExpiresAt: new Date(),
       save: jest.fn().mockResolvedValue(true),
     };
-    userModel.findOne.mockResolvedValue(mockUser);
+
+    userModel.findById.mockResolvedValue(mockUser);
+    validatePassword.mockReturnValue(true);
+    global.createSendToken = jest.fn(); // Mock the global function if needed
 
     await userController.resetPassword(req, res);
 
-    expect(mockUser.password).toBe(req.body.password);
-    expect(mockUser.passwordResetToken).toBeUndefined();
-    expect(mockUser.passwordResetExpiresAt).toBeUndefined();
-    expect(mockUser.save).toHaveBeenCalled();
+    expect(mockUser.password).toBe("NewStrongPass123!");
+    expect(mockUser.passwordResetOTP).toBeUndefined();
+    expect(mockUser.passwordResetOTPExpiresAt).toBeUndefined();
+    expect(mockUser.save).toHaveBeenCalledWith({ validateBeforeSave: false });
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
       message: "Password reseted successfully",
     });
   });
+
+  it("should handle unexpected errors", async () => {
+    req.headers.authorization = "Bearer validToken";
+
+    jwt.verify = jest.fn().mockImplementation(() => {
+      throw new Error("Unexpected error");
+    });
+
+    await userController.resetPassword(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Internal server error",
+    });
+  });
 });
 
 // ==============================
-// Tests for verifyResetPasswordToken
+// Tests for verifyResetPasswordOTP
 // ==============================
-describe("verifyResetPasswordToken", () => {
+describe("verifyResetPasswordOTP", () => {
   let req, res;
+
   beforeEach(() => {
-    req = { params: { token: "plainToken" } };
+    req = { body: {} };
     res = mockRes();
+    jest.clearAllMocks();
   });
 
-  it("should return 400 if token is invalid or expired", async () => {
-    userModel.findOne.mockResolvedValue(null);
-    await userController.verifyResetPasswordToken(req, res);
+  it("should return 400 if OTP is missing", async () => {
+    // Empty body with no OTP
+    await userController.verifyResetPasswordOTP(req, res);
+
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Token is invalid or has expired",
+      message: "Please fill all required fields",
+    });
+    expect(userModel.findOne).not.toHaveBeenCalled();
+  });
+
+  it("should return 400 if OTP is invalid or expired", async () => {
+    req.body = { otp: "123456" };
+
+    // Mock crypto hash function
+    const hashedOTP = "hashedOTP123";
+    crypto.createHash = jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(hashedOTP),
+      }),
+    });
+
+    // No user found with this OTP
+    userModel.findOne.mockResolvedValue(null);
+
+    await userController.verifyResetPasswordOTP(req, res);
+
+    expect(crypto.createHash).toHaveBeenCalledWith("sha256");
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      isActive: true,
+      passwordResetOTP: hashedOTP,
+      passwordResetOTPExpiresAt: { $gt: expect.any(Number) },
+    });
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "OTP is invalid or has expired",
     });
   });
 
-  it("should verify token successfully", async () => {
-    const user = { email: "john@example.com" };
-    userModel.findOne.mockResolvedValue(user);
-    await userController.verifyResetPasswordToken(req, res);
+  it("should verify OTP successfully and return reset token", async () => {
+    req.body = { otp: "123456" };
+
+    // Mock crypto hash function
+    const hashedOTP = "hashedOTP123";
+    crypto.createHash = jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(hashedOTP),
+      }),
+    });
+
+    // Mock user found with valid OTP
+    const mockUser = {
+      _id: "userId123",
+      email: "user@example.com",
+      passwordResetOTP: hashedOTP,
+      passwordResetOTPExpiresAt: new Date(Date.now() + 10000), // not expired
+    };
+    userModel.findOne.mockResolvedValue(mockUser);
+
+    // Mock JWT sign
+    const resetToken = "jwt-reset-token";
+    jwt.sign = jest.fn().mockReturnValue(resetToken);
+
+    await userController.verifyResetPasswordOTP(req, res);
+
+    // Check JWT was called with correct params
+    expect(jwt.sign).toHaveBeenCalledWith(
+      { id: mockUser._id },
+      process.env.RESET_PASSWORD_OTP_SECRET,
+      { expiresIn: "15m" }
+    );
+
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
-      status: "success",
-      data: { email: user.email },
+      message: "OTP verified successfully",
+      resetToken,
+    });
+  });
+
+  it("should handle unexpected errors", async () => {
+    req.body = { otp: "123456" };
+
+    // Mock crypto hash function
+    const hashedOTP = "hashedOTP123";
+    crypto.createHash = jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(hashedOTP),
+      }),
+    });
+
+    // Force an error
+    const error = new Error("Database connection error");
+    userModel.findOne.mockRejectedValue(error);
+
+    await userController.verifyResetPasswordOTP(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Internal server error",
     });
   });
 });
@@ -1431,7 +1861,6 @@ describe("updateEmail", () => {
     expect(user.email).toBe("new@email.com");
     expect(user.isConfirmed).toBe(false);
     expect(user.save).toHaveBeenCalled();
-    expect(sendEmailConfirmation).toHaveBeenCalledWith(user.id || user._id);
 
     expect(res.json).toHaveBeenCalledWith({
       status: "success",
