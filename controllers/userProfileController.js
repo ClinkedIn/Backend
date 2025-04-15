@@ -2,6 +2,7 @@ const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
+const impressionModel = require('../models/impressionModel');
 const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences, validateConnectionStatus, handlePagination } = require('../utils/userProfileUtils') 
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
@@ -1912,7 +1913,28 @@ const getUserActivity = async (req, res) => {
         // Check if current user has saved these posts
         const currentUser = await userModel.findById(currentUserId).select('savedPosts');
         const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
+        const likePromises = paginatedActivities.map(activity => {
+            const postId = activity.postId;
+            if (!postId) return Promise.resolve(false);
         
+            return impressionModel.findOne({
+                targetId: postId,
+                userId: currentUserId,
+            }).lean()  // Add lean() to convert to plain object
+              .then(result => ({ 
+                  postId: postId.toString(), 
+                  isLiked: result  // This now contains the full impression document or null
+              }));
+        });
+        
+        // Wait for all like status checks to complete
+        const likeResults = await Promise.all(likePromises);
+        
+        // Create a lookup map for quick access
+        const likeStatusMap = {};
+        likeResults.forEach(item => {
+            if (item) likeStatusMap[item.postId] = item.isLiked;
+        });
         // Format final response with all details
         const formattedPosts = paginatedActivities.map(activity => {
             const post = postMap[activity.postId.toString()];
@@ -1937,7 +1959,6 @@ const getUserActivity = async (req, res) => {
                     }
                 };
             }
-            
             // Format post response exactly like in getPost function
             const postResponse = {
                 postId: post._id,
@@ -1957,6 +1978,8 @@ const getUserActivity = async (req, res) => {
                 whoCanSee: post.whoCanSee || 'anyone', // Include privacy setting
                 whoCanComment: post.whoCanComment || 'anyone', // Include comment setting
                 isRepost,
+                isLiked: likeStatusMap[post._id.toString()] || false,
+                isMine: post.userId._id.toString() === currentUserId,
                 isSaved: savedPostsSet.has(post._id.toString()),
                 activityType: activity.activityType,
                 activityDate: activity.activityDate

@@ -279,7 +279,7 @@ const getPostComments = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
-
+    const userId= req.user.id;
     // Validate post ID
     if (!postId) {
       return res.status(400).json({ message: "Post ID is required" });
@@ -301,7 +301,8 @@ const getPostComments = async (req, res) => {
     const user = await userModel.findById(req.user.id);
     if (
       post.commentSetting === "connections" &&
-      !user.connections.includes(post.userId)
+      req.user.connections.includes(post.userId) &&
+      post.userId.toString() !== user
     ) {
       return res.status(403).json({
         message: "You can only view comments on posts from your connections",
