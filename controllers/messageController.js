@@ -1,332 +1,381 @@
-const MessageModel = require('../models/chatMessageModel');
-const userModel = require('../models/userModel');
-const directChatModel = require('../models/directChatModel');
-const chatGroupModel = require('../models/chatGroupModel');
-const mongoose = require('mongoose');
-const customError = require('../utils/customError');
+const MessageModel = require("../models/chatMessageModel");
+const userModel = require("../models/userModel");
+const directChatModel = require("../models/directChatModel");
+const chatGroupModel = require("../models/chatGroupModel");
+const mongoose = require("mongoose");
+const customError = require("../utils/customError");
 
-const { validateUser, validateChatType, validateChatId, validateMessageContent,
-     validateReplyMessage, validateChatMembership, handleFileUploads, findOrCreateDirectChat, updateUnreadCount, updateGroupUnreadCounts,
-     validateMessageOwner, isSenderBlocked, calculateTotalUnreadCount, markMessageReadByUser} = require('../utils/chatUtils');
-const  sendNotification  = require('../utils/Notification');
+const {
+  validateUser,
+  validateChatType,
+  validateChatId,
+  validateMessageContent,
+  validateReplyMessage,
+  validateChatMembership,
+  handleFileUploads,
+  findOrCreateDirectChat,
+  updateUnreadCount,
+  updateGroupUnreadCounts,
+  validateMessageOwner,
+  isSenderBlocked,
+  calculateTotalUnreadCount,
+  markMessageReadByUser,
+} = require("../utils/chatUtils");
+const { sendNotification } = require("../utils/Notification");
 
 // Create a new message.
 const sendMessage = async (req, res) => {
+  try {
+    const sender = req.user.id;
+    const { type, messageText, replyTo } = req.body;
+    let { receiverId, chatId: providedChatId } = req.body;
+    const messageAttachment = req.files;
+
+    // Validate inputs
     try {
-        const sender = req.user.id;
-        const { type, messageText, replyTo} = req.body;
-        let { receiverId, chatId: providedChatId } = req.body;
-        const messageAttachment = req.files;
-        
-        // Validate inputs
-        try {
-            await validateUser(sender);
-            console.log("Sender validation passed");
-        } catch (error) {
-            console.error("Sender validation failed:", error);
-            return res.status(404).json({ message: 'Sender not found', details: 'The authenticated user does not exist' });
-        }
-        validateChatType(type);
-        validateMessageContent(messageText, messageAttachment);
-
-        if (replyTo) {
-            await validateReplyMessage(replyTo);
-        }
-
-        // Determine chat ID and handle chat creation if necessary
-        let chatId = providedChatId;
-        let chatModel = type === 'direct' ? directChatModel : chatGroupModel;
-        // if userId not provided, get the receiverId from the chatId
-        if (!receiverId && chatId) {
-            const chat = await chatModel.findById(chatId);
-            if (!chat) {
-                return res.status(404).json({ message: 'Chat not found' });
-            }
-            if (type === 'direct') {
-                receiverId = chat.secondUser.toString() === sender ? chat.firstUser : chat.secondUser;
-                console.log("Receiver ID from chat:", receiverId);
-            }
-        }
-        console.log("Receiver ID:", receiverId);
-        console.log("Sender ID: ", sender)
-        // Validate chatId if provided
-        if (chatId) {
-            validateChatId(chatId);
-            await validateChatMembership(chatModel, chatId, sender, type);
-            // Check for blocking in direct chats
-        } else {
-        const chat = await findOrCreateDirectChat(sender, receiverId);
-        chatId = chat._id;
-        }
-
-        if (type === 'direct') {
-            if (await isSenderBlocked(sender, receiverId)) {
-                return res.status(403).json({ message: 'Sender is blocked by the receiver' });
-            }
-        }
-
-        // Handle file uploads
-        const attachmentsArray = await handleFileUploads(messageAttachment);
-        const newMessage = new MessageModel({
-            sender,
-            chatId,
-            type,
-            messageText,
-            messageAttachment: attachmentsArray,
-            replyTo
+      await validateUser(sender);
+      console.log("Sender validation passed");
+    } catch (error) {
+      console.error("Sender validation failed:", error);
+      return res
+        .status(404)
+        .json({
+          message: "Sender not found",
+          details: "The authenticated user does not exist",
         });
-
-        const savedMessage = await newMessage.save();
-        if (!savedMessage) {
-            return res.status(500).json({ message: 'Failed to save message' });
-        }
-
-        // Update unread counts for group members or the receiver
-        if (type === 'group') {
-            await updateGroupUnreadCounts(chatId, sender);
-        } else {
-            await updateUnreadCount(receiverId, chatId, "DirectChat");
-        }
-
-        // Update the chat with the new message
-        const chat = await chatModel.findByIdAndUpdate(
-            chatId,
-            { $push: { messages: savedMessage._id } },
-            { new: true }
-        );
-        console.log("chat id: ", chatId)
-
-        if (!chat) {
-            console.error('Chat not found:', chatId);
-            return res.status(404).json({ message: `${type === 'direct' ? 'Direct' : 'Group'} chat not found` });
-        }
-        
-        // send notification to user if direct chat
-        // the receiver should be the full recever model
-        
-        if (type === 'direct') {
-            const receiver = await userModel.findById(receiverId);
-            const senderModel = await userModel.findById(sender);
-            sendNotification(senderModel, receiver, "message", savedMessage)
-            .then(() => {
-                console.log("Notification sent successfully");
-            })
-            .catch(error => {
-                console.error("Failed to send notification:", error);
-            });
-        }
-        res.status(200).json({ message: 'Message created successfully', data: savedMessage});
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error creating message:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
     }
+    validateChatType(type);
+    validateMessageContent(messageText, messageAttachment);
+
+    if (replyTo) {
+      await validateReplyMessage(replyTo);
+    }
+
+    // Determine chat ID and handle chat creation if necessary
+    let chatId = providedChatId;
+    let chatModel = type === "direct" ? directChatModel : chatGroupModel;
+    // if userId not provided, get the receiverId from the chatId
+    if (!receiverId && chatId) {
+      const chat = await chatModel.findById(chatId);
+      if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+      }
+      if (type === "direct") {
+        receiverId =
+          chat.secondUser.toString() === sender
+            ? chat.firstUser
+            : chat.secondUser;
+        console.log("Receiver ID from chat:", receiverId);
+      }
+    }
+    console.log("Receiver ID:", receiverId);
+    console.log("Sender ID: ", sender);
+    // Validate chatId if provided
+    if (chatId) {
+      validateChatId(chatId);
+      await validateChatMembership(chatModel, chatId, sender, type);
+      // Check for blocking in direct chats
+    } else {
+      const chat = await findOrCreateDirectChat(sender, receiverId);
+      chatId = chat._id;
+    }
+
+    if (type === "direct") {
+      if (await isSenderBlocked(sender, receiverId)) {
+        return res
+          .status(403)
+          .json({ message: "Sender is blocked by the receiver" });
+      }
+    }
+
+    // Handle file uploads
+    const attachmentsArray = await handleFileUploads(messageAttachment);
+    const newMessage = new MessageModel({
+      sender,
+      chatId,
+      type,
+      messageText,
+      messageAttachment: attachmentsArray,
+      replyTo,
+    });
+
+    const savedMessage = await newMessage.save();
+    if (!savedMessage) {
+      return res.status(500).json({ message: "Failed to save message" });
+    }
+
+    // Update unread counts for group members or the receiver
+    if (type === "group") {
+      await updateGroupUnreadCounts(chatId, sender);
+    } else {
+      await updateUnreadCount(receiverId, chatId, "DirectChat");
+    }
+
+    // Update the chat with the new message
+    const chat = await chatModel.findByIdAndUpdate(
+      chatId,
+      { $push: { messages: savedMessage._id } },
+      { new: true }
+    );
+    console.log("chat id: ", chatId);
+
+    if (!chat) {
+      console.error("Chat not found:", chatId);
+      return res
+        .status(404)
+        .json({
+          message: `${type === "direct" ? "Direct" : "Group"} chat not found`,
+        });
+    }
+
+    // send notification to user if direct chat
+    // the receiver should be the full recever model
+
+    if (type === "direct") {
+      const receiver = await userModel.findById(receiverId);
+      const senderModel = await userModel.findById(sender);
+      sendNotification(senderModel, receiver, "message", savedMessage)
+        .then(() => {
+          console.log("Notification sent successfully");
+        })
+        .catch((error) => {
+          console.error("Failed to send notification:", error);
+        });
+    }
+    res
+      .status(200)
+      .json({ message: "Message created successfully", data: savedMessage });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error creating message:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
+    }
+  }
 };
 
 // Update a message. patch request. only message text could be updated
 const editMessage = async (req, res) => {
-    try {
-        const messageId = req.params.messageId;
-        const { messageText } = req.body;
-        if (!messageText) {
-            throw new customError('Message text is required', 400);
-        }
-
-        validateMessageOwner(messageId, req.user.id);
-
-        // Check if message isDeleted = true deleted
-        
-        const updatedMessage = await MessageModel.findByIdAndUpdate(
-            messageId,
-            { messageText },
-            { new: true }
-        );
-        
-        if (!updatedMessage) {
-            return res.status(404).json({ message: 'Message not found' });
-        }
-
-        if (updatedMessage.isDeleted) {
-            return res.status(400).json({ message: 'Cannot update a deleted message' });
-        }
-
-        res.status(200).json({ message: 'Message updated successfully', updatedMessage: updatedMessage });
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error updating message:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
+  try {
+    const messageId = req.params.messageId;
+    const { messageText } = req.body;
+    if (!messageText) {
+      throw new customError("Message text is required", 400);
     }
+
+    validateMessageOwner(messageId, req.user.id);
+
+    // Check if message isDeleted = true deleted
+
+    const updatedMessage = await MessageModel.findByIdAndUpdate(
+      messageId,
+      { messageText },
+      { new: true }
+    );
+
+    if (!updatedMessage) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (updatedMessage.isDeleted) {
+      return res
+        .status(400)
+        .json({ message: "Cannot update a deleted message" });
+    }
+
+    res
+      .status(200)
+      .json({
+        message: "Message updated successfully",
+        updatedMessage: updatedMessage,
+      });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error updating message:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
+    }
+  }
 };
 
 // Delete a message.
 const deleteMessage = async (req, res) => {
-    try {
-        const messageId = req.params.messageId;
-        validateMessageOwner(messageId, req.user.id);
+  try {
+    const messageId = req.params.messageId;
+    validateMessageOwner(messageId, req.user.id);
 
-        const deletedMessage = await MessageModel.findByIdAndUpdate(
-            messageId,
-            { isDeleted: true },
-            { new: true }
-        );
-        if (!deletedMessage) {
-            return res.status(404).json({ message: 'Message not found' });
-        }
-
-        // if the message was unread and deleted, should we update the unread count ????
-        
-        res.status(200).json({ message: 'Message deleted successfully', data: deletedMessage });
-
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error deleting message:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
+    const deletedMessage = await MessageModel.findByIdAndUpdate(
+      messageId,
+      { isDeleted: true },
+      { new: true }
+    );
+    if (!deletedMessage) {
+      return res.status(404).json({ message: "Message not found" });
     }
+
+    // if the message was unread and deleted, should we update the unread count ????
+
+    res
+      .status(200)
+      .json({ message: "Message deleted successfully", data: deletedMessage });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error deleting message:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
+    }
+  }
 };
 
 // Block User From Messaging
 const blockUserFromMessaging = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const blockedUserId = req.params.userId;
+  try {
+    const userId = req.user.id;
+    const blockedUserId = req.params.userId;
 
-        if (!blockedUserId) {
-            return res.status(400).json({ message: 'User ID is required' });
-        }
-        const user = await userModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        const blockedUser = userModel.findById(blockedUserId);
-        if (!blockedUser) {
-            return res.status(404).json({ message: 'Blocked user not found' });
-        }
-
-        // Check if the user is already blocked
-        if (user.blockedUsers.includes(blockedUserId)) {
-            return res.status(400).json({ message: 'User is already blocked' });
-        }
-        // Block the user
-        user.blockedUsers.push(blockedUserId);
-        await user.save();
-        // return
-        res.status(200).json({ message: 'User blocked successfully' });
-
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error blocking user:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
+    if (!blockedUserId) {
+      return res.status(400).json({ message: "User ID is required" });
     }
-}
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const blockedUser = userModel.findById(blockedUserId);
+    if (!blockedUser) {
+      return res.status(404).json({ message: "Blocked user not found" });
+    }
+
+    // Check if the user is already blocked
+    if (user.blockedUsers.includes(blockedUserId)) {
+      return res.status(400).json({ message: "User is already blocked" });
+    }
+    // Block the user
+    user.blockedUsers.push(blockedUserId);
+    await user.save();
+    // return
+    res.status(200).json({ message: "User blocked successfully" });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error blocking user:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
+    }
+  }
+};
 
 const unblockUserFromMessaging = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const blockedUserId = req.params.userId;
-        
-        // Fetch current user
-        const user = await userModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
-        console.log("Before modification, blocked users:", user.blockedUsers);
-        
-        // Filter out the blocked user ID directly from the array
-        user.blockedUsers = user.blockedUsers.filter(id => 
-            id.toString() !== blockedUserId.toString()
-        );
-        
-        console.log("After filter, blocked users:", user.blockedUsers);
-        
-        // Save the updated user document
-        await user.save();
-        
-        // Get the most recent state of the user
-        const updatedUser = await userModel.findById(userId);
-        console.log("Final blocked users:", updatedUser.blockedUsers);
-        
-        res.status(200).json({ 
-            message: 'User unblocked successfully',
-            blockedUsers: updatedUser.blockedUsers
-        });
+  try {
+    const userId = req.user.id;
+    const blockedUserId = req.params.userId;
 
-    } catch (err) {
-        console.error('Error unblocking user:', err);
-        res.status(500).json({ message: 'Internal server error', error: err.message });
+    // Fetch current user
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
+
+    console.log("Before modification, blocked users:", user.blockedUsers);
+
+    // Filter out the blocked user ID directly from the array
+    user.blockedUsers = user.blockedUsers.filter(
+      (id) => id.toString() !== blockedUserId.toString()
+    );
+
+    console.log("After filter, blocked users:", user.blockedUsers);
+
+    // Save the updated user document
+    await user.save();
+
+    // Get the most recent state of the user
+    const updatedUser = await userModel.findById(userId);
+    console.log("Final blocked users:", updatedUser.blockedUsers);
+
+    res.status(200).json({
+      message: "User unblocked successfully",
+      blockedUsers: updatedUser.blockedUsers,
+    });
+  } catch (err) {
+    console.error("Error unblocking user:", err);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: err.message });
+  }
 };
 
 const getTotalUnreadCount = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        
-        // First check if the user exists
-        const userExists = await userModel.exists({ _id: userId });
-        if (!userExists) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
-        // Use the shared utility function
-        const totalUnread = await calculateTotalUnreadCount(userId);
-        
-        res.status(200).json({
-            message: 'Total unread count fetched successfully',
-            totalUnread: totalUnread
-        });
-    
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error getting total unread count:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
+  try {
+    const userId = req.user.id;
+
+    // First check if the user exists
+    const userExists = await userModel.exists({ _id: userId });
+    if (!userExists) {
+      return res.status(404).json({ message: "User not found" });
     }
+
+    // Use the shared utility function
+    const totalUnread = await calculateTotalUnreadCount(userId);
+
+    res.status(200).json({
+      message: "Total unread count fetched successfully",
+      totalUnread: totalUnread,
+    });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error getting total unread count:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
+    }
+  }
 };
 
 const markMessageAsRead = async (req, res) => {
-    try {
-        const messageId = req.params.messageId;
-        const userId = req.user.id;
+  try {
+    const messageId = req.params.messageId;
+    const userId = req.user.id;
 
-        const { updatedMessage, isNewReadReceipt } = await markMessageReadByUser(messageId, userId);
+    const { updatedMessage, isNewReadReceipt } = await markMessageReadByUser(
+      messageId,
+      userId
+    );
 
-        res.status(200).json({ 
-            message: 'Message marked as read successfully', 
-            data: updatedMessage,
-            isNewReadReceipt
-        });
+    res.status(200).json({
+      message: "Message marked as read successfully",
+      data: updatedMessage,
+      isNewReadReceipt,
+    });
+  } catch (err) {
+    if (err instanceof customError) {
+      res.status(err.statusCode).json({ message: err.message });
+    } else {
+      console.error("Error marking message as read:", err);
+      res
+        .status(500)
+        .json({ message: "Internal server error", error: err.message });
     }
-    catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error marking message as read:', err);
-            res.status(500).json({ message: 'Internal server error', error: err.message });
-        }
-    }
+  }
 };
 
-
 module.exports = {
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    blockUserFromMessaging,
-    unblockUserFromMessaging,
-    getTotalUnreadCount,
-    markMessageAsRead
+  sendMessage,
+  editMessage,
+  deleteMessage,
+  blockUserFromMessaging,
+  unblockUserFromMessaging,
+  getTotalUnreadCount,
+  markMessageAsRead,
 };
