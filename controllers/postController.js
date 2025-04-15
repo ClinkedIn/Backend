@@ -200,6 +200,7 @@ const getPost = async (req, res) => {
       isRepost,
       isSaved,
       isLiked,
+      isMine: post.userId._id.toString() === userId,
       // Include repost details if applicable
       ...(isRepost && {
         repostId: repost._id,
@@ -516,6 +517,7 @@ const getAllPosts = async (req, res) => {
           isRepost: isRepost,
           isSaved: isSaved,
           isLiked: isLiked,
+          isMine: post.userId._id.toString() === userId,
           // Only include repost details if this is a repost
           ...(isRepost && {
             repostId: repostDetails.repostId,
