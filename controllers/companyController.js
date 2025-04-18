@@ -5,6 +5,7 @@ const {
     uploadMultipleImages,
     deleteFileFromUrl,
 } = require('../utils/cloudinaryUpload');
+const APIFeatures = require('../utils/apiFeatures');
 const slugify = require('slugify');
 // Create a new company
 const createCompany = async (req, res) => {
@@ -40,6 +41,16 @@ const createCompany = async (req, res) => {
                 )}`,
             });
         }
+        const cleanAddress = slugify(address, { lower: true, strict: true });
+
+        const existingCompany = await companyModel.findOne({
+            address: cleanAddress,
+        });
+        if (existingCompany) {
+            return res.status(400).json({
+                message: 'Company with this address already exists',
+            });
+        }
 
         let logo = null;
         if (req.file) {
@@ -62,19 +73,9 @@ const createCompany = async (req, res) => {
             }
         }
 
-        const cleanAddress = slugify(address, { lower: true, strict: true });
         const protocol = req.protocol;
         const host = req.get('host'); // e.g., yourdomain.com
         const pageURL = `${protocol}://${host}/company/${cleanAddress}`;
-
-        const existingCompany = await companyModel.findOne({
-            address: cleanAddress,
-        });
-        if (existingCompany) {
-            return res.status(400).json({
-                message: 'Company with this address already exists',
-            });
-        }
 
         const admins = [req.user.id]; // Add the creator as an admin
         const newCompany = new companyModel({
@@ -106,7 +107,15 @@ const createCompany = async (req, res) => {
 // Get all companies
 const getAllCompanies = async (req, res) => {
     try {
-        const companies = await companyModel.find();
+        const features = new APIFeatures(
+            companyModel.find({ isDeleted: false }),
+            req.query
+        )
+            .filter()
+            .sort()
+            .limitFields()
+            .paginate();
+        const companies = await features.query;
         res.status(200).json(companies);
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -60,7 +60,7 @@ const companySchema = new mongoose.Schema(
         logo: { type: String }, // URL to company logo
         tagLine: { type: String }, // Short company description
         visitors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who visited the profile
-        isActive: { type: Boolean, default: true },
+        isDeleted: { type: Boolean, default: false },
         posts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }], // Company posts
         jobs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Job' }], // Company job listings
         location: { type: String, default: null }, // Company location
