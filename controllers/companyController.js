@@ -5,6 +5,7 @@ const {
     uploadMultipleImages,
     deleteFileFromUrl,
 } = require('../utils/cloudinaryUpload');
+const slugify = require('slugify');
 // Create a new company
 const createCompany = async (req, res) => {
     try {
@@ -40,12 +41,6 @@ const createCompany = async (req, res) => {
             });
         }
 
-        const existingCompany = await companyModel.findOne({ address });
-        if (existingCompany) {
-            return res.status(400).json({
-                message: 'Company with this address already exists',
-            });
-        }
         let logo = null;
         if (req.file) {
             const uploadResult = await uploadFile(
@@ -54,12 +49,27 @@ const createCompany = async (req, res) => {
             );
             logo = uploadResult.secure_url;
         }
+
+        const cleanAddress = slugify(address, { lower: true, strict: true });
+        const protocol = req.protocol;
+        const host = req.get('host'); // e.g., yourdomain.com
+        const pageURL = `${protocol}://${host}/company/${cleanAddress}`;
+
+        const existingCompany = await companyModel.findOne({
+            address: pageURL,
+        });
+        if (existingCompany) {
+            return res.status(400).json({
+                message: 'Company with this address already exists',
+            });
+        }
+
         const admins = [req.user.id]; // Add the creator as an admin
         const newCompany = new companyModel({
             ownerId: req.user.id,
             admins,
             name,
-            address,
+            address: pageURL,
             industry,
             organizationSize,
             organizationType,
