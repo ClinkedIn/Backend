@@ -1,26 +1,80 @@
-// fuctions implementation is a placeholder
 const companyModel = require('../models/companyModel');
-
+const userModel = require('../models/userModel');
+const {
+    uploadFile,
+    uploadMultipleImages,
+    deleteFileFromUrl,
+} = require('../utils/cloudinaryUpload');
 // Create a new company
 const createCompany = async (req, res) => {
     try {
-        const company = new companyModel({
-            userId: req.body.userId,
-            name: req.body.name,
-            address: req.body.address,
-            website: req.body.website,
-            industry: req.body.industry,
-            organizationSize: req.body.organizationSize,
-            organizationType: req.body.organizationType,
-            logo: req.body.logo,
-            tagLine: req.body.tagLine,
-            followers: [],
-            visitors: []
+        const { name, address, industry, organizationSize, organizationType } =
+            req.body;
+        if (
+            !name ||
+            !address ||
+            !industry ||
+            !organizationSize ||
+            !organizationType
+        ) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        const organizationSizeEnum =
+            companyModel.schema.path('organizationSize').enumValues;
+        const organizationTypeEnum =
+            companyModel.schema.path('organizationType').enumValues;
+
+        if (!organizationSizeEnum.includes(organizationSize)) {
+            return res.status(400).json({
+                message: `Invalid organization size. Valid options are: ${organizationSizeEnum.join(
+                    ', '
+                )}`,
+            });
+        }
+        if (!organizationTypeEnum.includes(organizationType)) {
+            return res.status(400).json({
+                message: `Invalid organization type. Valid options are: ${organizationTypeEnum.join(
+                    ', '
+                )}`,
+            });
+        }
+
+        const existingCompany = await companyModel.findOne({ address });
+        if (existingCompany) {
+            return res.status(400).json({
+                message: 'Company with this address already exists',
+            });
+        }
+        let logo = null;
+        if (req.file) {
+            const uploadResult = await uploadFile(
+                req.file.buffer,
+                req.file.mimetype
+            );
+            logo = uploadResult.secure_url;
+        }
+        const admins = [req.user.id]; // Add the creator as an admin
+        const newCompany = new companyModel({
+            ownerId: req.user.id,
+            admins,
+            name,
+            address,
+            industry,
+            organizationSize,
+            organizationType,
+            logo,
         });
-        const newCompany = await company.save();
+        await newCompany.save();
+        // Add the company to the creator's list of companies
+
+        await userModel.findByIdAndUpdate(req.user.id, {
+            $push: { companies: newCompany._id },
+        });
         res.status(201).json(newCompany);
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error creating company:', error);
+        res.status(500).json({ message: 'Internal server error ' });
     }
 };
 
@@ -59,8 +113,10 @@ const updateCompany = async (req, res) => {
         company.address = req.body.address || company.address;
         company.website = req.body.website || company.website;
         company.industry = req.body.industry || company.industry;
-        company.organizationSize = req.body.organizationSize || company.organizationSize;
-        company.organizationType = req.body.organizationType || company.organizationType;
+        company.organizationSize =
+            req.body.organizationSize || company.organizationSize;
+        company.organizationType =
+            req.body.organizationType || company.organizationType;
         company.logo = req.body.logo || company.logo;
         company.tagLine = req.body.tagLine || company.tagLine;
         const updatedCompany = await company.save();
@@ -93,11 +149,15 @@ const followCompany = async (req, res) => {
         }
         const userId = req.body.userId;
         if (!userId) {
-            return res.status(400).json({ message: 'User ID is required to follow the company' });
+            return res
+                .status(400)
+                .json({ message: 'User ID is required to follow the company' });
         }
         // Check if the user is already following
         if (company.followers.includes(userId)) {
-            return res.status(400).json({ message: 'User is already following this company' });
+            return res
+                .status(400)
+                .json({ message: 'User is already following this company' });
         }
         company.followers.push(userId);
         const updatedCompany = await company.save();
@@ -116,9 +176,13 @@ const unfollowCompany = async (req, res) => {
         }
         const userId = req.body.userId;
         if (!userId) {
-            return res.status(400).json({ message: 'User ID is required to unfollow the company' });
+            return res.status(400).json({
+                message: 'User ID is required to unfollow the company',
+            });
         }
-        company.followers = company.followers.filter(id => id.toString() !== userId);
+        company.followers = company.followers.filter(
+            (id) => id.toString() !== userId
+        );
         const updatedCompany = await company.save();
         res.status(200).json(updatedCompany);
     } catch (error) {
@@ -135,7 +199,9 @@ const addVisitor = async (req, res) => {
         }
         const userId = req.body.userId;
         if (!userId) {
-            return res.status(400).json({ message: 'User ID is required to add a visitor' });
+            return res
+                .status(400)
+                .json({ message: 'User ID is required to add a visitor' });
         }
         if (!company.visitors.includes(userId)) {
             company.visitors.push(userId);
@@ -155,5 +221,5 @@ module.exports = {
     deleteCompany,
     followCompany,
     unfollowCompany,
-    addVisitor
+    addVisitor,
 };
