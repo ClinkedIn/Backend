@@ -68,8 +68,20 @@ const companySchema = new mongoose.Schema(
     { timestamps: true }
 ); // Adds createdAt & updatedAt timestamps
 
-companySchema.pre('/^find/', function (next) {
+companySchema.pre(/^find/, function (next) {
+    if (this.getOptions().skipDeletedFilter) {
+        return next();
+    }
+    /*
+    const company = await companyModel.findById(companyId).setOptions({ skipDeletedFilter: true });
+    const deletedCompany = await companyModel
+    .findOne({ _id: companyId })
+    .setOptions({ skipDeletedFilter: true });
+
+    */
+
     this.find({ isDeleted: false });
+    console.log('Pre-hook for find* called');
     next();
 });
 
