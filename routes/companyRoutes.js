@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const companyController = require('../controllers/companyController');
 const { protect } = require('../middlewares/auth');
+const upload = require('../middlewares/multer');
 
 router
     .route('/')
-    .post(protect, companyController.createCompany)
+    .post(protect, upload.single('file'), companyController.createCompany)
     .get(protect, companyController.getAllCompanies);
 
 router

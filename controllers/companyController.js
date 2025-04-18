@@ -43,11 +43,23 @@ const createCompany = async (req, res) => {
 
         let logo = null;
         if (req.file) {
-            const uploadResult = await uploadFile(
-                req.file.buffer,
-                req.file.mimetype
-            );
-            logo = uploadResult.secure_url;
+            if (!req.file.mimetype.startsWith('image/')) {
+                return res
+                    .status(400)
+                    .json({ message: 'Please upload an image file' });
+            }
+            try {
+                const uploadResult = await uploadFile(
+                    req.file.buffer,
+                    req.file.mimetype
+                );
+                logo = uploadResult.url;
+            } catch (err) {
+                console.error('Error uploading file:', err);
+                return res.status(500).json({
+                    message: 'Failed to upload image',
+                });
+            }
         }
 
         const cleanAddress = slugify(address, { lower: true, strict: true });
@@ -56,7 +68,7 @@ const createCompany = async (req, res) => {
         const pageURL = `${protocol}://${host}/company/${cleanAddress}`;
 
         const existingCompany = await companyModel.findOne({
-            address: pageURL,
+            address: cleanAddress,
         });
         if (existingCompany) {
             return res.status(400).json({
@@ -69,7 +81,7 @@ const createCompany = async (req, res) => {
             ownerId: req.user.id,
             admins,
             name,
-            address: pageURL,
+            address: cleanAddress,
             industry,
             organizationSize,
             organizationType,
@@ -81,7 +93,10 @@ const createCompany = async (req, res) => {
         await userModel.findByIdAndUpdate(req.user.id, {
             $push: { companies: newCompany._id },
         });
-        res.status(201).json(newCompany);
+        res.status(201).json({
+            ...newCompany.toObject(),
+            pageURL, // Include full URL in response
+        });
     } catch (error) {
         console.error('Error creating company:', error);
         res.status(500).json({ message: 'Internal server error ' });
