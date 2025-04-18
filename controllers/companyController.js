@@ -130,10 +130,7 @@ const createCompany = async (req, res) => {
 // Get all companies
 const getAllCompanies = async (req, res) => {
     try {
-        const features = new APIFeatures(
-            companyModel.find({ isDeleted: false }),
-            req.query
-        )
+        const features = new APIFeatures(companyModel.find(), req.query)
             .filter()
             .sort()
             .limitFields()
