@@ -313,12 +313,28 @@ const updateCompany = async (req, res) => {
 // Delete a company by ID
 const deleteCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const companyId = req.params.companyId;
+        // Find the company to delete
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        await company.remove();
-        res.status(200).json({ message: 'Company deleted successfully' });
+
+        // Check authorization - only owner or admin can delete
+        if (
+            company.ownerId.toString() !== req.user.id &&
+            !company.admins.some((admin) => admin.toString() === req.user.id)
+        ) {
+            return res.status(403).json({
+                message: 'Not authorized to delete this company',
+            });
+        }
+
+        // Soft delete the company by setting isDeleted to true
+        company.isDeleted = true;
+        await company.save();
+
+        res.status(204).json({ status: 'success', data: null });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
