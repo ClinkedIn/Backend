@@ -68,4 +68,9 @@ const companySchema = new mongoose.Schema(
     { timestamps: true }
 ); // Adds createdAt & updatedAt timestamps
 
+companySchema.pre('/^find/', function (next) {
+    this.find({ isDeleted: false });
+    next();
+});
+
 module.exports = mongoose.model('Company', companySchema);

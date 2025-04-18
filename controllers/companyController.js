@@ -75,7 +75,7 @@ const createCompany = async (req, res) => {
 
         const protocol = req.protocol;
         const host = req.get('host'); // e.g., yourdomain.com
-        const pageURL = `${protocol}://${host}/company/${cleanAddress}`;
+        const pageURL = `${protocol}://${host}/companies/${cleanAddress}`;
 
         const admins = [req.user.id]; // Add the creator as an admin
         const newCompany = new companyModel({
@@ -125,13 +125,31 @@ const getAllCompanies = async (req, res) => {
 // Get a specific company by ID
 const getCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        console.log('Company ID:', req.params.companyId);
+        let company = null;
+
+        if (req.params.companyId) {
+            const slug = slugify(req.params.companyId, {
+                lower: true,
+                strict: true,
+            });
+            console.log('Slug:', slug);
+            company = await companyModel.findOne({
+                address: slug,
+            });
+
+            if (!company) {
+                company = await companyModel.findById(req.params.companyId);
+            }
+        }
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
+
         res.status(200).json(company);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching company:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
