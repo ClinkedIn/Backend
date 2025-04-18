@@ -10,8 +10,16 @@ const slugify = require('slugify');
 // Create a new company
 const createCompany = async (req, res) => {
     try {
-        const { name, address, industry, organizationSize, organizationType } =
-            req.body;
+        const {
+            name,
+            address,
+            website,
+            industry,
+            organizationSize,
+            organizationType,
+            tagLine,
+            location,
+        } = req.body;
         if (
             !name ||
             !address ||
@@ -51,6 +59,13 @@ const createCompany = async (req, res) => {
                 message: 'Company with this address already exists',
             });
         }
+        const object = {
+            name,
+            address: cleanAddress,
+            industry,
+            organizationSize,
+            organizationType,
+        };
 
         let logo = null;
         if (req.file) {
@@ -72,22 +87,30 @@ const createCompany = async (req, res) => {
                 });
             }
         }
+        if (logo) {
+            object.logo = logo;
+        }
 
         const protocol = req.protocol;
         const host = req.get('host'); // e.g., yourdomain.com
         const pageURL = `${protocol}://${host}/companies/${cleanAddress}`;
 
         const admins = [req.user.id]; // Add the creator as an admin
-        const newCompany = new companyModel({
-            ownerId: req.user.id,
-            admins,
-            name,
-            address: cleanAddress,
-            industry,
-            organizationSize,
-            organizationType,
-            logo,
-        });
+
+        object.admins = admins;
+        object.ownerId = req.user.id; // Add the creator as the owner
+        if (website) {
+            object.website = website;
+        }
+        if (tagLine) {
+            object.tagLine = tagLine;
+        }
+        if (location) {
+            object.location = location;
+        }
+
+        const newCompany = new companyModel(object);
+        // Save the new company to the database
         await newCompany.save();
         // Add the company to the creator's list of companies
 
@@ -125,7 +148,6 @@ const getAllCompanies = async (req, res) => {
 // Get a specific company by ID
 const getCompany = async (req, res) => {
     try {
-        console.log('Company ID:', req.params.companyId);
         let company = null;
 
         if (req.params.companyId) {
@@ -133,7 +155,6 @@ const getCompany = async (req, res) => {
                 lower: true,
                 strict: true,
             });
-            console.log('Slug:', slug);
             company = await companyModel.findOne({
                 address: slug,
             });
@@ -156,25 +177,136 @@ const getCompany = async (req, res) => {
 // Update a company by ID
 const updateCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const companyId = req.params.companyId;
+        console.log('Company ID:', companyId);
+        // Find the company to update
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        company.userId = req.body.userId || company.userId;
-        company.name = req.body.name || company.name;
-        company.address = req.body.address || company.address;
-        company.website = req.body.website || company.website;
-        company.industry = req.body.industry || company.industry;
-        company.organizationSize =
-            req.body.organizationSize || company.organizationSize;
-        company.organizationType =
-            req.body.organizationType || company.organizationType;
-        company.logo = req.body.logo || company.logo;
-        company.tagLine = req.body.tagLine || company.tagLine;
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
+
+        // Check authorization - only owner or admin can update
+        if (
+            company.ownerId.toString() !== req.user.id &&
+            !company.admins.some((admin) => admin.toString() === req.user.id)
+        ) {
+            return res.status(403).json({
+                message: 'Not authorized to update this company',
+            });
+        }
+
+        // Extract fields from request body
+        const {
+            name,
+            address,
+            website,
+            industry,
+            organizationSize,
+            organizationType,
+            tagLine,
+            location,
+        } = req.body;
+
+        // Create update object with only provided fields
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (website) updateData.website = website;
+        if (industry) updateData.industry = industry;
+        if (tagLine) updateData.tagLine = tagLine;
+        if (location) updateData.location = location;
+
+        // Validate organization size if provided
+        if (organizationSize) {
+            const organizationSizeEnum =
+                companyModel.schema.path('organizationSize').enumValues;
+            if (!organizationSizeEnum.includes(organizationSize)) {
+                return res.status(400).json({
+                    message: `Invalid organization size. Valid options are: ${organizationSizeEnum.join(
+                        ', '
+                    )}`,
+                });
+            }
+            updateData.organizationSize = organizationSize;
+        }
+
+        // Validate organization type if provided
+        if (organizationType) {
+            const organizationTypeEnum =
+                companyModel.schema.path('organizationType').enumValues;
+            if (!organizationTypeEnum.includes(organizationType)) {
+                return res.status(400).json({
+                    message: `Invalid organization type. Valid options are: ${organizationTypeEnum.join(
+                        ', '
+                    )}`,
+                });
+            }
+            updateData.organizationType = organizationType;
+        }
+
+        // Handle address update (which requires slugifying and uniqueness check)
+        if (address) {
+            const cleanAddress = slugify(address, {
+                lower: true,
+                strict: true,
+            });
+
+            // Check if new address conflicts with any existing company except the current one
+            const existingCompany = await companyModel.findOne({
+                address: cleanAddress,
+                _id: { $ne: companyId }, // Exclude current company from check
+            });
+
+            if (existingCompany) {
+                return res.status(400).json({
+                    message: 'Company with this address already exists',
+                });
+            }
+
+            updateData.address = cleanAddress;
+        }
+
+        // Handle logo upload if file is included
+        if (req.file) {
+            if (!req.file.mimetype.startsWith('image/')) {
+                return res
+                    .status(400)
+                    .json({ message: 'Please upload an image file' });
+            }
+
+            try {
+                const uploadResult = await uploadFile(
+                    req.file.buffer,
+                    req.file.mimetype
+                );
+                updateData.logo = uploadResult.url;
+            } catch (err) {
+                console.error('Error uploading file:', err);
+                return res.status(500).json({
+                    message: 'Failed to upload image',
+                });
+            }
+        }
+
+        // Update the company
+        const updatedCompany = await companyModel.findByIdAndUpdate(
+            companyId,
+            updateData,
+            { new: true, runValidators: true } // Return updated doc and run schema validators
+        );
+
+        // Generate page URL for response
+        const protocol = req.protocol;
+        const host = req.get('host');
+        const pageURL = `${protocol}://${host}/companies/${updatedCompany.address}`;
+
+        // Return the updated company
+        res.status(200).json({
+            ...updatedCompany.toObject(),
+            pageURL,
+        });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error updating company:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 

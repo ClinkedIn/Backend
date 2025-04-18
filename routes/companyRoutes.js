@@ -12,7 +12,7 @@ router
 router
     .route('/:companyId')
     .get(protect, companyController.getCompany)
-    .put(protect, companyController.updateCompany)
+    .patch(protect, upload.single('file'), companyController.updateCompany)
     .delete(protect, companyController.deleteCompany);
 
 // Endpoint to follow/unfollow a company
