@@ -118,7 +118,7 @@ const getAllCompanies = async (req, res) => {
         const companies = await features.query;
         res.status(200).json(companies);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
