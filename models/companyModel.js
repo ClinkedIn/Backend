@@ -81,7 +81,6 @@ companySchema.pre(/^find/, function (next) {
     */
 
     this.find({ isDeleted: false });
-    console.log('Pre-hook for find* called');
     next();
 });
 
