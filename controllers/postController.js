@@ -16,6 +16,7 @@ const {
 const {
     uploadPostAttachments,
     createPostUtils,
+    updatePostUtils,
 } = require('../utils/postUtils');
 const { sendNotification } = require('../utils/Notification');
 const impressionModel = require('../models/impressionModel');
@@ -51,36 +52,21 @@ const createPost = async (req, res) => {
                 .json({ message: error.message });
         }
         // Get user information separately without changing the post structure
-        const user = await userModel
-            .findById(userId)
-            .select('firstName lastName headline');
+        const user = await userModel.findById(userId);
 
-        // Count impression types if needed (depends on your impression model structure)
-        // For now, we'll just provide the count of impressions
-
-        // Create a custom response object with the requested fields
-        const postResponse = {
-            postId: newPost._id,
-            userId: userId, // Original user ID reference
-            firstName: user.firstName,
-            lastName: user.lastName,
-            headline: user.headline || '',
-            postDescription: newPost.description,
-            attachments: newPost.attachments,
-            impressionTypes: [],
-            impressionCounts: newPost.impressionCounts,
-            commentCount: newPost.commentCount,
-            repostCount: newPost.repostCount,
-            createdAt: newPost.createdAt,
-            taggedUsers: newPost.taggedUsers,
-        };
         //add the post id to the user's post array
         await userModel.findByIdAndUpdate(userId, {
             $push: { posts: newPost._id },
         });
         res.status(201).json({
             message: 'Post created successfully',
-            post: postResponse,
+            post: newPost,
+            owner: {
+                Id: user._id,
+                name: user.firstName + ' ' + user.lastName,
+                headline: user.headline || '',
+                profilePicture: user.profilePicture,
+            },
         });
     } catch (error) {
         console.error('Error creating post:', error);
@@ -267,7 +253,6 @@ const updatePost = async (req, res) => {
     try {
         const { postId } = req.params;
         const userId = req.user.id;
-        const { description, taggedUsers } = req.body;
 
         // Validate input
         if (!postId) {
@@ -282,8 +267,16 @@ const updatePost = async (req, res) => {
             return res.status(404).json({ message: 'Post not found' });
         }
 
+        if (post.owner.type !== 'User') {
+            return res.status(403).json({
+                message:
+                    'You can only update user posts through this route, this is a company post',
+            });
+        }
+
         // Check if user is the owner of the post
-        if (post.userId.toString() !== userId) {
+        console.log('Post owner:', post.owner.id.toHexString());
+        if (post.owner.id.toHexString() !== userId) {
             return res
                 .status(403)
                 .json({ message: 'You can only update your own posts' });
@@ -296,62 +289,25 @@ const updatePost = async (req, res) => {
         }
 
         // Create update object with only allowed fields
-        const updateData = {};
-
-        if (description !== undefined) {
-            // Validate description if provided
-            if (description.trim() === '') {
-                return res
-                    .status(400)
-                    .json({ message: 'Post description cannot be empty' });
-            }
-            updateData.description = description;
-        }
-
-        if (taggedUsers !== undefined) {
-            updateData.taggedUsers = taggedUsers;
-        }
-
-        // Only perform update if there are changes
-        if (Object.keys(updateData).length === 0) {
+        let updatedPost = null;
+        try {
+            updatedPost = await updatePostUtils(req, postId);
+        } catch (updatePostError) {
             return res
-                .status(400)
-                .json({ message: 'No valid fields to update' });
+                .status(updatePostError.statusCode)
+                .json({ message: updatePostError.message });
         }
-
-        // Update the post with new data and return the updated document
-        const updatedPost = await postModel
-            .findByIdAndUpdate(
-                postId,
-                {
-                    ...updateData,
-                    updatedAt: Date.now(), // Explicitly update the timestamp
-                },
-                { new: true } // Return the modified document
-            )
-            .populate('userId', 'firstName lastName headline profilePicture');
-
-        // Format response to match your API standard
-        const postResponse = {
-            postId: updatedPost._id,
-            userId: updatedPost.userId._id,
-            firstName: updatedPost.userId.firstName,
-            lastName: updatedPost.userId.lastName,
-            headline: updatedPost.userId.headline || '',
-            profilePicture: updatedPost.userId.profilePicture,
-            postDescription: updatedPost.description,
-            attachments: updatedPost.attachments,
-            impressionCounts: updatedPost.impressionCounts,
-            commentCount: updatedPost.commentCount || 0,
-            repostCount: updatedPost.repostCount || 0,
-            createdAt: updatedPost.createdAt,
-            updatedAt: updatedPost.updatedAt,
-            taggedUsers: updatedPost.taggedUsers,
-        };
+        const user = await userModel.findById(userId);
 
         res.status(200).json({
             message: 'Post updated successfully',
-            post: postResponse,
+            post: updatedPost,
+            owner: {
+                Id: user._id,
+                name: user.firstName + ' ' + user.lastName,
+                headline: user.headline || '',
+                profilePicture: user.profilePicture,
+            },
         });
     } catch (error) {
         console.error('Error updating post:', error);

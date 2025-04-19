@@ -109,7 +109,42 @@ const createPostUtils = async (req, ownerType) => {
     return post;
 };
 
+const updatePostUtils = async (req, postId) => {
+    const { description, taggedUsers } = req.body;
+    const updateData = {};
+
+    if (description !== undefined) {
+        // Validate description if provided
+        if (description.trim() === '') {
+            throw new customError('Post description cannot be empty', 400);
+        }
+        updateData.description = description;
+    }
+
+    if (taggedUsers !== undefined) {
+        updateData.taggedUsers = taggedUsers;
+    }
+    // Only perform update if there are changes
+    if (Object.keys(updateData).length === 0) {
+        throw new customError('No valid fields to update', 400);
+    }
+
+    const updatedPost = await postModel.findByIdAndUpdate(
+        postId,
+        { ...updateData, updatedAt: Date.now() },
+        {
+            new: true,
+            runValidators: true,
+        }
+    );
+    if (!updatedPost) {
+        throw new customError('Post not found', 404);
+    }
+    return updatedPost;
+};
+
 module.exports = {
     uploadPostAttachments,
     createPostUtils,
+    updatePostUtils,
 };
