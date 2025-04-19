@@ -1,7 +1,7 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
-const { createPostUtils } = require('./../utils/postUtils');
+const { createPostUtils, updatePostUtils } = require('./../utils/postUtils');
 const customError = require('./../utils/customError');
 const {
     uploadFile,
@@ -377,7 +377,95 @@ const createPost = async (req, res) => {
     }
 };
 
-const updatePost = async (req, res) => {};
+const updatePost = async (req, res) => {
+    try {
+        const { postId, companyId } = req.params;
+        const userId = req.user.id;
+
+        // Validate required params
+        if (!postId || !companyId) {
+            return res.status(400).json({
+                message: !postId
+                    ? 'Post ID is required'
+                    : 'Company ID is required',
+            });
+        }
+
+        // Fetch post and validate ownership
+        const post = await postModel.findById(postId);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        if (post.owner.type !== 'Company') {
+            return res.status(403).json({
+                message: 'This route is only for company posts',
+            });
+        }
+
+        if (post.owner.id.toString() !== companyId) {
+            return res.status(403).json({
+                message: 'This post does not belong to the provided company',
+            });
+        }
+
+        if (!post.isActive) {
+            return res
+                .status(400)
+                .json({ message: 'Cannot update inactive posts' });
+        }
+
+        // Fetch company and user
+        const [company, user] = await Promise.all([
+            companyModel.findById(companyId),
+            userModel.findById(userId),
+        ]);
+
+        if (!company || !user) {
+            return res.status(404).json({
+                message: !company ? 'Company not found' : 'User not found',
+            });
+        }
+
+        // Check user is owner or admin
+        const isOwner = company.ownerId.toString() === userId;
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === userId
+        );
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({
+                message:
+                    'You are not authorized to update posts for this company',
+            });
+        }
+
+        // Update post using utility
+        let updatedPost;
+        try {
+            updatedPost = await updatePostUtils(req, postId);
+        } catch (err) {
+            return res
+                .status(err.statusCode || 500)
+                .json({ message: err.message });
+        }
+
+        res.status(200).json({
+            message: 'Post updated successfully',
+            post: updatedPost,
+            owner: {
+                id: company._id,
+                name: company.name,
+                headline: company.tagLine || '',
+                profilePicture: company.logo || null,
+            },
+        });
+    } catch (error) {
+        console.error('Error updating post:', error);
+        res.status(500).json({
+            message: 'Failed to update post',
+            error: error.message,
+        });
+    }
+};
 
 const deletePost = async (req, res) => {};
 // Follow a company
