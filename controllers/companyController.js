@@ -1,5 +1,8 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
+const postModel = require('../models/postModel');
+const { createPostUtils } = require('./../utils/postUtils');
+const customError = require('./../utils/customError');
 const {
     uploadFile,
     uploadMultipleImages,
@@ -337,6 +340,46 @@ const deleteCompany = async (req, res) => {
     }
 };
 
+const createPost = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        // Check authorization - only owner or admin can create posts
+        if (
+            company.ownerId.toString() !== req.user.id &&
+            !company.admins.some((admin) => admin.toString() === req.user.id)
+        ) {
+            return res.status(403).json({
+                message: 'Not authorized to create posts for this company',
+            });
+        }
+
+        // Create the post using the utility function
+        let post = null;
+        try {
+            post = await createPostUtils(req, 'Company');
+        } catch (postError) {
+            console.error('Error creating post:', postError);
+            return res
+                .status(postError.statusCode)
+                .json({ message: postError.message });
+        }
+        // Add the post to the company's posts array
+        company.posts.push(post._id);
+        await company.save();
+        res.status(201).json(post);
+    } catch (error) {
+        console.error('Error creating post:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const updatePost = async (req, res) => {};
+
+const deletePost = async (req, res) => {};
 // Follow a company
 const followCompany = async (req, res) => {
     try {
@@ -416,6 +459,9 @@ module.exports = {
     getCompany,
     updateCompany,
     deleteCompany,
+    createPost,
+    updatePost,
+    deletePost,
     followCompany,
     unfollowCompany,
     addVisitor,

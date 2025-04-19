@@ -24,4 +24,10 @@ router
 // Endpoint to add a visitor to a company
 router.route('/:companyId/visit').post(protect, companyController.addVisitor);
 
+router
+    .route('/:companyId/post')
+    .post(protect, companyController.createPost)
+    .patch(protect, companyController.updatePost)
+    .delete(protect, companyController.deletePost);
+
 module.exports = router;
