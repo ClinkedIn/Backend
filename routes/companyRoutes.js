@@ -31,4 +31,9 @@ router
     .patch(protect, companyController.updatePost)
     .delete(protect, companyController.deletePost);
 
+router
+    .route('/:companyId/admin')
+    .post(protect, companyController.addAdmin)
+    .delete(protect, companyController.removeAdmin);
+
 module.exports = router;

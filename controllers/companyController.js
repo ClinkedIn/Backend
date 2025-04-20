@@ -488,6 +488,103 @@ const updatePost = async (req, res) => {
 };
 
 const deletePost = async (req, res) => {};
+
+const addAdmin = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const userId = req.body.userId; // User ID to be added as admin
+
+        // Validate required params
+        if (!companyId || !userId) {
+            return res.status(400).json({
+                message: !companyId
+                    ? 'Company ID is required'
+                    : 'User ID is required',
+            });
+        }
+
+        // Fetch company and validate ownership
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        if (company.ownerId.toString() !== req.user.id) {
+            return res.status(403).json({
+                message: 'Only the owner can add admins',
+            });
+        }
+
+        // Check if user is already an admin
+        if (company.admins.includes(userId)) {
+            return res.status(400).json({
+                message: 'User is already an admin of this company',
+            });
+        }
+
+        // Add user as admin
+        company.admins.push(userId);
+        await company.save();
+
+        res.status(200).json({
+            message: 'User added as admin successfully',
+            admins: company.admins,
+        });
+    } catch (error) {
+        console.error('Error adding admin:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const removeAdmin = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const userId = req.body.userId; // User ID to be removed as admin
+
+        // Validate required params
+        if (!companyId || !userId) {
+            return res.status(400).json({
+                message: !companyId
+                    ? 'Company ID is required'
+                    : 'User ID is required',
+            });
+        }
+
+        // Fetch company and validate ownership
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        if (company.ownerId.toString() !== req.user.id) {
+            return res.status(403).json({
+                message: 'Only the owner can remove admins',
+            });
+        }
+
+        // Check if user is an admin
+        if (!company.admins.includes(userId)) {
+            return res.status(400).json({
+                message: 'User is not an admin of this company',
+            });
+        }
+
+        // Remove user as admin
+        company.admins = company.admins.filter(
+            (admin) => admin.toString() !== userId
+        );
+        await company.save();
+
+        res.status(200).json({
+            message: 'User removed as admin successfully',
+            admins: company.admins,
+        });
+    } catch (error) {
+        console.error('Error removing admin:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 // Follow a company
 const followCompany = async (req, res) => {
     try {
@@ -573,4 +670,6 @@ module.exports = {
     followCompany,
     unfollowCompany,
     addVisitor,
+    addAdmin,
+    removeAdmin,
 };
