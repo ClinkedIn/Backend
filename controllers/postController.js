@@ -875,26 +875,19 @@ const repostPost = async (req, res) => {
         );
 
         // Get user details for response
-        const user = await userModel
-            .findById(userId)
-            .select('firstName lastName headline profilePicture');
-
-        // Format response
-        const repostResponse = {
-            repostId: newRepost._id,
-            originalPostId: postId,
-            userId: userId,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            headline: user.headline || '',
+        const user = await userModel.findById(userId);
+        const owner = {
+            id: user._id,
+            name: user.firstName + ' ' + user.lastName,
+            headline: user.headline,
             profilePicture: user.profilePicture,
-            repostDescription: newRepost.description,
-            createdAt: newRepost.createdAt,
         };
 
         res.status(201).json({
             message: 'Post reposted successfully',
-            repost: repostResponse,
+            repost: newRepost,
+            originalPost: updatedPost,
+            owner,
         });
     } catch (error) {
         console.error('Error reposting post:', error);

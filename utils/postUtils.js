@@ -155,7 +155,6 @@ const getPostOwnerUtils = async (post) => {
         owner = {
             id: user._id,
             name: user.firstName + ' ' + user.lastName,
-            profilePicture: user.profilePicture,
             headline: user.headline,
             profilePicture: user.profilePicture,
         };
@@ -171,7 +170,6 @@ const getPostOwnerUtils = async (post) => {
             name: company.name,
             profilePicture: company.logo,
             headline: company.description,
-            profilePicture: company.logo,
         };
     }
     return owner;
