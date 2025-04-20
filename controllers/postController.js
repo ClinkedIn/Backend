@@ -17,6 +17,7 @@ const {
     uploadPostAttachments,
     createPostUtils,
     updatePostUtils,
+    getPostOwnerUtils,
 } = require('../utils/postUtils');
 const { sendNotification } = require('../utils/Notification');
 const impressionModel = require('../models/impressionModel');
@@ -58,15 +59,20 @@ const createPost = async (req, res) => {
         await userModel.findByIdAndUpdate(userId, {
             $push: { posts: newPost._id },
         });
+
+        let owner = null;
+        try {
+            owner = await getPostOwnerUtils(newPost);
+        } catch (ownerError) {
+            return res
+                .status(error.statusCode)
+                .json({ message: error.message });
+        }
+
         res.status(201).json({
             message: 'Post created successfully',
             post: newPost,
-            owner: {
-                Id: user._id,
-                name: user.firstName + ' ' + user.lastName,
-                headline: user.headline || '',
-                profilePicture: user.profilePicture,
-            },
+            owner,
         });
     } catch (error) {
         console.error('Error creating post:', error);
@@ -297,17 +303,19 @@ const updatePost = async (req, res) => {
                 .status(updatePostError.statusCode)
                 .json({ message: updatePostError.message });
         }
-        const user = await userModel.findById(userId);
+        let owner = null;
+        try {
+            owner = await getPostOwnerUtils(updatedPost);
+        } catch (ownerError) {
+            return res
+                .status(error.statusCode)
+                .json({ message: error.message });
+        }
 
         res.status(200).json({
             message: 'Post updated successfully',
             post: updatedPost,
-            owner: {
-                Id: user._id,
-                name: user.firstName + ' ' + user.lastName,
-                headline: user.headline || '',
-                profilePicture: user.profilePicture,
-            },
+            owner,
         });
     } catch (error) {
         console.error('Error updating post:', error);

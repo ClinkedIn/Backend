@@ -1,7 +1,11 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
-const { createPostUtils, updatePostUtils } = require('./../utils/postUtils');
+const {
+    createPostUtils,
+    updatePostUtils,
+    getPostOwnerUtils,
+} = require('./../utils/postUtils');
 const customError = require('./../utils/customError');
 const {
     uploadFile,
@@ -370,15 +374,18 @@ const createPost = async (req, res) => {
         // Add the post to the company's posts array
         company.posts.push(post._id);
         await company.save();
+
+        let owner = null;
+        try {
+            owner = await getPostOwnerUtils(post);
+        } catch (err) {
+            return res.status(err.statusCode).json({ message: err.message });
+        }
+
         res.status(201).json({
             message: 'Post created successfully',
             post: post,
-            owner: {
-                Id: company._id,
-                name: company.name,
-                headline: company.tagLine || '',
-                profilePicture: company.logo || null,
-            },
+            owner,
         });
     } catch (error) {
         console.error('Error creating post:', error);
@@ -457,15 +464,19 @@ const updatePost = async (req, res) => {
                 .json({ message: err.message });
         }
 
+        let owner = null;
+        try {
+            owner = await getPostOwnerUtils(updatedPost);
+        } catch (err) {
+            return res
+                .status(err.statusCode || 500)
+                .json({ message: err.message });
+        }
+
         res.status(200).json({
             message: 'Post updated successfully',
             post: updatedPost,
-            owner: {
-                id: company._id,
-                name: company.name,
-                headline: company.tagLine || '',
-                profilePicture: company.logo || null,
-            },
+            owner,
         });
     } catch (error) {
         console.error('Error updating post:', error);

@@ -143,8 +143,43 @@ const updatePostUtils = async (req, postId) => {
     return updatedPost;
 };
 
+const getPostOwnerUtils = async (post) => {
+    let owner = {};
+    if (post.owner.type === 'User') {
+        const user = await userModel
+            .findById(post.owner.id)
+            .select('-password');
+        if (!user) {
+            throw new customError('User not found', 404);
+        }
+        owner = {
+            id: user._id,
+            name: user.firstName + ' ' + user.lastName,
+            profilePicture: user.profilePicture,
+            headline: user.headline,
+            profilePicture: user.profilePicture,
+        };
+    } else if (post.owner.type === 'Company') {
+        const company = await companyModel
+            .findById(post.owner.id)
+            .select('-password');
+        if (!company) {
+            throw new customError('Company not found', 404);
+        }
+        owner = {
+            id: company._id,
+            name: company.name,
+            profilePicture: company.logo,
+            headline: company.description,
+            profilePicture: company.logo,
+        };
+    }
+    return owner;
+};
+
 module.exports = {
     uploadPostAttachments,
     createPostUtils,
     updatePostUtils,
+    getPostOwnerUtils,
 };
