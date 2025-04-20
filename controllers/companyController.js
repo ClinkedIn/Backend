@@ -370,7 +370,16 @@ const createPost = async (req, res) => {
         // Add the post to the company's posts array
         company.posts.push(post._id);
         await company.save();
-        res.status(201).json(post);
+        res.status(201).json({
+            message: 'Post created successfully',
+            post: post,
+            owner: {
+                Id: company._id,
+                name: company.name,
+                headline: company.tagLine || '',
+                profilePicture: company.logo || null,
+            },
+        });
     } catch (error) {
         console.error('Error creating post:', error);
         res.status(500).json({ message: 'Internal server error' });
