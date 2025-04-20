@@ -231,9 +231,15 @@ const deletePost = async (req, res) => {
                 .status(404)
                 .json({ message: 'Post not found or already deleted' });
         }
+        if (post.owner.type !== 'User') {
+            return res.status(403).json({
+                message:
+                    'You can only delete user posts through this route, this is a company post',
+            });
+        }
 
         // Check if user is the owner of the post
-        if (post.userId.toString() !== userId) {
+        if (post.owner.id.toHexString() !== userId) {
             return res
                 .status(403)
                 .json({ message: 'You can only delete your own posts' });
@@ -281,7 +287,6 @@ const updatePost = async (req, res) => {
         }
 
         // Check if user is the owner of the post
-        console.log('Post owner:', post.owner.id.toHexString());
         if (post.owner.id.toHexString() !== userId) {
             return res
                 .status(403)
