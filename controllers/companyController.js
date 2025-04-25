@@ -1,11 +1,6 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
-const {
-    createPostUtils,
-    updatePostUtils,
-    getPostOwnerUtils,
-} = require('./../utils/postUtils');
 const customError = require('./../utils/customError');
 const {
     uploadFile,
