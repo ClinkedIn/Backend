@@ -1125,6 +1125,9 @@
  *                           __v:
  *                             type: number
  *                             example: 0
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -1367,6 +1370,9 @@
  *                         __v:
  *                           type: number
  *                           example: 0
+ *                     isMine:
+ *                       type: boolean
+ *                       example: true
  *                     isRepost:
  *                       type: boolean
  *                       example: true
@@ -2358,10 +2364,6 @@
  *                 type: string
  *                 description: Text content of the comment
  *                 example: "This is a great post! Thanks for sharing."
- *               commentAttachment:
- *                 type: string
- *                 description: URL of an image (alternative to file upload)
- *                 example: "https://example.com/image.jpg"
  *               file:
  *                 type: string
  *                 format: binary
@@ -11359,7 +11361,7 @@
 
 /**
  * @swagger
- * /user/{userId}/activity:
+ * /user/{userId}/user-activity:
  *   get:
  *     summary: Get posts that a user has posted, reposted, or commented on
  *     tags: [Users, Posts]
