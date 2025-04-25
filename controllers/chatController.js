@@ -379,7 +379,6 @@ const getAllChats = async (req, res) => {
             }
         }) : [];
         
-        // Query for group chats
         const groupChats = groupChatIds.length > 0 ? await groupChatModel.find({
             _id: { $in: groupChatIds }
         }).populate({
@@ -450,7 +449,6 @@ const getAllChats = async (req, res) => {
                 );
             }
             
-            // Get the latest message (safely)
             const latestMessage = chat.messages && chat.messages.length > 0 ? chat.messages[0] : null;
             
             return {
@@ -485,7 +483,6 @@ const getAllChats = async (req, res) => {
             };
         });
         
-        // Process group chats - unchanged
         const processedGroupChats = groupChats.map(chat => {
             const userChatRef = userChats.find(uc => 
                 uc.chatId && chat._id && uc.chatId.toString() === chat._id.toString()

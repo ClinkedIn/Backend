@@ -158,6 +158,10 @@ async function createRandomUsers() {
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 2 })
             ),
+            reportedUsers: faker.helpers.arrayElements(
+                userIds.filter(id => id !== userId), 
+                faker.number.int({ min: 0, max: 2 })
+            ),
             profileViews: faker.helpers.arrayElements(
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 5 })
@@ -231,6 +235,7 @@ async function updateUserRelationships() {
             followers,
             connectionList: finalConnectionList,
             blockedUsers: relationship.blockedUsers,
+            reportedUsers: relationship.reportedUsers,
             profileViews: relationship.profileViews,
             savedPosts: relationship.savedPosts,
             savedJobs: relationship.savedJobs,
