@@ -11,7 +11,7 @@ const MessageModel = require('../models/chatMessageModel');
 const notifications = [];
 
 // Target user ID
-const TARGET_USER_ID = '3dddd459ad9b0142faafeb7b';
+const TARGET_USER_ID = '994acb8d6faac3c04c5e8571';
 
 // Notification templates based on utils/Notification.js
 const notificationTemplates = {

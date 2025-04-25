@@ -18,10 +18,11 @@ const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
 const searchRouter = require("./routes/searchRoutes");
 const adminRouter = require("./routes/adminRoutes");
-//to be removed
 const uploadRouter = require("./routes/uploadRoutes");
+const stripeRouter = require("./routes/stripeRoutes");
 const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
+const stripeController = require("./controllers/stripeController"); // Import the controller
 const app = express();
 connectDB();
 const corsOptions = {
@@ -31,6 +32,11 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// Add these lines BEFORE any JSON body parsing middleware:
+app.post('/stripe/webhook', 
+  express.raw({ type: 'application/json' }),
+  stripeController.handleWebhook  // Direct reference to the controller
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -47,8 +53,9 @@ app.use("/upload", uploadRouter);
 app.use("/search", searchRouter);
 app.use("/notifications", notificationRouter);
 app.use("/admin", adminRouter);
+app.use("/stripe", stripeRouter);
 app.use(
-  "/",
+  "/api-docs",
   swaggerUI.serve,
   swaggerUI.setup(swaggerSpec, {
     swaggerOptions: {
