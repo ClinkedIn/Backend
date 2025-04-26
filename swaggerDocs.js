@@ -88,6 +88,8 @@
  *     responses:
  *       200:
  *         description: Connection request sent successfully
+ *       403:
+ *         description: Cannot send connection request due to other user privacy settings
  *       400:
  *         description: Invalid request or already connected
  *       401:
@@ -6480,6 +6482,9 @@
  *                       type: array
  *                       items:
  *                         type: string
+ *                 canSendConnectionRequest:
+ *                   type: boolean
+ *                   description: check whether the user can send a connection request to this user based on their privacy settings
  *       403:
  *         description: Access denied due to privacy settings
  *         content:
