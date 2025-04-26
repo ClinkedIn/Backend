@@ -31,7 +31,6 @@ router.route('/get-report/:reportId')
     .get(protect, privacyController.getReportById);
 
 
-// Control who can send connection requests
 router.route('/connection-request')
     .patch(protect, privacyController.controlConnectionRequest);
 

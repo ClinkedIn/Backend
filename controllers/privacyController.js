@@ -66,13 +66,28 @@ const reportUser = async (req, res) => {
     try {
         const { userId } = req.params;
         const loggedInUserId = req.user.id;
-        const { policy, dontWantToSee } = req.body;
-        // ensure policy is one of the allowed values
+        const { policy } = req.body;
+        
         const allowedPolicies = [
+            "Harassment", 
+            "Fraud or scam", 
+            "Spam", 
+            "Misinformation", 
+            "Hateful speech", 
+            "Threats or violence", 
+            "Self-harm", 
+            "Graphic content", 
+            "Dangerous or extremist organizations", 
+            "Sexual content", 
+            "Fake account", 
+            "Child exploitation", 
+            "Illegal goods and services", 
+            "Infringement",
+            // User-specific violations
             "This person is impersonating someone", 
             "This account has been hacked", 
             "This account is not a real person"
-        ]
+        ];
 
         if (!allowedPolicies.includes(policy)) {
             return res.status(400).json({ message: "Invalid policy." });
@@ -91,31 +106,20 @@ const reportUser = async (req, res) => {
             return res.status(404).json({ message: "User not found." });
         }
 
-        const updatedUser = await userModel.findOneAndUpdate(
-            { 
-                _id: loggedInUserId,
-                reportedUsers: { $ne: userId }
-            },
-            { 
-                $addToSet: { reportedUsers: userId } 
-            },
-            { new: true }
+        await userModel.findByIdAndUpdate(
+            loggedInUserId, 
+            { $addToSet: { reportedUsers: userId } }
         );
-
-        if (!updatedUser) {
-            return res.status(400).json({ message: "You have already reported this user." });
-        }
 
         const newReport = new reportModel({
             userId: loggedInUserId,
             reportedId: userId,
             reportedType: "User",
-            policy,
-            dontWantToSee
+            policy
         });
 
         await newReport.save();
-        // return success message and the report ID
+
         const reportId = newReport._id;
         return res.status(201).json({ message: "User reported successfully.", reportId });
     }
@@ -123,7 +127,7 @@ const reportUser = async (req, res) => {
         console.error("Error reporting user:", error);
         return res.status(500).json({ message: "Internal server error." });
     }
-}
+};
 
 const reportPost = async (req, res) => {
     try {
@@ -179,6 +183,7 @@ const reportPost = async (req, res) => {
     }
 }
 
+
 const getBlockedUsers = async (req, res) => {
     try {
         const loggedInUserId = req.user.id;
@@ -193,6 +198,25 @@ const getBlockedUsers = async (req, res) => {
     }
     catch (error) {
         console.error("Error fetching blocked users:", error);
+        return res.status(500).json({ message: "Internal server error." });
+    }
+}
+
+
+const getRepotedUsers = async (req, res) => {
+    try {
+        const loggedInUserId = req.user.id;
+
+        const user = await userModel.findById(loggedInUserId).populate("reportedUsers", "name email profilePicture");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        return res.status(200).json({ reportedUsers: user.reportedUsers });
+    }
+    catch (error) {
+        console.error("Error fetching reported users:", error);
         return res.status(500).json({ message: "Internal server error." });
     }
 }
@@ -219,24 +243,6 @@ const getReportById = async (req, res) => {
     }
 }
 
-const getRepotedUsers = async (req, res) => {
-    try {
-        const loggedInUserId = req.user.id;
-
-        const user = await userModel.findById(loggedInUserId).populate("reportedUsers", "name email profilePicture");
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found." });
-        }
-
-        return res.status(200).json({ reportedUsers: user.reportedUsers });
-    }
-    catch (error) {
-        console.error("Error fetching reported users:", error);
-        return res.status(500).json({ message: "Internal server error." });
-    }
-}
-
 // Change connection request privacy setting
 const controlConnectionRequest = async (req, res) => {
     try {
@@ -257,7 +263,7 @@ const controlConnectionRequest = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
-        return res.status(200).json({ message: "Connection request controlled successfully." });
+        return res.status(200).json({ message: "Connection request updated successfully." });
     }
     catch (error) {
         console.error("Error controlling connection request:", error);
