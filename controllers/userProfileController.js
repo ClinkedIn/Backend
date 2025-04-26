@@ -2133,6 +2133,7 @@ const sendConnectionRequest = async (req, res) => {
         }
 
         // Check receiver privacy settings
+        // ADDED
         const canSendRequest = await canSendConnectionRequest(targetUserId, userId);
         if (!canSendRequest) {
             return res.status(403).json({ message: 'Cannot send connection request due to other user privacy settings' });
