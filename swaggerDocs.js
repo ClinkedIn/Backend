@@ -6062,7 +6062,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/admin:
+ * /api/companies/{companyId}/admin:
  *   post:
  *     summary: Add a company admin
  *     tags: [Companies]
@@ -6204,7 +6204,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/post:
+ * api/companies/{companyId}/post:
  *   post:
  *     summary: Create a company post
  *     tags: [Companies, Posts]
@@ -6600,7 +6600,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/analytics:
+ * api/companies/{companyId}/analytics:
  *   get:
  *     summary: Retrieve company analytics
  *     tags: [Companies]
