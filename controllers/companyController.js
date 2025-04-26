@@ -594,15 +594,41 @@ const followCompany = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (company.followers.includes(userId)) {
-            return res.status(400).json({
-                message: 'You are already following this company',
-            });
+        const companyFollowers = company.followers;
+
+        for (let i = 0; i < companyFollowers.length; i++) {
+            if (companyFollowers[i].entity.toString() === userId) {
+                return res.status(400).json({
+                    message: 'You are already following this company',
+                });
+            }
         }
-        company.followers.push(userId);
+
+        companyFollowers.push({
+            entity: userId,
+            entityType: 'User',
+            followedAt: Date.now(),
+        });
+        company.followers = companyFollowers;
+
+        const userFollowing = user.following;
+
+        for (let i = 0; i < userFollowing.length; i++) {
+            if (userFollowing[i].entity.toString() === companyId) {
+                return res.status(400).json({
+                    message: 'You are already following this company',
+                });
+            }
+        }
+        userFollowing.push({
+            entity: companyId,
+            entityType: 'Company',
+            followedAt: Date.now(),
+        });
+        user.followingCompanies = userFollowing;
         await company.save();
-        user.followingCompanies.push(companyId);
         await user.save();
+
         res.status(200).json({
             message: 'Successfully followed the company',
         });
@@ -613,6 +639,7 @@ const followCompany = async (req, res) => {
 };
 
 // Unfollow a company
+
 const unfollowCompany = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -628,12 +655,14 @@ const unfollowCompany = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Check if the user is actually following the company
-        if (
-            !company.followers.some(
-                (followerId) => followerId.toString() === userId
-            )
-        ) {
+        // Check if the user is actually following the company using entity field
+        const isFollowing = company.followers.some(
+            (follower) =>
+                follower.entity.toString() === userId &&
+                follower.entityType === 'User'
+        );
+
+        if (!isFollowing) {
             return res.status(400).json({
                 message: 'You are not following this company',
             });
@@ -641,13 +670,22 @@ const unfollowCompany = async (req, res) => {
 
         // Remove user from company's followers
         company.followers = company.followers.filter(
-            (followerId) => followerId.toString() !== userId
+            (follower) =>
+                !(
+                    follower.entity.toString() === userId &&
+                    follower.entityType === 'User'
+                )
         );
         await company.save();
 
         // Remove company from user's followingCompanies
-        user.followingCompanies = user.followingCompanies.filter(
-            (compId) => compId.toString() !== companyId
+        const userFollowingCompanies = user.following || [];
+        user.following = userFollowingCompanies.filter(
+            (following) =>
+                !(
+                    following.entity.toString() === companyId &&
+                    following.entityType === 'Company'
+                )
         );
         await user.save();
 
