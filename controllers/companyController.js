@@ -150,6 +150,8 @@ const createCompany = async (req, res) => {
         }
         if (logo) {
             object.logo = logo;
+        } else {
+            object.logo = null;
         }
 
         const protocol = req.protocol;
@@ -162,12 +164,19 @@ const createCompany = async (req, res) => {
         object.ownerId = req.user.id; // Add the creator as the owner
         if (website) {
             object.website = website;
+        } else {
+            object.website = null;
         }
         if (tagLine) {
             object.tagLine = tagLine;
+        } else {
+            object.tagLine = null;
         }
+
         if (location) {
             object.location = location;
+        } else {
+            object.location = null;
         }
 
         const newCompany = new companyModel(object);
@@ -180,8 +189,9 @@ const createCompany = async (req, res) => {
         });
 
         const representation = helper(newCompany, req.user);
+
         res.status(201).json({
-            representation,
+            ...representation,
             pageURL, // Include full URL in response
             message: 'Company created successfully',
         });
@@ -205,7 +215,7 @@ const getAllCompanies = async (req, res) => {
             return res.status(404).json({ message: 'No companies found' });
         }
         const formattedCompanies = companies.map((company) => {
-            return helper(company, req.user);
+            return { ...helper(company, req.user) };
         });
 
         res.status(200).json(formattedCompanies);
@@ -238,7 +248,7 @@ const getCompany = async (req, res) => {
 
         const representation = helper(company, req.user);
 
-        res.status(200).json(representation);
+        res.status(200).json({ ...representation });
     } catch (error) {
         console.error('Error fetching company:', error);
         res.status(500).json({ message: 'Internal server error' });
