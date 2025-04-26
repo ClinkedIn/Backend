@@ -463,6 +463,8 @@ const createPost = async (req, res) => {
     try {
         const companyId = req.params.companyId;
         const company = await companyModel.findById(companyId);
+        let { description, taggedUsers, whoCanSee, whoCanComment } = req.body;
+        const userId = req.user.id; // From authentication middleware
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
@@ -477,9 +479,53 @@ const createPost = async (req, res) => {
         }
 
         // Create the post using the utility function
-        let post = null;
+        let newPost;
         try {
-            post = await createPostUtils(req, 'Company');
+            if (!description || description.trim() === "") {
+                return res.status(400).json({ message: "Post description is required" });
+            }
+
+            // Initialize post object
+            const newPostData = {
+                companyId,
+                description,
+                attachments: [],
+                taggedUsers: taggedUsers || [],
+                whoCanSee: whoCanSee || "anyone",
+                whoCanComment: whoCanComment || "anyone",
+            };
+            if (req.files && req.files.length > 0) {
+                try {
+                    // Use the helper function to handle attachments
+                    newPostData.attachments = await uploadPostAttachments(req.files);
+                } catch (uploadError) {
+                    return res.status(400).json({ message: uploadError.message });
+                }
+            }
+            const newPost = await postModel.create(newPostData);
+            const postResponse = {
+                postId: newPost._id,
+                companyId:{
+                    id: company._id,
+                    name: company.name,
+                    address: company.address,
+                    logo: company.logo,
+                    industry: company.industry,
+                    organizationSize: company.organizationSize,
+                    organizationType: company.organizationType,
+                }, // Original user ID reference
+                firstName: null,
+                lastName: null,
+                headline: null,
+                postDescription: newPost.description,
+                attachments: newPost.attachments,
+                impressionTypes: [],
+                impressionCounts: newPost.impressionCounts,
+                commentCount: newPost.commentCount,
+                repostCount: newPost.repostCount,
+                createdAt: newPost.createdAt,
+                taggedUsers: newPost.taggedUsers,
+              };
         } catch (postError) {
             console.error('Error creating post:', postError);
             return res
@@ -602,7 +648,7 @@ const updatePost = async (req, res) => {
     }
 };
 
-const deletePost = async (req, res) => {};
+const deletePost = async (req, res) => { };
 
 const addAdmin = async (req, res) => {
     try {
