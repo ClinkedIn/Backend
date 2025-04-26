@@ -996,6 +996,177 @@ const getFollowers = async (req, res) => {
     }
 };
 
+const getCompanyAnalytics = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { startDate, endDate, interval = 'day' } = req.query;
+
+        // Validate company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Check authorization - only owner or admin can access analytics
+        const isOwner = company.ownerId.toString() === req.user.id;
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === req.user.id
+        );
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({
+                message: 'Not authorized to view company analytics',
+            });
+        }
+
+        // Parse date range parameters
+        const parsedStartDate = startDate
+            ? new Date(startDate)
+            : new Date(new Date().setDate(new Date().getDate() - 30)); // Default to last 30 days
+        const parsedEndDate = endDate ? new Date(endDate) : new Date();
+
+        if (
+            isNaN(parsedStartDate.getTime()) ||
+            isNaN(parsedEndDate.getTime())
+        ) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Set end date to end of day
+        parsedEndDate.setHours(23, 59, 59, 999);
+
+        // Prepare analytics data structure
+        const analytics = {
+            visitors: await getVisitorAnalytics(
+                company,
+                parsedStartDate,
+                parsedEndDate,
+                interval
+            ),
+            followers: await getFollowerAnalytics(
+                company,
+                parsedStartDate,
+                parsedEndDate,
+                interval
+            ),
+            summary: {
+                totalVisitors: company.visitors.length,
+                totalFollowers: company.followers.length,
+                visitorsTrend: 0,
+                followersTrend: 0,
+            },
+        };
+
+        // Calculate trends (% change over period)
+        analytics.summary.visitorsTrend = calculateTrend(analytics.visitors);
+        analytics.summary.followersTrend = calculateTrend(analytics.followers);
+
+        res.status(200).json({
+            message: 'Analytics retrieved successfully',
+            companyId: company._id,
+            companyName: company.name,
+            dateRange: {
+                start: parsedStartDate,
+                end: parsedEndDate,
+            },
+            interval,
+            analytics,
+        });
+    } catch (error) {
+        console.error('Error retrieving company analytics:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Helper function to get visitor analytics by date
+const getVisitorAnalytics = async (company, startDate, endDate, interval) => {
+    // Filter visitors within the date range
+    const relevantVisitors = company.visitors.filter((visitor) => {
+        const visitDate = new Date(visitor.visitedAt);
+        return visitDate >= startDate && visitDate <= endDate;
+    });
+
+    // Group by date according to interval
+    return groupByTimeInterval(relevantVisitors, 'visitedAt', interval);
+};
+
+// Helper function to get follower analytics by date
+const getFollowerAnalytics = async (company, startDate, endDate, interval) => {
+    // Filter followers within the date range
+    const relevantFollowers = company.followers.filter((follower) => {
+        const followDate = new Date(follower.followedAt);
+        return followDate >= startDate && followDate <= endDate;
+    });
+
+    // Group by date according to interval
+    return groupByTimeInterval(relevantFollowers, 'followedAt', interval);
+};
+
+// Helper to group data by time intervals (day, week, month)
+const groupByTimeInterval = (data, dateField, interval) => {
+    const grouped = {};
+
+    data.forEach((item) => {
+        const date = new Date(item[dateField]);
+        let key;
+
+        switch (interval) {
+            case 'week':
+                // Get the week number and year
+                const weekNumber = getWeekNumber(date);
+                key = `${date.getFullYear()}-W${weekNumber}`;
+                break;
+            case 'month':
+                // Format: YYYY-MM
+                key = `${date.getFullYear()}-${String(
+                    date.getMonth() + 1
+                ).padStart(2, '0')}`;
+                break;
+            case 'day':
+            default:
+                // Format: YYYY-MM-DD
+                key = date.toISOString().split('T')[0];
+        }
+
+        if (!grouped[key]) {
+            grouped[key] = 0;
+        }
+        grouped[key]++;
+    });
+
+    // Convert to array format for easier consumption by frontend charting libraries
+    return Object.entries(grouped).map(([date, count]) => ({ date, count }));
+};
+
+// Helper to get week number
+const getWeekNumber = (date) => {
+    const d = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+};
+
+// Calculate trend (percentage change)
+const calculateTrend = (data) => {
+    if (data.length < 2) return 0;
+
+    // Sum counts for first and second half of the period
+    const midpoint = Math.floor(data.length / 2);
+    const firstHalf = data
+        .slice(0, midpoint)
+        .reduce((sum, item) => sum + item.count, 0);
+    const secondHalf = data
+        .slice(midpoint)
+        .reduce((sum, item) => sum + item.count, 0);
+
+    if (firstHalf === 0) return secondHalf > 0 ? 100 : 0; // Handle division by zero
+
+    return Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+};
+
 module.exports = {
     createCompany,
     getAllCompanies,
@@ -1010,4 +1181,5 @@ module.exports = {
     addAdmin,
     removeAdmin,
     getFollowers,
+    getCompanyAnalytics,
 };

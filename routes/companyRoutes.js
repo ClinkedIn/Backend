@@ -34,4 +34,8 @@ router
     .post(protect, companyController.addAdmin)
     .delete(protect, companyController.removeAdmin);
 
+router
+    .route('/:companyId/analytics')
+    .get(protect, companyController.getCompanyAnalytics);
+
 module.exports = router;
