@@ -33,7 +33,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Add these lines BEFORE any JSON body parsing middleware:
-app.post('/stripe/webhook', 
+app.post('/server/stripe/webhook', 
   express.raw({ type: 'application/json' }),
   stripeController.handleWebhook  // Direct reference to the controller
 );
@@ -53,7 +53,7 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
-app.use("/stripe", stripeRouter);
+app.use("/api/stripe", stripeRouter);
 app.use(
   "/api/docs",
   swaggerUI.serve,

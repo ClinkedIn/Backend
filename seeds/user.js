@@ -112,7 +112,7 @@ async function createRandomUsers() {
                 "public", "private", "connectionsOnly"
             ]),
             connectionRequestPrivacySetting: faker.helpers.arrayElement([
-                "everyone", "connectionsOnly"
+                "everyone", "mutual"
             ]),
             defaultMode: faker.helpers.arrayElement(["light", "dark"]),
             googleId: faker.datatype.boolean() ? faker.string.uuid() : null,
@@ -155,6 +155,10 @@ async function createRandomUsers() {
                 faker.number.int({ min: 0, max: 8 })
             ),
             blockedUsers: faker.helpers.arrayElements(
+                userIds.filter(id => id !== userId), 
+                faker.number.int({ min: 0, max: 2 })
+            ),
+            reportedUsers: faker.helpers.arrayElements(
                 userIds.filter(id => id !== userId), 
                 faker.number.int({ min: 0, max: 2 })
             ),

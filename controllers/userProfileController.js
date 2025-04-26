@@ -324,7 +324,7 @@ const uploadResume = async (req, res) => {
 
         res.status(200).json({
             message: 'Resume uploaded successfully',
-            resume: uploadResult.url
+            resume:  `https://docs.google.com/viewer?url=${encodeURIComponent(uploadResult.url)}&embedded=true`
         });
     } catch (error) {
         console.error('Error uploading resume:', error);
