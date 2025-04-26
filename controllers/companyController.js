@@ -581,28 +581,82 @@ const removeAdmin = async (req, res) => {
 };
 
 // Follow a company
-const followCompany = async (req, res) => {};
+const followCompany = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const companyId = req.params.companyId;
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (company.followers.includes(userId)) {
+            return res.status(400).json({
+                message: 'You are already following this company',
+            });
+        }
+        company.followers.push(userId);
+        await company.save();
+        user.followingCompanies.push(companyId);
+        await user.save();
+        res.status(200).json({
+            message: 'Successfully followed the company',
+        });
+    } catch (error) {
+        console.error('Error following company:', error);
+        res.status(500).json({ message: 'Interal server error' });
+    }
+};
 
 // Unfollow a company
 const unfollowCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const userId = req.user.id;
+        const companyId = req.params.companyId;
+
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        const userId = req.body.userId;
-        if (!userId) {
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if the user is actually following the company
+        if (
+            !company.followers.some(
+                (followerId) => followerId.toString() === userId
+            )
+        ) {
             return res.status(400).json({
-                message: 'User ID is required to unfollow the company',
+                message: 'You are not following this company',
             });
         }
+
+        // Remove user from company's followers
         company.followers = company.followers.filter(
-            (id) => id.toString() !== userId
+            (followerId) => followerId.toString() !== userId
         );
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
+        await company.save();
+
+        // Remove company from user's followingCompanies
+        user.followingCompanies = user.followingCompanies.filter(
+            (compId) => compId.toString() !== companyId
+        );
+        await user.save();
+
+        res.status(200).json({
+            message: 'Successfully unfollowed the company',
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error unfollowing company:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
