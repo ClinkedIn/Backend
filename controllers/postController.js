@@ -153,26 +153,27 @@ const getPost = async (req, res) => {
     }
 
     // Check privacy settings - if post is connections only
-    if (post.whoCanSee === "connections") {
-      // If user is not the post owner
-      if (post.userId._id.toString() !== userId) {
-        // Get the post owner's connections
-        const connections = post.userId.connections || [];
+    if(post.userId!=null){
+      if (post.whoCanSee === "connections") {
+        // If user is not the post owner
+        if (post.userId._id.toString() !== userId) {
+          // Get the post owner's connections
+          const connections = post.userId.connections || [];
 
-        // Check if current user is in the connections
-        const isConnected = connections.some(
-          (connectionId) => connectionId.toString() === userId
-        );
+          // Check if current user is in the connections
+          const isConnected = connections.some(
+            (connectionId) => connectionId.toString() === userId
+          );
 
-        if (!isConnected) {
-          return res.status(403).json({
-            message: "This post is only visible to the author's connections",
-          });
+          if (!isConnected) {
+            return res.status(403).json({
+              message: "This post is only visible to the author's connections",
+            });
+          }
         }
+        // If user is the post owner, they can see it regardless of privacy settings
       }
-      // If user is the post owner, they can see it regardless of privacy settings
     }
-
     // Check if current user has saved this post
     const currentUser = await userModel.findById(userId).select("savedPosts");
     const isSaved =
@@ -270,7 +271,12 @@ const deletePost = async (req, res) => {
     }
 
     // Check if user is the owner of the post
-    if (post.userId.toString() !== userId) {
+    let company
+    if (post.companyId != null) {
+      company = await companyModel.findById(post.companyId);
+    }
+    // Check if user is the owner of the post
+    if (post.userId.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
       return res
         .status(403)
         .json({ message: "You can only delete your own posts" });
@@ -310,9 +316,12 @@ const updatePost = async (req, res) => {
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
-
+    let company
+    if (post.companyId != null) {
+      company = await companyModel.findById(post.companyId);
+    }
     // Check if user is the owner of the post
-    if (post.userId.toString() !== userId) {
+    if (post.userId.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
       return res
         .status(403)
         .json({ message: "You can only update your own posts" });
@@ -359,11 +368,12 @@ const updatePost = async (req, res) => {
     // Format response to match your API standard
     const postResponse = {
       postId: updatedPost._id,
-      userId: updatedPost.userId._id,
-      firstName: updatedPost.userId.firstName,
-      lastName: updatedPost.userId.lastName,
-      headline: updatedPost.userId.headline || "",
-      profilePicture: updatedPost.userId.profilePicture,
+      userId: updatedPost.userId?updatedPost.userId._id : null,
+      companyId: updatedPost.companyId ? updatedPost.companyId._id : null,
+      firstName: uupdatedPost.userId?updatedPost.userId.firstName: null,
+      lastName: updatedPost.userId?updatedPost.userId.lastName:null,
+      headline: updatedPost.userId?updatedPost.userId.headline : "",
+      profilePicture: updatedPost.userId?updatedPost.userId.profilePicture: null,
       postDescription: updatedPost.description,
       attachments: updatedPost.attachments,
       impressionCounts: updatedPost.impressionCounts,
