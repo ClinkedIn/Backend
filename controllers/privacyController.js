@@ -67,7 +67,15 @@ const reportUser = async (req, res) => {
         const { userId } = req.params;
         const loggedInUserId = req.user.id;
         const { policy } = req.body;
-        
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID." });
+        }
+
+        if (!policy) {
+            return res.status(400).json({ message: "Policy is required." });
+        }
+
         const allowedPolicies = [
             "Harassment", 
             "Fraud or scam", 
@@ -135,6 +143,14 @@ const reportPost = async (req, res) => {
         const loggedInUserId = req.user.id;
         const { policy, dontWantToSee } = req.body;
 
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ message: "Invalid post ID." });
+        }
+
+        if (!policy) {
+            return res.status(400).json({ message: "Policy is required." });
+        }
+
         const allowedPolicies = [
             "Harassment", 
             "Fraud or scam", 
@@ -150,8 +166,21 @@ const reportPost = async (req, res) => {
             "Child exploitation", 
             "Illegal goods and services", 
             "Infringement",
-        ]
+        ];
+
+        const allowedDontWantToSee = [
+              "I'm not interested in the author",
+              "I'm not interested in this topic",
+              "I've seen too many posts on this topic",
+              "I've seen this post before",
+              "This post is old",
+              "It's something else",
+        ];
         
+        if (dontWantToSee && !allowedDontWantToSee.includes(dontWantToSee)) {
+            return res.status(400).json({ message: "Invalid dontWantToSee value." });
+        }
+
         if (!allowedPolicies.includes(policy)) {
             return res.status(400).json({ message: "Invalid policy." });
         }

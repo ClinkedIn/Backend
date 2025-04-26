@@ -13601,7 +13601,7 @@
  *                   "This account has been hacked", 
  *                   "This account is not a real person"
  *                 ]
- *                 example: "This account is not a real person"
+ *                 example: "This person is impersonating someone"
  *                 description: The specific policy that the user is violating
  *     responses:
  *       201:
@@ -13631,6 +13631,10 @@
  *                 summary: Invalid policy
  *                 value:
  *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
  *               selfReport:
  *                 summary: Trying to report yourself
  *                 value:
@@ -13660,7 +13664,134 @@
  *                   type: string
  *                   example: "User not found."
  *       500:
- *         description: Server error
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/report-post/{postId}:
+ *   post:
+ *     summary: Report a post for policy violations
+ *     tags: [Privacy]
+ *     description: Reports a post for violating platform policies
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to report
+ *         example: "65fb2a8e7c5721f123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement"
+ *                 ]
+ *                 example: "Misinformation"
+ *                 description: The specific policy that the post is violating
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author",
+ *                   "I'm not interested in this topic",
+ *                   "I've seen too many posts on this topic",
+ *                   "I've seen this post before",
+ *                   "This post is old",
+ *                   "It's something else"
+ *                 ]
+ *                 description: Reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
+ *     responses:
+ *       201:
+ *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully."
+ *       400:
+ *         description: Bad request - Invalid policy, post ID, or dontWantToSee value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy
+ *                 value:
+ *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
+ *               invalidPostId:
+ *                 summary: Invalid post ID format
+ *                 value:
+ *                   message: "Invalid post ID."
+ *               invalidDontWantToSee:
+ *                 summary: Invalid dontWantToSee value
+ *                 value:
+ *                   message: "Invalid dontWantToSee value."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post to report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found."
+ *       500:
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             schema:
