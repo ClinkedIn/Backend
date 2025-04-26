@@ -5761,35 +5761,32 @@
  *             schema:
  *               type: object
  *               properties:
- *                 representation:
+ *                 company:
  *                   type: object
  *                   properties:
- *                     company:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: string
- *                         name:
- *                           type: string
- *                         address:
- *                           type: string
- *                         website:
- *                           type: string
- *                         location:
- *                           type: string
- *                         tagLine:
- *                           type: string
- *                         logo:
- *                           type: string
- *                         industry:
- *                           type: string
- *                         organizationSize:
- *                           type: string
- *                         followersCount:
- *                           type: integer
- *                     userRelationship:
+ *                     id:
  *                       type: string
- *                       enum: [owner, admin, follower, visitor]
+ *                     name:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *                     website:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     tagLine:
+ *                       type: string
+ *                     logo:
+ *                       type: string
+ *                     industry:
+ *                       type: string
+ *                     organizationSize:
+ *                       type: string
+ *                     followersCount:
+ *                       type: integer
+ *                 userRelationship:
+ *                   type: string
+ *                   enum: [owner, admin, follower, visitor]
  *                 pageURL:
  *                   type: string
  *                   example: "https://example.com/companies/acme-corporation"
