@@ -1432,7 +1432,15 @@
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "This post is only visible to the author's connections"
+ *             examples:
+ *               connectionsOnly:
+ *                 summary: Post is only visible to connections
+ *                 value:
+ *                   message: "This post is only visible to the author's connections"
+ *               blocked:
+ *                 summary: User is blocked by post author
+ *                 value:
+ *                   message: "User is blocked by the author of this post"
  *       404:
  *         description: Post not found
  *         content:

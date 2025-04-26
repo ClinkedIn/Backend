@@ -154,8 +154,16 @@ const getPost = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    // Check privacy settings - if post is connections only
+    // Check privacy settings - if post is connections only (OR BLOCKED)
     if(post.userId!=null){
+      // ADDED
+      const isUserBlocked = await isBlocked(post.userId._id, userId);
+      if (isUserBlocked) {
+        return res.status(403).json({
+          message: "User is blocked by the author of this post",
+        });
+      }
+
       if (post.whoCanSee === "connections") {
         // If user is not the post owner
         if (post.userId._id.toString() !== userId) {

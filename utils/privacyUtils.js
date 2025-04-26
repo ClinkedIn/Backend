@@ -42,18 +42,14 @@ const canSendConnectionRequest = async (userId, loggedInUserId) => {
         console.log("Checking if user can send connection request...");
         const user = await userModel.findById(userId);
         if (!user) {
-            console.log("User not found");
             throw new customError("User not found", 404);
         }
         const userConnectionPrivacy = user.connectionRequestPrivacySetting|| 'everyone';
-        console.log("User connection privacy settings:", userConnectionPrivacy);
         if (userConnectionPrivacy === 'everyone') {
             console.log("User connection privacy is 'everyone'");
             return true;
         }
-        console.log("User connection privacy is 'mutual' or other settings");
         if (userConnectionPrivacy  === "mutual") {
-            console.log("User connection privacy 'mutual'");
             const loggedInUser = await userModel.findById(loggedInUserId);
             if (!loggedInUser) {
                 throw new customError("Logged in user not found", 404);
