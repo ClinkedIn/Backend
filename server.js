@@ -55,6 +55,7 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/privacy", privacyRouter);
 app.use("/stripe", stripeRouter);
 app.use(
   "/api/docs",
