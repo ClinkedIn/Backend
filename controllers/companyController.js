@@ -1,6 +1,7 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
+const impressionModel = require('../models/impressionModel');
 const customError = require('./../utils/customError');
 const {
     uploadFile,
@@ -1078,6 +1079,127 @@ const getCompanyAnalytics = async (req, res) => {
     }
 };
 
+const getCompanyPosts = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Verify company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Convert query parameters to numbers with validation
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limit between 1 and 50
+        const skipIndex = (pageNum - 1) * limitNum;
+
+        // Query posts directly using companyId field and pagination
+        const [posts, totalPosts] = await Promise.all([
+            postModel
+                .find({
+                    companyId: companyId,
+                    isActive: true,
+                })
+                .sort({ createdAt: -1 })
+                .skip(skipIndex)
+                .limit(limitNum)
+                .populate(
+                    'userId',
+                    'firstName lastName profilePicture headline'
+                )
+                .lean(),
+
+            postModel.countDocuments({
+                companyId: companyId,
+                isActive: true,
+            }),
+        ]);
+
+        // Get current user's saved posts and impressions
+        const currentUser = await userModel
+            .findById(req.user.id)
+            .select('savedPosts')
+            .lean();
+        const savedPostIds = new Set(
+            (currentUser?.savedPosts || []).map((id) => id.toString())
+        );
+
+        // Format posts with appropriate data
+        const enhancedPosts = await Promise.all(
+            posts.map(async (post) => {
+                // Check if the current user has liked this post
+                const userImpression = await impressionModel
+                    .findOne({
+                        targetId: post._id,
+                        userId: req.user.id,
+                        targetType: 'Post',
+                    })
+                    .lean();
+
+                return {
+                    id: post._id,
+                    postId: post._id,
+                    userId: post.userId
+                        ? {
+                              id: post.userId._id,
+                              firstName: post.userId.firstName,
+                              lastName: post.userId.lastName,
+                              profilePicture: post.userId.profilePicture,
+                              headline: post.userId.headline || '',
+                          }
+                        : null,
+                    companyId: {
+                        id: company._id,
+                        name: company.name,
+                        logo: company.logo,
+                    },
+                    description: post.description,
+                    attachments: post.attachments || [],
+                    impressionCounts: post.impressionCounts || {},
+                    commentCount: post.commentCount || 0,
+                    repostCount: post.repostCount || 0,
+                    createdAt: post.createdAt,
+                    updatedAt: post.updatedAt,
+                    taggedUsers: post.taggedUsers || [],
+                    whoCanSee: post.whoCanSee || 'anyone',
+                    whoCanComment: post.whoCanComment || 'anyone',
+                    isCompanyPost: true,
+                    isSaved: savedPostIds.has(post._id.toString()),
+                    isLiked: !!userImpression,
+                    impressionType: userImpression?.type || null,
+                    isMine:
+                        post.userId?.toString() === req.user.id ||
+                        company.admins.includes(req.user.id) ||
+                        company.ownerId === req.user.id,
+                };
+            })
+        );
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalPosts / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+        res.status(200).json({
+            message: 'Posts fetched successfully',
+            posts: enhancedPosts,
+            pagination: {
+                total: totalPosts,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching company posts:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 // Helper function to get visitor analytics by date
 const getVisitorAnalytics = async (company, startDate, endDate, interval) => {
     // Filter visitors within the date range
@@ -1182,4 +1304,5 @@ module.exports = {
     removeAdmin,
     getFollowers,
     getCompanyAnalytics,
+    getCompanyPosts,
 };
