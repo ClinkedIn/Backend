@@ -26,7 +26,7 @@ const stripeController = require("./controllers/stripeController"); // Import th
 const app = express();
 connectDB();
 const corsOptions = {
-  origin: "http://localhost:5173", // Allow all origins
+  origin: "https://www.lockedin-cufe.me", // Allow all origins
   credentials: true, // Allow credentials (cookies, authorization headers)
   methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
 };
@@ -55,7 +55,7 @@ app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/stripe", stripeRouter);
 app.use(
-  "/api-docs",
+  "/api/docs",
   swaggerUI.serve,
   swaggerUI.setup(swaggerSpec, {
     swaggerOptions: {
