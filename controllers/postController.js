@@ -5,6 +5,7 @@ const repostModel = require("../models/repostModel");
 const reportModel = require("../models/reportModel");
 const cloudinary = require("../utils/cloudinary");
 const commentModel = require("../models/commentModel");
+const companyModel = require("../models/companyModel");
 //import { ObjectId } from 'mongodb';
 const mongoose = require("mongoose");
 const {
@@ -146,7 +147,7 @@ const getPost = async (req, res) => {
         "name logo tagLine address industry organizationSize organizationType"
       );
     }
-
+    console.log("Post:", post.companyId);
     // Check if post exists
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
@@ -199,8 +200,8 @@ const getPost = async (req, res) => {
     // Format post response
     const postResponse = {
       postId: post._id,
-      userId: post.userId._id,
-      companyId: post.companyId ? post.companyId._id : null,
+      userId: post.userId ?post.userId._id:null,
+      companyId: post.companyId ? post.companyId : null,
       firstName: post.userId?post.userId.firstName : null,
       lastName: post.userId?post.userId.lastName: null,
       headline: post.userId?post.userId.headline :"",
@@ -254,9 +255,15 @@ const deletePost = async (req, res) => {
     if (!postId) {
       return res.status(400).json({ message: "Post ID is required" });
     }
-
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ message: "Invalid post ID format" });
+    }
     // Find the post
-    const post = await postModel.findById(postId);
+    const post = await postModel.findOne({
+      _id:postId,
+      isActive: true
+    })
+    .populate("userId", "firstName lastName headline profilePicture").populate("companyId", "name logo tagLine address industry organizationSize organizationType");
 
     // Check if post exists
     if (!post) {
@@ -276,7 +283,7 @@ const deletePost = async (req, res) => {
       company = await companyModel.findById(post.companyId);
     }
     // Check if user is the owner of the post
-    if (post.userId.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
+    if (post.userId?.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
       return res
         .status(403)
         .json({ message: "You can only delete your own posts" });
@@ -321,7 +328,7 @@ const updatePost = async (req, res) => {
       company = await companyModel.findById(post.companyId);
     }
     // Check if user is the owner of the post
-    if (post.userId.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
+    if (post.userId?.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
       return res
         .status(403)
         .json({ message: "You can only update your own posts" });
@@ -369,8 +376,8 @@ const updatePost = async (req, res) => {
     const postResponse = {
       postId: updatedPost._id,
       userId: updatedPost.userId?updatedPost.userId._id : null,
-      companyId: updatedPost.companyId ? updatedPost.companyId._id : null,
-      firstName: uupdatedPost.userId?updatedPost.userId.firstName: null,
+      companyId: updatedPost.companyId ? updatedpost.companyId : null,
+      firstName: updatedPost.userId?updatedPost.userId.firstName: null,
       lastName: updatedPost.userId?updatedPost.userId.lastName:null,
       headline: updatedPost.userId?updatedPost.userId.headline : "",
       profilePicture: updatedPost.userId?updatedPost.userId.profilePicture: null,
@@ -425,7 +432,6 @@ const getAllPosts = async (req, res) => {
     const followedCompanyIds = (currentUser.following || [])
       .filter((follow) => follow.entityType === "Company")
       .map((follow) => follow.entity.toString());
-
     // Combine all relevant user IDs (connections + followed users + self)
     const relevantUserIds = [
       ...new Set([...connectionIds, ...followedUserIds, userId]),
@@ -461,7 +467,7 @@ const getAllPosts = async (req, res) => {
         repostDate: repost.createdAt,
       });
     });
-
+    console.log(followedCompanyIds);
     // Query posts that are either created by relevant users or reposted by them
     const posts = await postModel
       .find({
@@ -478,12 +484,11 @@ const getAllPosts = async (req, res) => {
 
               // Posts from followed companies
               {
-                userId: {
+                companyId: {
                   $in: followedCompanyIds.length
                     ? followedCompanyIds
                     : ["000000000000000000000000"],
-                },
-                entityType: "Company",
+                }
               },
 
               // Posts that were reposted by connections or followed users
@@ -496,8 +501,8 @@ const getAllPosts = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .populate("userId", "firstName lastName headline profilePicture")
+      .populate("companyId", "name logo tagLine address industry organizationSize organizationType")
       .lean();
-
     // Count total posts for pagination
     const total = await postModel.countDocuments({
       $and: [
@@ -505,13 +510,12 @@ const getAllPosts = async (req, res) => {
         {
           $or: [
             { userId: { $in: relevantUserIds } },
-            { userId: { $in: followedCompanyIds }, entityType: "Company" },
+            { companyId: { $in: followedCompanyIds }, entityType: "Company" },
             { _id: { $in: repostedPostIds } },
           ],
         },
       ],
     });
-
     // Format posts and add repost information
     const formattedPosts = await Promise.all(
       posts.map(async (post) => {
@@ -531,11 +535,12 @@ const getAllPosts = async (req, res) => {
         });
         return {
           postId: post._id,
-          userId: post.userId._id,
-          firstName: post.userId.firstName,
-          lastName: post.userId.lastName,
-          headline: post.userId.headline || "",
-          profilePicture: post.userId.profilePicture,
+          userId: post.userId?post.userId._id: null,
+          companyId: post.companyId ? post.companyId : null,
+          firstName: post.userId?post.userId.firstName:null,
+          lastName: post.userId?post.userId.lastName: null,
+          headline: post.userId?post.userId.headline :"",
+          profilePicture: post.userId?post.userId.profilePicture: null,
           postDescription: post.description,
           attachments: post.attachments,
           impressionCounts: post.impressionCounts,
@@ -546,7 +551,7 @@ const getAllPosts = async (req, res) => {
           isRepost: isRepost,
           isSaved: isSaved,
           isLiked: isLiked,
-          isMine: post.userId._id.toString() === userId,
+          isMine: post.userId?._id.toString() === userId,
           // Only include repost details if this is a repost
           ...(isRepost && {
             repostId: repostDetails.repostId,
