@@ -581,31 +581,7 @@ const removeAdmin = async (req, res) => {
 };
 
 // Follow a company
-const followCompany = async (req, res) => {
-    try {
-        const company = await companyModel.findById(req.params.companyId);
-        if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
-        }
-        const userId = req.body.userId;
-        if (!userId) {
-            return res
-                .status(400)
-                .json({ message: 'User ID is required to follow the company' });
-        }
-        // Check if the user is already following
-        if (company.followers.includes(userId)) {
-            return res
-                .status(400)
-                .json({ message: 'User is already following this company' });
-        }
-        company.followers.push(userId);
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+const followCompany = async (req, res) => {};
 
 // Unfollow a company
 const unfollowCompany = async (req, res) => {
