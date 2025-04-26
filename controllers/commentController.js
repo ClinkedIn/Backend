@@ -36,14 +36,14 @@ const addComment = async (req, res) => {
       });
     }
     // Check if the user is blocked by the post owner
-    if (postOwner.blockedUsers.includes(userId)) {
+    if (postOwner && postOwner.blockedUsers.includes(userId)) {
       return res
         .status(403)
         .json({ message: "You can't comment on this post" });
     }
     //Check if the user blocked the post owner
     const user = await userModel.findById(userId);
-    if (user.blockedUsers.includes(post.userId)) {
+    if (post.userId && user.blockedUsers.includes(post.userId)) {
       return res
         .status(403)
         .json({ message: "You can't comment on this post" });
