@@ -10,6 +10,65 @@ const {
 const APIFeatures = require('../utils/apiFeatures');
 const slugify = require('slugify');
 // Create a new company
+
+const helper = (company, user) => {
+    const followers = company.followers.map((follower) => {
+        return {
+            id: follower.entity.toString(),
+            entityType: follower.entityType,
+            followedAt: follower.followedAt,
+        };
+    });
+
+    const following = company.following.map((following) => {
+        return {
+            id: following.entity.toString(),
+            entityType: following.entityType,
+            followedAt: following.followedAt,
+        };
+    });
+    let userRelationship = 'visitor'; // Default relationship
+
+    // Check ownership first (highest priority)
+    const isOwner = company.ownerId.toString() === user.id;
+    if (isOwner) {
+        userRelationship = 'owner';
+    } else {
+        // Check if user is an admin
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === user.id
+        );
+        if (isAdmin) {
+            userRelationship = 'admin';
+        } else {
+            // Check if user is a follower
+            const isFollower = company.followers.some(
+                (follower) => follower.entity.toString() === user.id
+            );
+            if (isFollower) {
+                userRelationship = 'follower';
+            }
+        }
+    }
+
+    return {
+        company: {
+            id: company._id,
+            name: company.name,
+            address: company.address,
+            website: company.website,
+            location: company.location,
+            tagLine: company.tagLine,
+            posts: company.posts,
+            logo: company.logo,
+            industry: company.industry,
+            organizationSize: company.organizationSize,
+            followersCount: company.followers.length,
+        },
+        userRelationship,
+    };
+};
+
 const createCompany = async (req, res) => {
     try {
         const {
@@ -119,9 +178,12 @@ const createCompany = async (req, res) => {
         await userModel.findByIdAndUpdate(req.user.id, {
             $push: { companies: newCompany._id },
         });
+
+        const representation = helper(newCompany, req.user);
         res.status(201).json({
-            ...newCompany.toObject(),
+            representation,
             pageURL, // Include full URL in response
+            message: 'Company created successfully',
         });
     } catch (error) {
         console.error('Error creating company:', error);
@@ -138,7 +200,15 @@ const getAllCompanies = async (req, res) => {
             .limitFields()
             .paginate();
         const companies = await features.query;
-        res.status(200).json(companies);
+
+        if (!companies || companies.length === 0) {
+            return res.status(404).json({ message: 'No companies found' });
+        }
+        const formattedCompanies = companies.map((company) => {
+            return helper(company, req.user);
+        });
+
+        res.status(200).json(formattedCompanies);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
@@ -166,7 +236,9 @@ const getCompany = async (req, res) => {
             return res.status(404).json({ message: 'Company not found' });
         }
 
-        res.status(200).json(company);
+        const representation = helper(company, req.user);
+
+        res.status(200).json(representation);
     } catch (error) {
         console.error('Error fetching company:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -299,8 +371,10 @@ const updateCompany = async (req, res) => {
         const pageURL = `${protocol}://${host}/companies/${updatedCompany.address}`;
 
         // Return the updated company
+
+        const representation = helper(updatedCompany, req.user);
         res.status(200).json({
-            ...updatedCompany.toObject(),
+            representation,
             pageURL,
         });
     } catch (error) {
@@ -698,29 +772,6 @@ const unfollowCompany = async (req, res) => {
     }
 };
 
-// Add a visitor to the company's visitors list
-const addVisitor = async (req, res) => {
-    try {
-        const company = await companyModel.findById(req.params.companyId);
-        if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
-        }
-        const userId = req.body.userId;
-        if (!userId) {
-            return res
-                .status(400)
-                .json({ message: 'User ID is required to add a visitor' });
-        }
-        if (!company.visitors.includes(userId)) {
-            company.visitors.push(userId);
-        }
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
 module.exports = {
     createCompany,
     getAllCompanies,
@@ -732,7 +783,6 @@ module.exports = {
     deletePost,
     followCompany,
     unfollowCompany,
-    addVisitor,
     addAdmin,
     removeAdmin,
 };
