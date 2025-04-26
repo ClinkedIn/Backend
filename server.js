@@ -33,27 +33,27 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Add these lines BEFORE any JSON body parsing middleware:
-app.post('/stripe/webhook', 
+app.post('/server/stripe/webhook', 
   express.raw({ type: 'application/json' }),
   stripeController.handleWebhook  // Direct reference to the controller
 );
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use("/user", userRouter);
-app.use("/user", userProfileRouter);
-app.use("/posts", postRouter);
-app.use("/report", reportRouter);
-app.use("/comments", commentRouter);
-app.use("/chats", chatRouter);
-app.use("/messages", messageRouter);
-app.use("/jobs", jobRouter);
-app.use("/companies", companyRouter);
-app.use("/upload", uploadRouter);
-app.use("/search", searchRouter);
-app.use("/notifications", notificationRouter);
-app.use("/admin", adminRouter);
-app.use("/stripe", stripeRouter);
+app.use("/api/user", userRouter);
+app.use("/api/user", userProfileRouter);
+app.use("/api/posts", postRouter);
+app.use("/api/report", reportRouter);
+app.use("/api/comments", commentRouter);
+app.use("/api/chats", chatRouter);
+app.use("/api/messages", messageRouter);
+app.use("/api/jobs", jobRouter);
+app.use("/api/companies", companyRouter);
+app.use("/api/upload", uploadRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/notifications", notificationRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/stripe", stripeRouter);
 app.use(
   "/api-docs",
   swaggerUI.serve,
