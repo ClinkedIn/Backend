@@ -2,7 +2,6 @@ const userModel = require("../models/userModel");
 const reportModel = require("../models/reportModel");
 const postModel = require("../models/postModel");
 const mongoose = require("mongoose");
-const customError = require("../utils/customError");
 
 
 const blockUser = async (req, res) => {
@@ -23,7 +22,77 @@ const blockUser = async (req, res) => {
             return res.status(404).json({ message: "User not found." });
         }
 
-        await userModel.findByIdAndUpdate(loggedInUserId, { $addToSet: { blockedUsers: userId } });
+        const loggedInUser = await userModel.findById(loggedInUserId);
+        
+        if (!loggedInUser.blockedUsers.includes(userId)) {
+            loggedInUser.blockedUsers.push(userId);
+        }
+        
+        if (loggedInUser.connectionList && Array.isArray(loggedInUser.connectionList)) {
+            loggedInUser.connectionList = loggedInUser.connectionList.filter(
+                id => id && id.toString() !== userId
+            );
+        }
+        
+        if (loggedInUser.sentConnectionRequests && Array.isArray(loggedInUser.sentConnectionRequests)) {
+            loggedInUser.sentConnectionRequests = loggedInUser.sentConnectionRequests.filter(
+                id => id && id.toString() !== userId
+            );
+        }
+        
+        if (loggedInUser.receivedConnectionRequests && Array.isArray(loggedInUser.receivedConnectionRequests)) {
+            loggedInUser.receivedConnectionRequests = loggedInUser.receivedConnectionRequests.filter(
+                id => id && id.toString() !== userId
+            );
+        }
+        
+        if (loggedInUser.following && Array.isArray(loggedInUser.following)) {
+            loggedInUser.following = loggedInUser.following.filter(
+                item => item && item.entity && !(item.entity.toString() === userId && item.entityType === "User")
+            );
+        }
+        
+        if (loggedInUser.followers && Array.isArray(loggedInUser.followers)) {
+            loggedInUser.followers = loggedInUser.followers.filter(
+                item => item && item.entity && !(item.entity.toString() === userId && item.entityType === "User")
+            );
+        }
+        
+        await loggedInUser.save();
+        
+        const blockedUser = await userModel.findById(userId);
+        
+        if (blockedUser.connectionList && Array.isArray(blockedUser.connectionList)) {
+            blockedUser.connectionList = blockedUser.connectionList.filter(
+                id => id && id.toString() !== loggedInUserId
+            );
+        }
+        
+        if (blockedUser.sentConnectionRequests && Array.isArray(blockedUser.sentConnectionRequests)) {
+            blockedUser.sentConnectionRequests = blockedUser.sentConnectionRequests.filter(
+                id => id && id.toString() !== loggedInUserId
+            );
+        }
+        
+        if (blockedUser.receivedConnectionRequests && Array.isArray(blockedUser.receivedConnectionRequests)) {
+            blockedUser.receivedConnectionRequests = blockedUser.receivedConnectionRequests.filter(
+                id => id && id.toString() !== loggedInUserId
+            );
+        }
+        
+        if (blockedUser.following && Array.isArray(blockedUser.following)) {
+            blockedUser.following = blockedUser.following.filter(
+                item => item && item.entity && !(item.entity.toString() === loggedInUserId && item.entityType === "User")
+            );
+        }
+        
+        if (blockedUser.followers && Array.isArray(blockedUser.followers)) {
+            blockedUser.followers = blockedUser.followers.filter(
+                item => item && item.entity && !(item.entity.toString() === loggedInUserId && item.entityType === "User")
+            );
+        }
+        
+        await blockedUser.save();
 
         return res.status(200).json({ message: "User blocked successfully." });
     }
