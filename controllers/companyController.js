@@ -10,6 +10,65 @@ const {
 const APIFeatures = require('../utils/apiFeatures');
 const slugify = require('slugify');
 // Create a new company
+
+const helper = (company, user) => {
+    const followers = company.followers.map((follower) => {
+        return {
+            id: follower.entity.toString(),
+            entityType: follower.entityType,
+            followedAt: follower.followedAt,
+        };
+    });
+
+    const following = company.following.map((following) => {
+        return {
+            id: following.entity.toString(),
+            entityType: following.entityType,
+            followedAt: following.followedAt,
+        };
+    });
+    let userRelationship = 'visitor'; // Default relationship
+
+    // Check ownership first (highest priority)
+    const isOwner = company.ownerId.toString() === user.id;
+    if (isOwner) {
+        userRelationship = 'owner';
+    } else {
+        // Check if user is an admin
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === user.id
+        );
+        if (isAdmin) {
+            userRelationship = 'admin';
+        } else {
+            // Check if user is a follower
+            const isFollower = company.followers.some(
+                (follower) => follower.entity.toString() === user.id
+            );
+            if (isFollower) {
+                userRelationship = 'follower';
+            }
+        }
+    }
+
+    return {
+        company: {
+            id: company._id,
+            name: company.name,
+            address: company.address,
+            website: company.website,
+            location: company.location,
+            tagLine: company.tagLine,
+            posts: company.posts,
+            logo: company.logo,
+            industry: company.industry,
+            organizationSize: company.organizationSize,
+            followersCount: company.followers.length,
+        },
+        userRelationship,
+    };
+};
+
 const createCompany = async (req, res) => {
     try {
         const {
@@ -91,6 +150,8 @@ const createCompany = async (req, res) => {
         }
         if (logo) {
             object.logo = logo;
+        } else {
+            object.logo = null;
         }
 
         const protocol = req.protocol;
@@ -103,12 +164,19 @@ const createCompany = async (req, res) => {
         object.ownerId = req.user.id; // Add the creator as the owner
         if (website) {
             object.website = website;
+        } else {
+            object.website = null;
         }
         if (tagLine) {
             object.tagLine = tagLine;
+        } else {
+            object.tagLine = null;
         }
+
         if (location) {
             object.location = location;
+        } else {
+            object.location = null;
         }
 
         const newCompany = new companyModel(object);
@@ -119,9 +187,13 @@ const createCompany = async (req, res) => {
         await userModel.findByIdAndUpdate(req.user.id, {
             $push: { companies: newCompany._id },
         });
+
+        const representation = helper(newCompany, req.user);
+
         res.status(201).json({
-            ...newCompany.toObject(),
+            ...representation,
             pageURL, // Include full URL in response
+            message: 'Company created successfully',
         });
     } catch (error) {
         console.error('Error creating company:', error);
@@ -138,7 +210,15 @@ const getAllCompanies = async (req, res) => {
             .limitFields()
             .paginate();
         const companies = await features.query;
-        res.status(200).json(companies);
+
+        if (!companies || companies.length === 0) {
+            return res.status(404).json({ message: 'No companies found' });
+        }
+        const formattedCompanies = companies.map((company) => {
+            return { ...helper(company, req.user) };
+        });
+
+        res.status(200).json(formattedCompanies);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
     }
@@ -166,7 +246,45 @@ const getCompany = async (req, res) => {
             return res.status(404).json({ message: 'Company not found' });
         }
 
-        res.status(200).json(company);
+        const representation = helper(company, req.user);
+
+        if (
+            representation.userRelationship === 'visitor' ||
+            representation.userRelationship === 'follower'
+        ) {
+            // if the user is a visitor, we need to add him to company's visitors list
+            // Get today's start date (midnight)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Check if user already visited today
+            const existingVisit = company.visitors.find(
+                (visitor) => visitor.id.toString() === req.user.id
+            );
+
+            if (existingVisit) {
+                // Convert visitedAt to date object if it's a string
+                const visitDate = new Date(existingVisit.visitedAt);
+                visitDate.setHours(0, 0, 0, 0);
+
+                // Check if last visit was before today
+                if (visitDate < today) {
+                    // Update the visit date to now
+                    existingVisit.visitedAt = new Date();
+                    await company.save();
+                }
+                // If they already visited today, do nothing
+            } else {
+                // Add new visitor
+                company.visitors.push({
+                    id: req.user.id,
+                    visitedAt: new Date(),
+                });
+                await company.save();
+            }
+        }
+
+        res.status(200).json({ ...representation });
     } catch (error) {
         console.error('Error fetching company:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -299,8 +417,10 @@ const updateCompany = async (req, res) => {
         const pageURL = `${protocol}://${host}/companies/${updatedCompany.address}`;
 
         // Return the updated company
+
+        const representation = helper(updatedCompany, req.user);
         res.status(200).json({
-            ...updatedCompany.toObject(),
+            representation,
             pageURL,
         });
     } catch (error) {
@@ -343,6 +463,8 @@ const createPost = async (req, res) => {
     try {
         const companyId = req.params.companyId;
         const company = await companyModel.findById(companyId);
+        let { description, taggedUsers, whoCanSee, whoCanComment } = req.body;
+        const userId = req.user.id; // From authentication middleware
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
@@ -357,34 +479,79 @@ const createPost = async (req, res) => {
         }
 
         // Create the post using the utility function
-        let post = null;
+        let newPost;
         try {
-            post = await createPostUtils(req, 'Company');
-        } catch (postError) {
-            console.error('Error creating post:', postError);
-            return res
-                .status(postError.statusCode)
-                .json({ message: postError.message });
-        }
-        // Add the post to the company's posts array
-        company.posts.push(post._id);
-        await company.save();
+            if (!description || description.trim() === '') {
+                return res
+                    .status(400)
+                    .json({ message: 'Post description is required' });
+            }
 
-        let owner = null;
-        try {
-            owner = await getPostOwnerUtils(post);
-        } catch (err) {
-            return res.status(err.statusCode).json({ message: err.message });
-        }
+            // Initialize post object
+            const newPostData = {
+                companyId,
+                description,
+                attachments: [],
+                taggedUsers: taggedUsers || [],
+                whoCanSee: whoCanSee || 'anyone',
+                whoCanComment: whoCanComment || 'anyone',
+            };
+            if (req.files && req.files.length > 0) {
+                try {
+                    // Use the helper function to handle attachments
+                    newPostData.attachments = await uploadPostAttachments(
+                        req.files
+                    );
+                } catch (uploadError) {
+                    return res
+                        .status(400)
+                        .json({ message: uploadError.message });
+                }
+            }
+            const newPost = await postModel.create(newPostData);
+            const postResponse = {
+                postId: newPost._id,
+                companyId: {
+                    id: company._id,
+                    name: company.name,
+                    address: company.address,
+                    logo: company.logo,
+                    industry: company.industry,
+                    organizationSize: company.organizationSize,
+                    organizationType: company.organizationType,
+                }, // Original user ID reference
+                firstName: null,
+                lastName: null,
+                headline: null,
+                postDescription: newPost.description,
+                attachments: newPost.attachments,
+                impressionTypes: [],
+                impressionCounts: newPost.impressionCounts,
+                commentCount: newPost.commentCount,
+                repostCount: newPost.repostCount,
+                createdAt: newPost.createdAt,
+                taggedUsers: newPost.taggedUsers,
+            };
+            company.posts.push(newPost._id); // Add post ID to company's posts array
+            await company.save();
 
-        res.status(201).json({
-            message: 'Post created successfully',
-            post: post,
-            owner,
-        });
+            res.status(201).json({
+                message: 'Post created successfully',
+                post: postResponse,
+            });
+        } catch (error) {
+            console.error('Error creating post:', error);
+            res.status(500).json({
+                message: 'Failed to create post',
+                error: error.message,
+            });
+        }
     } catch (error) {
         console.error('Error creating post:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({
+            message: 'Failed to create post',
+            error: error.message,
+        });
     }
 };
 
@@ -583,73 +750,249 @@ const removeAdmin = async (req, res) => {
 // Follow a company
 const followCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const userId = req.user.id;
+        const companyId = req.params.companyId;
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        const userId = req.body.userId;
-        if (!userId) {
-            return res
-                .status(400)
-                .json({ message: 'User ID is required to follow the company' });
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-        // Check if the user is already following
-        if (company.followers.includes(userId)) {
-            return res
-                .status(400)
-                .json({ message: 'User is already following this company' });
+
+        const companyFollowers = company.followers;
+
+        for (let i = 0; i < companyFollowers.length; i++) {
+            if (companyFollowers[i].entity.toString() === userId) {
+                return res.status(400).json({
+                    message: 'You are already following this company',
+                });
+            }
         }
-        company.followers.push(userId);
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
+
+        companyFollowers.push({
+            entity: userId,
+            entityType: 'User',
+            followedAt: Date.now(),
+        });
+        company.followers = companyFollowers;
+
+        const userFollowing = user.following;
+
+        for (let i = 0; i < userFollowing.length; i++) {
+            if (userFollowing[i].entity.toString() === companyId) {
+                return res.status(400).json({
+                    message: 'You are already following this company',
+                });
+            }
+        }
+        userFollowing.push({
+            entity: companyId,
+            entityType: 'Company',
+            followedAt: Date.now(),
+        });
+        user.followingCompanies = userFollowing;
+        await company.save();
+        await user.save();
+
+        res.status(200).json({
+            message: 'Successfully followed the company',
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error following company:', error);
+        res.status(500).json({ message: 'Interal server error' });
     }
 };
 
 // Unfollow a company
+
 const unfollowCompany = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const userId = req.user.id;
+        const companyId = req.params.companyId;
+
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        const userId = req.body.userId;
-        if (!userId) {
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if the user is actually following the company using entity field
+        const isFollowing = company.followers.some(
+            (follower) =>
+                follower.entity.toString() === userId &&
+                follower.entityType === 'User'
+        );
+
+        if (!isFollowing) {
             return res.status(400).json({
-                message: 'User ID is required to unfollow the company',
+                message: 'You are not following this company',
             });
         }
+
+        // Remove user from company's followers
         company.followers = company.followers.filter(
-            (id) => id.toString() !== userId
+            (follower) =>
+                !(
+                    follower.entity.toString() === userId &&
+                    follower.entityType === 'User'
+                )
         );
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
+        await company.save();
+
+        // Remove company from user's followingCompanies
+        const userFollowingCompanies = user.following || [];
+        user.following = userFollowingCompanies.filter(
+            (following) =>
+                !(
+                    following.entity.toString() === companyId &&
+                    following.entityType === 'Company'
+                )
+        );
+        await user.save();
+
+        res.status(200).json({
+            message: 'Successfully unfollowed the company',
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error unfollowing company:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
-// Add a visitor to the company's visitors list
-const addVisitor = async (req, res) => {
+const getFollowers = async (req, res) => {
     try {
-        const company = await companyModel.findById(req.params.companyId);
+        const companyId = req.params.companyId;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert query parameters to numbers with validation
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limit between 1 and 50
+        const skipIndex = (pageNum - 1) * limitNum;
+
+        // Verify company exists
+        const company = await companyModel.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        const userId = req.body.userId;
-        if (!userId) {
-            return res
-                .status(400)
-                .json({ message: 'User ID is required to add a visitor' });
+
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === req.user.id
+        );
+
+        if (!isAdmin) {
+            return res.status(403).json({
+                message:
+                    'You are not authorized to see followers of this company',
+            });
         }
-        if (!company.visitors.includes(userId)) {
-            company.visitors.push(userId);
-        }
-        const updatedCompany = await company.save();
-        res.status(200).json(updatedCompany);
+
+        // Get total count for pagination
+        const totalFollowers = company.followers.length;
+
+        // Apply pagination to followers array
+        const paginatedFollowers = company.followers.slice(
+            skipIndex,
+            skipIndex + limitNum
+        );
+
+        // Extract user IDs from the followers who are users
+        const userFollowerIds = paginatedFollowers
+            .filter((follower) => follower.entityType === 'User')
+            .map((follower) => follower.entity);
+
+        // Fetch user details in a single query
+        const userDetails = await userModel
+            .find(
+                {
+                    _id: { $in: userFollowerIds },
+                    isActive: true,
+                },
+                {
+                    firstName: 1,
+                    lastName: 1,
+                    profilePicture: 1,
+                    location: 1,
+                    industry: 1,
+                    mainEducation: 1,
+                    'about.description': 1,
+                    profilePrivacySettings: 1,
+                    education: 1,
+                }
+            )
+            .lean();
+
+        // Create a map for quick lookup of user details
+        const userMap = {};
+        userDetails.forEach((user) => {
+            userMap[user._id.toString()] = user;
+        });
+
+        // Create the enhanced followers array with all requested details
+        const enhancedFollowers = paginatedFollowers.map((follower) => {
+            const followerId = follower.entity.toString();
+            const followerDetails = userMap[followerId] || null;
+
+            if (!followerDetails || follower.entityType !== 'User') {
+                // Handle company followers or missing users
+                return {
+                    id: followerId,
+                    entityType: follower.entityType,
+                    followedAt: follower.followedAt,
+                };
+            }
+
+            // Get the main education if specified
+            let mainEducationDetails = null;
+            if (
+                followerDetails.mainEducation !== null &&
+                followerDetails.education &&
+                followerDetails.education.length > followerDetails.mainEducation
+            ) {
+                mainEducationDetails =
+                    followerDetails.education[followerDetails.mainEducation];
+            }
+
+            // Return enhanced user follower
+            return {
+                id: followerId,
+                firstName: followerDetails.firstName,
+                lastName: followerDetails.lastName,
+                profilePicture: followerDetails.profilePicture,
+                location: followerDetails.location,
+                industry: followerDetails.industry,
+                mainEducation: mainEducationDetails,
+                bio: followerDetails.about?.description || null,
+                profilePrivacySettings: followerDetails.profilePrivacySettings,
+                followedAt: follower.followedAt,
+            };
+        });
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalFollowers / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+        res.status(200).json({
+            message: 'Followers fetched successfully',
+            followers: enhancedFollowers,
+            pagination: {
+                total: totalFollowers,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage,
+            },
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching followers:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
@@ -664,7 +1007,7 @@ module.exports = {
     deletePost,
     followCompany,
     unfollowCompany,
-    addVisitor,
     addAdmin,
     removeAdmin,
+    getFollowers,
 };

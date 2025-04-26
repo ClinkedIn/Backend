@@ -81,7 +81,11 @@ async function createRandomCompanies() {
         
         // Store visitors (10-30 visitors)
         const visitorCount = faker.number.int({ min: 10, max: 30 });
-        const visitors = faker.helpers.arrayElements(userIds, visitorCount);
+        const visitors = faker.helpers.arrayElements(userIds, visitorCount)
+            .map(userId => ({
+                id: userId,
+                visitedAt: faker.date.past({ months: 6 })
+            }));
 
         // Generate company address (like linkedin.com/company/company-name)
         const companyName = faker.company.name();
@@ -90,7 +94,7 @@ async function createRandomCompanies() {
         
         companies.push({
             _id: companyId,
-            userId: creatorUserId,
+            ownerId: creatorUserId, // FIXED: Changed from userId to ownerId
             admins,
             followers,
             following,
@@ -107,16 +111,16 @@ async function createRandomCompanies() {
             logo: faker.image.urlLoremFlickr({ category: 'business' }),
             tagLine: faker.company.catchPhrase(),
             visitors,
-            isActive: faker.datatype.boolean(0.9), // 90% active
+            isDeleted: faker.datatype.boolean(0.1), // FIXED: Changed from isActive to isDeleted, 10% deleted
             posts: companyPosts,
             jobs: companyJobs,
+            location: faker.location.city(), // ADDED: Location field
             createdAt: faker.date.past({ years: 3 }),
             updatedAt: faker.date.recent(),
         });
     }
 }
 
-// Update user documents to link them with companies and sync followers/following
 // Update user documents to link them with companies and sync followers/following
 async function updateUserCompanyRelationships() {
     // Create maps for efficient lookups
@@ -137,8 +141,8 @@ async function updateUserCompanyRelationships() {
     companies.forEach(company => {
         const companyId = company._id.toString();
         
-        // Creator relationship
-        companyCreatorMap.get(company.userId.toString()).push(company._id);
+        // Creator relationship - FIXED: Changed from userId to ownerId
+        companyCreatorMap.get(company.ownerId.toString()).push(company._id);
         
         // Admin relationships
         company.admins.forEach(adminId => {
@@ -321,7 +325,8 @@ async function companySeeder() {
             industry: sampleCompany.industry,
             followersCount: sampleCompany.followers.length,
             followingCount: sampleCompany.following.length,
-            jobsCount: sampleCompany.jobs.length
+            jobsCount: sampleCompany.jobs.length,
+            location: sampleCompany.location
         });
         
         // Verify a sample user's company relationships

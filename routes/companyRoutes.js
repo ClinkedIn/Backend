@@ -19,10 +19,8 @@ router
 router
     .route('/:companyId/follow')
     .post(protect, companyController.followCompany)
-    .delete(protect, companyController.unfollowCompany);
-
-// Endpoint to add a visitor to a company
-router.route('/:companyId/visit').post(protect, companyController.addVisitor);
+    .delete(protect, companyController.unfollowCompany)
+    .get(protect, companyController.getFollowers);
 
 router.route('/:companyId/post').post(protect, companyController.createPost);
 

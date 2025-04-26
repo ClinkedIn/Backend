@@ -4,14 +4,6 @@ const postController = require('../controllers/postController');
 const { protect } = require('../middlewares/auth');
 const upload = require('../middlewares/multer');
 
-router.route('/')
-    .post(protect,upload.array('files'),postController.createPost)
-    .get(protect,postController.getAllPosts);
-
-router.route('/:postId')
-    .get(protect,postController.getPost)
-    .put(protect,postController.updatePost)
-    .delete(protect,postController.deletePost);
 
 router.route('/:postId/save')
     .post(protect,postController.savePost)
@@ -33,7 +25,14 @@ router.route('/:repostId/repost')
 router.route('/:postId/report')
     .post(protect,postController.reportPost);
 
+router.route('/')
+    .post(protect,upload.array('files'),postController.createPost)
+    .get(protect,postController.getAllPosts);
 
+router.route('/:postId')
+    .get(protect,postController.getPost)
+    .put(protect,postController.updatePost)
+    .delete(protect,postController.deletePost);
 
 
 module.exports = router;

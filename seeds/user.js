@@ -112,7 +112,7 @@ async function createRandomUsers() {
                 "public", "private", "connectionsOnly"
             ]),
             connectionRequestPrivacySetting: faker.helpers.arrayElement([
-                "everyone", "connectionsOnly"
+                "everyone", "mutual"
             ]),
             defaultMode: faker.helpers.arrayElement(["light", "dark"]),
             googleId: faker.datatype.boolean() ? faker.string.uuid() : null,

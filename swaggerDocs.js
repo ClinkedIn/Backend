@@ -13264,7 +13264,7 @@
 /**
  * @swagger
  * /stripe/cancel-subscription:
- *   post:
+ *   delete:
  *     summary: Cancel a subscription immediately
  *     tags: [Subscription]
  *     description: |
