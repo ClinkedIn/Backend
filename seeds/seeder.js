@@ -37,8 +37,9 @@ const { createRandomIds } = require('./init');
         // await chatMessageSeeder();
         // await impressionSeeder();
         // await companySeeder();
-        // await jobSeeder();
-        // await reportSeeder();
+        //await jobSeeder();
+        
+        //await reportSeeder();
         await notificationSeeder();
         // await otherSeeder();
 

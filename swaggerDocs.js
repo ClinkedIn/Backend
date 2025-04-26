@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /user/search:
+ * /api/user/search:
  *   get:
  *     summary: Search for users
  *     tags: [Connections & Networking]
@@ -73,7 +73,7 @@
  *       500:
  *         description: Server error
  *
- * /user/connections/request/{targetUserId}:
+ * /api/user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -95,7 +95,7 @@
  *       404:
  *         description: User not found
  *
- * /user/connections/requests:
+ * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -125,7 +125,7 @@
  *                       headline:
  *                         type: string
  *
- * /user/connections/requests/{senderId}:
+ * /api/user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -151,7 +151,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /user/connections/{connectionId}:
+ * /api/user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -167,7 +167,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /user/follow/{userId}:
+ * /api/user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -197,7 +197,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -227,7 +227,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -255,7 +255,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /user/message-requests:
+ * /api/user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -282,7 +282,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /user/message-requests/{requestId}:
+ * /api/user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -777,7 +777,7 @@
  *
  */
 
-// ******************************************* Posts APIs ************************************* //
+// ******************************************* Posts APIs ************************************* /api//
 
 /**
  * @swagger
@@ -788,7 +788,7 @@
 
 /**
  * @swagger
- * /posts:
+ * /api/posts:
  *   post:
  *     summary: Create a new post
  *     tags: [Posts]
@@ -980,7 +980,7 @@
 
 /**
  * @swagger
- * /posts:
+ * /api/posts:
  *   get:
  *     summary: Get feed posts including reposts
  *     tags: [Posts]
@@ -1221,7 +1221,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   get:
  *     summary: Get a single post
  *     tags: [Posts]
@@ -1458,7 +1458,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   delete:
  *     summary: Delete a post
  *     tags: [Posts]
@@ -1530,7 +1530,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   put:
  *     summary: Update a post
  *     tags: [Posts]
@@ -1719,7 +1719,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/save:
+ * /api/posts/{postId}/save:
  *   post:
  *     summary: Save a post
  *     tags: [Posts]
@@ -1791,7 +1791,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/like:
+ * /api/posts/{postId}/like:
  *   post:
  *     summary: Like or react to a post
  *     tags: [Posts]
@@ -1996,7 +1996,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/repost:
+ * /api/posts/{postId}/repost:
  *   post:
  *     summary: Repost a post
  *     tags: [Posts]
@@ -2109,7 +2109,7 @@
 
 /**
  * @swagger
- * /posts/{repostId}/repost:
+ * /api/posts/{repostId}/repost:
  *   delete:
  *     summary: Delete a repost
  *     tags: [Posts]
@@ -2191,7 +2191,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/report:
+ * /api/posts/{postId}/report:
  *   post:
  *     summary: Report a post for policy violations
  *     tags: [Posts]
@@ -2340,7 +2340,7 @@
 
 /**
  * @swagger
- * /comments:
+ * /api/comments:
  *   post:
  *     summary: Add a new comment or reply to a post
  *     tags: [Comments]
@@ -2563,7 +2563,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   put:
  *     summary: Update an existing comment
  *     tags: [Comments]
@@ -2790,7 +2790,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   delete:
  *     summary: Delete a comment
  *     tags: [Comments]
@@ -2873,7 +2873,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   get:
  *     summary: Get a single comment by ID
  *     tags: [Comments]
@@ -3048,7 +3048,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}/like:
+ * /api/comments/{commentId}/like:
  *   post:
  *     summary: Add an impression (like, celebrate, etc.) to a comment
  *     tags: [Comments]
@@ -3316,7 +3316,7 @@
 
 /**
  * @swagger
- * /comments/{postId}/post:
+ * /api/comments/{postId}/post:
  *   get:
  *     summary: Get comments for a specific post
  *     tags: [Comments]
@@ -3538,7 +3538,7 @@
 
 /**
  * @swagger
- * /messages:
+ * /api/messages:
  *   post:
  *     summary: Send a message
  *     tags: [Messages]
@@ -3564,7 +3564,7 @@
 
 /**
  * @swagger
- * /messages/{messageId}:
+ * /api/messages/{messageId}:
  *   get:
  *     summary: Get a message
  *     tags: [Messages]
@@ -3660,7 +3660,7 @@
 
 /**
  * @swagger
- * /messages/block/{userId}:
+ * /api/messages/block/{userId}:
  *   post:
  *     summary: Block a user from messaging
  *     tags: [Messages]
@@ -3746,7 +3746,7 @@
 
 /**
  * @swagger
- * /messages/unblock/{userId}:
+ * /api/messages/unblock/{userId}:
  *   post:
  *     summary: Unblock a user from messaging
  *     tags: [Messages]
@@ -3828,7 +3828,7 @@
 
 /**
  * @swagger
- * /messages/unread-count:
+ * /api/messages/unread-count:
  *   get:
  *     summary: Get total unread message count
  *     tags: [Messages]
@@ -3896,7 +3896,7 @@
 
 /**
  * @swagger
- * /api/chats/group-chat:
+ * /api/api/chats/group-chat:
  *   post:
  *     summary: Create a new group chat
  *     description: Creates a new group chat with specified members and the authenticated user as admin
@@ -3958,7 +3958,7 @@
 
 /**
  * @swagger
- * /api/chats/direct-chat/{chatId}:
+ * /api/api/chats/direct-chat/{chatId}:
  *   get:
  *     summary: Get a direct chat by ID
  *     description: Retrieves a direct chat by its ID, including message history and other user details. Also marks messages as read for the authenticated user.
@@ -4063,7 +4063,7 @@
 
 /**
  * @swagger
- * /api/chats/all-chats:
+ * /api/api/chats/all-chats:
  *   get:
  *     summary: Get all chats for the authenticated user
  *     description: Returns all direct and group chats for the authenticated user, with preview information including latest message and unread counts.
@@ -4106,7 +4106,7 @@
 
 /**
  * @swagger
- * /api/chats/group/{chatId}:
+ * /api/api/chats/group/{chatId}:
  *   get:
  *     summary: Get a group chat by ID
  *     description: Retrieves a group chat by its ID, including message history and member details
@@ -4140,7 +4140,7 @@
 
 /**
  * @swagger
- * /api/chats/direct/{chatId}:
+ * /api/api/chats/direct/{chatId}:
  *   put:
  *     summary: Update a direct chat
  *     description: Updates direct chat settings such as muting, archiving or starring
@@ -4190,7 +4190,7 @@
 
 /**
  * @swagger
- * /api/chats/group/{chatId}:
+ * /api/api/chats/group/{chatId}:
  *   put:
  *     summary: Update a group chat
  *     description: Updates group chat settings or details such as name, members, or user-specific settings
@@ -4243,7 +4243,7 @@
 
 /**
  * @swagger
- * /api/chats/mark-as-read/{chatId}:
+ * /api/api/chats/mark-as-read/{chatId}:
  *   patch:
  *     summary: Mark a chat as read
  *     description: Marks all messages in a chat as read for the authenticated user by setting unread count to zero
@@ -4281,7 +4281,7 @@
 
 /**
  * @swagger
- * /api/chats/mark-as-unread/{chatId}:
+ * /api/api/chats/mark-as-unread/{chatId}:
  *   patch:
  *     summary: Mark a chat as unread
  *     description: Marks a chat as unread for the authenticated user by incrementing the unread count
@@ -4683,7 +4683,7 @@
 
 /**
  * @swagger
- * /jobs:
+ * /api/jobs:
  *   post:
  *     summary: Create a new job
  *     tags: [Jobs]
@@ -4998,7 +4998,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}:
+ * /api/jobs/{jobId}:
  *   get:
  *     summary: Retrieve a specific job
  *     tags: [Jobs]
@@ -5083,7 +5083,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/apply:
+ * /api/jobs/{jobId}/apply:
  *   post:
  *     summary: Submit an application for a job
  *     tags: [Jobs]
@@ -5229,7 +5229,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/applications/{userId}/accept:
+ * /api/jobs/{jobId}/applications/{userId}/accept:
  *   put:
  *     summary: Accept a job applicant
  *     tags: [Jobs]
@@ -5268,7 +5268,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/applications/{userId}/reject:
+ * /api/jobs/{jobId}/applications/{userId}/reject:
  *   put:
  *     summary: Reject a job applicant
  *     tags: [Jobs]
@@ -5307,7 +5307,7 @@
 
 /**
  * @swagger
- * /jobs/company/{companyId}:
+ * /api/jobs/company/{companyId}:
  *   get:
  *     summary: Retrieve jobs by company
  *     tags: [Jobs]
@@ -5341,7 +5341,7 @@
 
 /**
  * @swagger
- * /companies:
+ * /api/companies:
  *   post:
  *     summary: Create a new company
  *     tags: [Companies]
@@ -5598,7 +5598,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}:
+ * /api/companies/{companyId}:
  *   get:
  *     summary: Retrieve a specific company
  *     tags: [Companies]
@@ -5864,7 +5864,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/follow:
+ * /api/companies/{companyId}/follow:
  *   post:
  *     summary: Follow a company
  *     tags: [Companies]
@@ -6750,7 +6750,7 @@
 
 /**
  * @swagger
- * /user/:
+ * /api/user/:
  *   post:
  *     summary: Register a new user
  *     tags: [Users]
@@ -6875,7 +6875,7 @@
 
 /**
  * @swagger
- * /user/login:
+ * /api/user/login:
  *   post:
  *     summary: Login user
  *     tags: [Users]
@@ -6965,7 +6965,7 @@
 
 /**
  * @swagger
- * /user/auth/google:
+ * /api/user/auth/google:
  *   post:
  *     summary: Login with Google
  *     tags: [Users]
@@ -7020,7 +7020,7 @@
 
 /**
  * @swagger
- * /user/logout:
+ * /api/user/logout:
  *    post:
  *     summary: Logout user
  *     tags: [Users]
@@ -7049,7 +7049,7 @@
 
 /**
  * @swagger
- * /user/forgot-password:
+ * /api/user/forgot-password:
  *   post:
  *     summary: Request a password reset link
  *     tags: [Users]
@@ -7111,7 +7111,7 @@
 
 /**
  * @swagger
- * /user/verify-reset-password-otp:
+ * /api/user/verify-reset-password-otp:
  *   post:
  *     summary: Verify password reset OTP
  *     tags: [Users]
@@ -7160,7 +7160,7 @@
 
 /**
  * @swagger
- * /user/update-password:
+ * /api/user/update-password:
  *   patch:
  *     summary: Update user password
  *     tags: [Users]
@@ -7218,7 +7218,7 @@
 
 /**
  * @swagger
- * /user/reset-password:
+ * /api/user/reset-password:
  *   patch:
  *     summary: Reset user password
  *     tags: [Users]
@@ -7283,7 +7283,7 @@
 
 /**
  * @swagger
- * /user/update-email:
+ * /api/user/update-email:
  *   patch:
  *     summary: Update user email
  *     description: Allows authenticated users to update their email. Requires password confirmation. The new email must not be already registered.
@@ -7374,7 +7374,7 @@
 
 /**
  * @swagger
- * /user/resend-confirmation-email:
+ * /api/user/resend-confirmation-email:
  *   get:
  *     summary: Resend confirmation email
  *     description: Resends the confirmation email for a user who has not yet confirmed their account.
@@ -7404,7 +7404,7 @@
 
 /**
  * @swagger
- * /user/confirm-email:
+ * /api/user/confirm-email:
  *   get:
  *     summary: Confirm user email
  *     description: Confirms a user's email address using a one-time password (OTP).
@@ -7461,7 +7461,7 @@
 
 /**
  * @swagger
- * /user/{userId}:
+ * /api/user/{userId}:
  *   get:
  *     summary: Get user profile by ID
  *     tags: [Users]
@@ -7657,7 +7657,7 @@
 
 /**
  * @swagger
- * /user/me:
+ * /api/user/me:
  *   get:
  *     summary: Get logged in user profile
  *     tags: [Users]
@@ -7846,7 +7846,7 @@
 
 /**
  * @swagger
- * /user:
+ * /api/user:
  *   get:
  *     summary: Get a list of users
  *     tags: [Users]
@@ -7984,7 +7984,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   post:
  *     summary: Upload or update the user's profile picture
  *     tags: [Users]
@@ -8067,7 +8067,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's profile picture.
@@ -8123,7 +8123,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   delete:
  *     summary: Delete the user's profile picture
  *     description: Removes the user's profile picture by setting the profilePicture field to null.
@@ -8179,7 +8179,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   post:
  *     summary: Upload or update the user's cover picture
  *     tags: [Users]
@@ -8262,7 +8262,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's cover picture.
@@ -8318,7 +8318,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   delete:
  *     summary: Delete the user's cover picture
  *     description: Removes the user's cover picture by setting the coverPicture field to null.
@@ -8378,7 +8378,7 @@
 
 /**
  * @swagger
- * /user/resume:
+ * /api/user/resume:
  *   get:
  *     summary: Get user resume
  *     tags: [Users]
@@ -8508,7 +8508,7 @@
 
 /**
  * @swagger
- * /user/experience:
+ * /api/user/experience:
  *   post:
  *     summary: Add a new work experience for the authenticated user.
  *     description: Allows a user to add a new experience entry to their profile, including job details, employment type, location, skills, and optional media uploads.
@@ -8709,7 +8709,7 @@
 
 /**
  * @swagger
- * /user/experience:
+ * /api/user/experience:
  *   get:
  *     summary: Retrieve all work experiences of the authenticated user.
  *     description: Fetches the list of work experiences associated with the authenticated user.
@@ -8805,7 +8805,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   get:
  *     summary: Get a specific work experience
  *     tags: [Users]
@@ -8887,7 +8887,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   patch:
  *     summary: Update a specific work experience entry of the authenticated user.
  *     description: Updates an existing work experience entry using the provided index and request body.
@@ -9053,7 +9053,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   delete:
  *     summary: Delete a specific work experience entry of the authenticated user.
  *     description: Removes a work experience entry by index and updates associated skills.
@@ -9171,7 +9171,7 @@
 
 /**
  * @swagger
- * /user/education:
+ * /api/user/education:
  *   post:
  *     summary: Add education
  *     tags: [Users]
@@ -9196,7 +9196,7 @@
  */
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   patch:
  *     summary: Update a specific education entry
  *     tags: [Users]
@@ -9271,7 +9271,7 @@
 
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   get:
  *     summary: Get a specific education entry
  *     tags: [Users]
@@ -9350,7 +9350,7 @@
 
 /**
  * @swagger
- * /user/education:
+ * /api/user/education:
  *   get:
  *     summary: Get all education entries
  *     tags: [Users]
@@ -9420,7 +9420,7 @@
 
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   delete:
  *     summary: Delete an education entry
  *     tags: [Users]
@@ -9520,7 +9520,7 @@
 
 /**
  * @swagger
- * /user/skills:
+ * /api/user/skills:
  *   post:
  *     summary: Add a new skill to the authenticated user's profile.
  *     description: Adds a skill associated with education and work experience indices.
@@ -9626,7 +9626,7 @@
 
 /**
  * @swagger
- * /user/skills:
+ * /api/user/skills:
  *   get:
  *     summary: Get all user skills
  *     tags: [Users]
@@ -9701,7 +9701,7 @@
 
 /**
  * @swagger
- * /user/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   get:
  *     summary: Get a specific user skill
  *     tags: [Users]
@@ -9781,7 +9781,7 @@
 
 /**
  * @swagger
- * /user/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   patch:
  *     summary: Update an existing skill for the authenticated user.
  *     description: Updates a skill's name, education indices, and work experience indices.
@@ -9892,7 +9892,7 @@
 
 /**
  * @swagger
- * /users/skills/{skillName}:
+ * /api/users/skills/{skillName}:
  *   delete:
  *     summary: Delete a skill from the user's profile
  *     tags: [Users]
@@ -9955,7 +9955,7 @@
 
 /**
  * @swagger
- * /user/skills/endorsements/add-endorsement:
+ * /api/user/skills/endorsements/add-endorsement:
  *   post:
  *     summary: Endorse a user's skill
  *     tags: [Users]
@@ -10014,7 +10014,7 @@
  *       500:
  *         description: Internal Server Error
  *
- * /user/skills/endorsements/remove-endorsement/{skillName}:
+ * /api/user/skills/endorsements/remove-endorsement/{skillName}:
  *   delete:
  *     summary: Remove endorsement from a skill
  *     tags: [Users]
@@ -10080,7 +10080,7 @@
 
 /**
  * @swagger
- * /user/certifications:
+ * /api/user/certifications:
  *   post:
  *     summary: Add certification
  *     tags: [Users]
@@ -10110,7 +10110,7 @@
 
 /**
  * @swagger
- * /user/certifications:
+ * /api/user/certifications:
  *   post:
  *     summary: Add certification
  *     tags: [Users]
@@ -10136,7 +10136,7 @@
 
 /**
  * @swagger
- * /user/privacy-settings:
+ * /api/user/privacy-settings:
  *   patch:
  *     summary: Update profile visibility privacy settings
  *     tags: [Users]
@@ -10165,7 +10165,7 @@
 
 /**
  * @swagger
- * /user/follow/{entityId}:
+ * /api/user/follow/{entityId}:
  *   post:
  *     summary: Follow an entity (user or company)
  *     tags: [Users]
@@ -10249,7 +10249,7 @@
 
 /**
  * @swagger
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Users]
@@ -10269,7 +10269,7 @@
 
 /**
  * @swagger
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Users]
@@ -10322,7 +10322,7 @@
 
 /**
  * @swagger
- * /user/message-requests:
+ * /api/user/message-requests:
  *   post:
  *     summary: Send a message request to a non-connection
  *     tags: [Messaging]
@@ -10839,7 +10839,7 @@
 /**
 /**
  * @swagger
- * /user/connections/request/{targetUserId}:
+ * /api/user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -10861,7 +10861,7 @@
  *       404:
  *         description: User not found
  * 
- * /user/connections/requests:
+ * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -10891,7 +10891,7 @@
  *                       headline:
  *                         type: string
  *
- * /user/connections/requests/{senderId}:
+ * /api/user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -10917,7 +10917,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /user/connections/{connectionId}:
+ * /api/user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -10933,7 +10933,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /user/follow/{userId}:
+ * /api/user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -10963,7 +10963,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -10993,7 +10993,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -11021,7 +11021,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /user/message-requests:
+ * /api/user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -11048,7 +11048,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /user/message-requests/{requestId}:
+ * /api/user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -11086,7 +11086,7 @@
 
 /**
  * @swagger
- * /notifications:
+ * /api/notifications:
  *   get:
  *     summary: Get all notifications
  *     tags: [Notifications]
@@ -11124,7 +11124,7 @@
 
 /**
  * @swagger
- * /notifications/mark-read/{id}:
+ * /api/notifications/mark-read/{id}:
  *   patch:
  *     summary: Mark a notification as read
  *     tags: [Notifications]
@@ -11147,7 +11147,7 @@
 
 /**
  * @swagger
- * /notifications/mark-unread/{id}:
+ * /api/notifications/mark-unread/{id}:
  *   patch:
  *     summary: Mark a notification as unread
  *     tags: [Notifications]
@@ -11170,7 +11170,7 @@
 
 /**
  * @swagger
- * /notifications/unread-count:
+ * /api/notifications/unread-count:
  *   get:
  *     summary: Get count of unread notifications
  *     tags: [Notifications]
@@ -11186,7 +11186,7 @@
 
 /**
  * @swagger
- * /notifications/pause-notifications:
+ * /api/notifications/pause-notifications:
  *   patch:
  *     summary: Pause receiving notifications
  *     tags: [Notifications]
@@ -11210,7 +11210,7 @@
 
 /**
  * @swagger
- * /notifications/resume-notifications:
+ * /api/notifications/resume-notifications:
  *   patch:
  *     summary: Resume receiving notifications
  *     tags: [Notifications]
@@ -11222,7 +11222,7 @@
 
 /**
  * @swagger
- * /notifications/restore-notification/{id}:
+ * /api/notifications/restore-notification/{id}:
  *   patch:
  *     summary: Restore a deleted notification
  *     tags: [Notifications]
@@ -11247,7 +11247,7 @@
 
 /**
  * @swagger
- * /notifications/{id}:
+ * /api/notifications/{id}:
  *   delete:
  *     summary: Soft delete a notification
  *     tags: [Notifications]
@@ -11277,7 +11277,7 @@
  */
 /**
  * @swagger
- * /user/search:
+ * /api/user/search:
  *   get:
  *     summary: Search for users
  *     tags: [Connections & Networking]
@@ -11353,7 +11353,7 @@
 
 /**
  * @swagger
- * /user/profile:
+ * /api/user/profile:
  *   patch:
  *     summary: Update user profile intro information
  *     tags: [Users]
@@ -11478,7 +11478,7 @@
 
 /**
  * @swagger
- * /user/contact-info:
+ * /api/user/contact-info:
  *   patch:
  *     summary: Update user contact information
  *     tags: [Users]
@@ -11604,7 +11604,7 @@
 
 /**
  * @swagger
- * /user/about:
+ * /api/user/about:
  *   patch:
  *     summary: Update user about section
  *     tags: [Users]
@@ -11713,7 +11713,7 @@
 
 /**
  * @swagger
- * /search/users:
+ * /api/search/users:
  *   get:
  *     summary: Search for users by name
  *     tags: [Search]
@@ -11835,7 +11835,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/like:
+ * /api/posts/{postId}/like:
  *   get:
  *     summary: Get users who reacted to a post
  *     tags: [Posts]
@@ -12040,7 +12040,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}/like:
+ * /api/comments/{commentId}/like:
  *   get:
  *     summary: Get users who reacted to a comment
  *     tags: [Comments]
@@ -12245,7 +12245,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/reposts:
+ * /api/posts/{postId}/reposts:
  *   get:
  *     summary: Get reposts of a specific post
  *     tags: [Posts]
@@ -12502,7 +12502,7 @@
 
 /**
  * @swagger
- * /user/{userId}/user-activity:
+ * /api/user/{userId}/user-activity:
  *   get:
  *     summary: Get posts that a user has posted, reposted, or commented on
  *     tags: [Users, Posts]
@@ -12841,7 +12841,7 @@
 
 /**
  * @swagger
- * /search/jobs:
+ * /api/search/jobs:
  *   get:
  *     summary: Search for jobs with advanced filters
  *     tags: [Search, Jobs]
@@ -13090,7 +13090,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/save:
+ * /api/jobs/{jobId}/save:
  *   post:
  *     summary: Save a job for the authenticated user
  *     tags: [Jobs]
@@ -13244,7 +13244,7 @@
  *                   type: string
  *                   example: "Internal server error details"
  *
- * /jobs/saved:
+ * /api/jobs/saved:
  *   get:
  *     summary: Get all saved jobs for the authenticated user
  *     tags: [Jobs, Users]
@@ -13395,7 +13395,7 @@
 
 /**
  * @swagger
- * /jobs/my-applications:
+ * /api/jobs/my-applications:
  *   get:
  *     summary: Get all job applications for the authenticated user
  *     tags: [Jobs, Users]
@@ -13600,7 +13600,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/apply:
+ * /api/jobs/{jobId}/apply:
  *   get:
  *     summary: Get all applications for a specific job
  *     tags: [Jobs, Applications]
@@ -13895,7 +13895,7 @@
 
 /**
  * @swagger
- * /admin/reports:
+ * /api/admin/reports:
  *   get:
  *     summary: Get all reports
  *     tags: [Admin]
@@ -13925,7 +13925,7 @@
 
 /**
  * @swagger
- * /admin/reports/{reportId}:
+ * /api/admin/reports/{reportId}:
  *   get:
  *     summary: Get a specific report
  *     tags: [Admin - Reports]
@@ -14111,7 +14111,7 @@
 
 /**
  * @swagger
- * /admin/jobs:
+ * /api/admin/jobs:
  *   get:
  *     summary: Get flagged jobs
  *     tags: [Admin]
@@ -14131,7 +14131,7 @@
 
 /**
  * @swagger
- * /admin/jobs/{jobId}:
+ * /api/admin/jobs/{jobId}:
  *   delete:
  *     summary: Remove job
  *     tags: [Admin]
@@ -14154,7 +14154,7 @@
 
 /**
  * @swagger
- * /admin/analytics/overview:
+ * /api/admin/analytics/overview:
  *   get:
  *     summary: Get analytics overview (Admin only)
  *     tags: [Admin]
@@ -14399,7 +14399,7 @@
  */
 /**
  * @swagger
- * /stripe/cancel-subscription:
+ * /api/stripe/cancel-subscription:
  *   delete:
  *     summary: Cancel a subscription immediately
  *     tags: [Subscription]
@@ -14456,7 +14456,7 @@
  */
 /**
  * @swagger
- * /stripe/create-checkout-session:
+ * /api/stripe/create-checkout-session:
  *   post:
  *     summary: Create a Stripe checkout session
  *     tags: [Subscription]
@@ -14529,4 +14529,284 @@
  *                 error:
  *                   type: string
  *                   example: "Error message from Stripe"
+ */
+/**
+ * @swagger
+ * /api/search/posts:
+ *   get:
+ *     summary: Search for posts by keyword
+ *     tags: [Search]
+ *     description: |
+ *       Searches for posts matching a keyword in post descriptions or tagged users.
+ *       Results are sorted by creation date (newest first) and include full post details
+ *       with user/company information, impression counts, and personalized flags like
+ *       whether the post is saved or liked by the requesting user.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: keyword
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *         description: Search term to match against post descriptions and tagged users
+ *         example: "javascript"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of posts per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Posts matching the search criteria retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier for the post
+ *                       userId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the user who created the post (null for company posts)
+ *                       companyId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456791"
+ *                         description: ID of the company that created the post (null for user posts)
+ *                       firstName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "John"
+ *                         description: First name of the user who created the post (null for company posts)
+ *                       lastName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Smith"
+ *                         description: Last name of the user who created the post (null for company posts)
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer"
+ *                         description: Professional headline of the user who created the post
+ *                       profilePicture:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://example.com/profile.jpg"
+ *                         description: Profile picture URL of the user who created the post
+ *                       companyName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Tech Company Inc."
+ *                         description: Name of the company that created the post (null for user posts)
+ *                       companyLogo:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://example.com/logo.png"
+ *                         description: Logo URL of the company that created the post (null for user posts)
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Excited to share our latest JavaScript project!"
+ *                         description: Content of the post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+ *                         description: URLs of attached media files
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 10
+ *                           support:
+ *                             type: number
+ *                             example: 5
+ *                           celebrate:
+ *                             type: number
+ *                             example: 3
+ *                           love:
+ *                             type: number
+ *                             example: 7
+ *                           insightful:
+ *                             type: number
+ *                             example: 4
+ *                           funny:
+ *                             type: number
+ *                             example: 2
+ *                           total:
+ *                             type: number
+ *                             example: 31
+ *                         description: Counts of different reaction types on the post
+ *                       commentCount:
+ *                         type: number
+ *                         example: 8
+ *                         description: Number of comments on the post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 3
+ *                         description: Number of reposts of this post
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-01-15T08:30:00.000Z"
+ *                         description: When the post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456792"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Jane"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Doe"
+ *                             companyName:
+ *                               type: string
+ *                               nullable: true
+ *                               example: null
+ *                         description: Users tagged in the post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether this post is a repost
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the current user has saved this post
+ *                       isLiked:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the current user has liked this post
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the post was created by the current user
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456793"
+ *                         description: ID of the repost (only present if isRepost is true)
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456794"
+ *                         description: ID of the user who reposted (only present if isRepost is true)
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "Alex"
+ *                         description: First name of the reposter (only present if isRepost is true)
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Johnson"
+ *                         description: Last name of the reposter (only present if isRepost is true)
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://example.com/alex.jpg"
+ *                         description: Profile picture URL of the reposter (only present if isRepost is true)
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Product Manager"
+ *                         description: Headline of the reposter (only present if isRepost is true)
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great post about JavaScript!"
+ *                         description: Description added by the reposter (only present if isRepost is true)
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-01-16T10:15:00.000Z"
+ *                         description: When the repost was created (only present if isRepost is true)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of posts matching the search criteria
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     pages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page of results
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page of results
+ *                 keyword:
+ *                   type: string
+ *                   example: "javascript"
+ *                   description: The search keyword used
+ *       400:
+ *         description: Bad request - missing or invalid search parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Search keyword is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search posts"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  */
