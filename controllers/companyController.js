@@ -481,8 +481,10 @@ const createPost = async (req, res) => {
         // Create the post using the utility function
         let newPost;
         try {
-            if (!description || description.trim() === "") {
-                return res.status(400).json({ message: "Post description is required" });
+            if (!description || description.trim() === '') {
+                return res
+                    .status(400)
+                    .json({ message: 'Post description is required' });
             }
 
             // Initialize post object
@@ -491,21 +493,25 @@ const createPost = async (req, res) => {
                 description,
                 attachments: [],
                 taggedUsers: taggedUsers || [],
-                whoCanSee: whoCanSee || "anyone",
-                whoCanComment: whoCanComment || "anyone",
+                whoCanSee: whoCanSee || 'anyone',
+                whoCanComment: whoCanComment || 'anyone',
             };
             if (req.files && req.files.length > 0) {
                 try {
                     // Use the helper function to handle attachments
-                    newPostData.attachments = await uploadPostAttachments(req.files);
+                    newPostData.attachments = await uploadPostAttachments(
+                        req.files
+                    );
                 } catch (uploadError) {
-                    return res.status(400).json({ message: uploadError.message });
+                    return res
+                        .status(400)
+                        .json({ message: uploadError.message });
                 }
             }
             const newPost = await postModel.create(newPostData);
             const postResponse = {
                 postId: newPost._id,
-                companyId:{
+                companyId: {
                     id: company._id,
                     name: company.name,
                     address: company.address,
@@ -525,32 +531,27 @@ const createPost = async (req, res) => {
                 repostCount: newPost.repostCount,
                 createdAt: newPost.createdAt,
                 taggedUsers: newPost.taggedUsers,
-              };
-        } catch (postError) {
-            console.error('Error creating post:', postError);
-            return res
-                .status(postError.statusCode)
-                .json({ message: postError.message });
-        }
-        // Add the post to the company's posts array
-        company.posts.push(post._id);
-        await company.save();
+            };
+            company.posts.push(newPost._id); // Add post ID to company's posts array
+            await company.save();
 
-        let owner = null;
-        try {
-            owner = await getPostOwnerUtils(post);
-        } catch (err) {
-            return res.status(err.statusCode).json({ message: err.message });
+            res.status(201).json({
+                message: 'Post created successfully',
+                post: postResponse,
+            });
+        } catch (error) {
+            console.error('Error creating post:', error);
+            res.status(500).json({
+                message: 'Failed to create post',
+                error: error.message,
+            });
         }
-
-        res.status(201).json({
-            message: 'Post created successfully',
-            post: post,
-            owner,
-        });
     } catch (error) {
         console.error('Error creating post:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({
+            message: 'Failed to create post',
+            error: error.message,
+        });
     }
 };
 
@@ -648,7 +649,7 @@ const updatePost = async (req, res) => {
     }
 };
 
-const deletePost = async (req, res) => { };
+const deletePost = async (req, res) => {};
 
 const addAdmin = async (req, res) => {
     try {
