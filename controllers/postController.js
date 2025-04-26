@@ -123,16 +123,29 @@ const getPost = async (req, res) => {
       return res.status(400).json({ message: "Post ID is required" });
     }
 
+    let post = await postModel.findOne({
+      _id: postId,
+      isActive: true,
+    });
     // Get the post and check if it's active
-    const post = await postModel
-      .findOne({
+    if (post.userId!=null) {
+      console.log("Post:", post.userId);
+      post = await postModel.findOne({
         _id: postId,
         isActive: true,
-      })
-      .populate(
+      }).populate(
         "userId",
-        "firstName lastName headline profilePicture connections"
+        "firstName lastName headline profilePicture connections",
       );
+    } else if (post.companyId!=null) {
+      post = await postModel.findOne({
+        _id: postId,
+        isActive: true,
+      }).populate(
+        "companyId",
+        "name logo tagLine address industry organizationSize organizationType"
+      );
+    }
 
     // Check if post exists
     if (!post) {
@@ -186,10 +199,11 @@ const getPost = async (req, res) => {
     const postResponse = {
       postId: post._id,
       userId: post.userId._id,
-      firstName: post.userId.firstName,
-      lastName: post.userId.lastName,
-      headline: post.userId.headline || "",
-      profilePicture: post.userId.profilePicture,
+      companyId: post.companyId ? post.companyId._id : null,
+      firstName: post.userId?post.userId.firstName : null,
+      lastName: post.userId?post.userId.lastName: null,
+      headline: post.userId?post.userId.headline :"",
+      profilePicture: post.userId?post.userId.profilePicture: null,
       postDescription: post.description,
       attachments: post.attachments,
       impressionCounts: post.impressionCounts,
@@ -203,7 +217,7 @@ const getPost = async (req, res) => {
       isRepost,
       isSaved,
       isLiked,
-      isMine: post.userId._id.toString() === userId,
+      isMine: post.userId?post.userId._id.toString() === userId: false,
       // Include repost details if applicable
       ...(isRepost && {
         repostId: repost._id,

@@ -165,7 +165,7 @@ const userSchema = new mongoose.Schema(
     },
     connectionRequestPrivacySetting: {
       type: String,
-      enum: ["everyone", "connectionsOnly"],
+      enum: ["everyone", "mutual"],
       default: "everyone",
     },
     impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
@@ -194,6 +194,7 @@ const userSchema = new mongoose.Schema(
     ],
     connectionList: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    reportedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User"}],
     profileViews: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],

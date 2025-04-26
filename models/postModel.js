@@ -3,7 +3,8 @@ const userModel = require("./userModel");
 const { instanceId } = require("firebase-admin");
 
 const postSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Could be company ID
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // User who created the post
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company" },
   description: { type: String, required: true },
   attachments: [{ type: String }], // Allow multiple pictures but only one video
   taggedUsers: [{
