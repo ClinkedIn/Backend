@@ -818,6 +818,137 @@ const unfollowCompany = async (req, res) => {
     }
 };
 
+const getFollowers = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert query parameters to numbers with validation
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limit between 1 and 50
+        const skipIndex = (pageNum - 1) * limitNum;
+
+        // Verify company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === req.user.id
+        );
+
+        if (!isAdmin) {
+            return res.status(403).json({
+                message:
+                    'You are not authorized to see followers of this company',
+            });
+        }
+
+        // Get total count for pagination
+        const totalFollowers = company.followers.length;
+
+        // Apply pagination to followers array
+        const paginatedFollowers = company.followers.slice(
+            skipIndex,
+            skipIndex + limitNum
+        );
+
+        // Extract user IDs from the followers who are users
+        const userFollowerIds = paginatedFollowers
+            .filter((follower) => follower.entityType === 'User')
+            .map((follower) => follower.entity);
+
+        // Fetch user details in a single query
+        const userDetails = await userModel
+            .find(
+                {
+                    _id: { $in: userFollowerIds },
+                    isActive: true,
+                },
+                {
+                    firstName: 1,
+                    lastName: 1,
+                    profilePicture: 1,
+                    location: 1,
+                    industry: 1,
+                    mainEducation: 1,
+                    'about.description': 1,
+                    profilePrivacySettings: 1,
+                    education: 1,
+                }
+            )
+            .lean();
+
+        // Create a map for quick lookup of user details
+        const userMap = {};
+        userDetails.forEach((user) => {
+            userMap[user._id.toString()] = user;
+        });
+
+        // Create the enhanced followers array with all requested details
+        const enhancedFollowers = paginatedFollowers.map((follower) => {
+            const followerId = follower.entity.toString();
+            const followerDetails = userMap[followerId] || null;
+
+            if (!followerDetails || follower.entityType !== 'User') {
+                // Handle company followers or missing users
+                return {
+                    id: followerId,
+                    entityType: follower.entityType,
+                    followedAt: follower.followedAt,
+                };
+            }
+
+            // Get the main education if specified
+            let mainEducationDetails = null;
+            if (
+                followerDetails.mainEducation !== null &&
+                followerDetails.education &&
+                followerDetails.education.length > followerDetails.mainEducation
+            ) {
+                mainEducationDetails =
+                    followerDetails.education[followerDetails.mainEducation];
+            }
+
+            // Return enhanced user follower
+            return {
+                id: followerId,
+                firstName: followerDetails.firstName,
+                lastName: followerDetails.lastName,
+                profilePicture: followerDetails.profilePicture,
+                location: followerDetails.location,
+                industry: followerDetails.industry,
+                mainEducation: mainEducationDetails,
+                bio: followerDetails.about?.description || null,
+                profilePrivacySettings: followerDetails.profilePrivacySettings,
+                followedAt: follower.followedAt,
+            };
+        });
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalFollowers / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+        res.status(200).json({
+            message: 'Followers fetched successfully',
+            followers: enhancedFollowers,
+            pagination: {
+                total: totalFollowers,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching followers:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     createCompany,
     getAllCompanies,
@@ -831,4 +962,5 @@ module.exports = {
     unfollowCompany,
     addAdmin,
     removeAdmin,
+    getFollowers,
 };

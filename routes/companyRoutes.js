@@ -19,7 +19,8 @@ router
 router
     .route('/:companyId/follow')
     .post(protect, companyController.followCompany)
-    .delete(protect, companyController.unfollowCompany);
+    .delete(protect, companyController.unfollowCompany)
+    .get(protect, companyController.getFollowers);
 
 router.route('/:companyId/post').post(protect, companyController.createPost);
 
