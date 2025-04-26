@@ -32,60 +32,44 @@ const sendMessage = async (req, res) => {
     const messageAttachment = req.files;
 
     // Validate inputs
-    try {
-      await validateUser(sender);
-      console.log("Sender validation passed");
-    } catch (error) {
-      console.error("Sender validation failed:", error);
-      return res
-        .status(404)
-        .json({
-          message: "Sender not found",
-          details: "The authenticated user does not exist",
-        });
+    const senderModel = await userModel.findById(sender);
+        if (!senderModel) {
+            throw new customError('User not found', 404);
+      }
+
+      if (type !== 'direct') {
+        throw new customError('Invalid chat type', 400);
     }
-    validateChatType(type);
-    validateMessageContent(messageText, messageAttachment);
+    
+    if (!messageText && (!messageAttachment || messageAttachment.length === 0)) {
+      throw new customError('Message content is required', 400);
+  }
 
     if (replyTo) {
       await validateReplyMessage(replyTo);
     }
 
-    // Determine chat ID and handle chat creation if necessary
     let chatId = providedChatId;
-    let chatModel = type === "direct" ? directChatModel : chatGroupModel;
-    // if userId not provided, get the receiverId from the chatId
+    let chatModel = directChatModel;
+    
     if (!receiverId && chatId) {
       const chat = await chatModel.findById(chatId);
       if (!chat) {
         return res.status(404).json({ message: "Chat not found" });
       }
-      if (type === "direct") {
-        receiverId =
-          chat.secondUser.toString() === sender
-            ? chat.firstUser
-            : chat.secondUser;
-        console.log("Receiver ID from chat:", receiverId);
-      }
-    }
-    console.log("Receiver ID:", receiverId);
-    console.log("Sender ID: ", sender);
-    // Validate chatId if provided
-    if (chatId) {
-      validateChatId(chatId);
+      receiverId = chat.secondUser.toString() === sender ? chat.firstUser : chat.secondUser;
       await validateChatMembership(chatModel, chatId, sender, type);
-      // Check for blocking in direct chats
-    } else {
+    }
+    
+    if (!chatId) {
       const chat = await findOrCreateDirectChat(sender, receiverId);
       chatId = chat._id;
     }
 
-    if (type === "direct") {
-      if (await isSenderBlocked(sender, receiverId)) {
-        return res
-          .status(403)
-          .json({ message: "Sender is blocked by the receiver" });
-      }
+    if (await isSenderBlocked(sender, receiverId)) {
+      return res
+        .status(403)
+        .json({ message: "Sender is blocked by the receiver" });
     }
 
     // Handle file uploads
@@ -104,23 +88,15 @@ const sendMessage = async (req, res) => {
       return res.status(500).json({ message: "Failed to save message" });
     }
 
-    // Update unread counts for group members or the receiver
-    if (type === "group") {
-      await updateGroupUnreadCounts(chatId, sender);
-    } else {
-      await updateUnreadCount(receiverId, chatId, "DirectChat");
-    }
+    await updateUnreadCount(receiverId, chatId, "DirectChat");
 
-    // Update the chat with the new message
     const chat = await chatModel.findByIdAndUpdate(
       chatId,
       { $push: { messages: savedMessage._id } },
       { new: true }
     );
-    console.log("chat id: ", chatId);
 
     if (!chat) {
-      console.error("Chat not found:", chatId);
       return res
         .status(404)
         .json({
@@ -128,20 +104,16 @@ const sendMessage = async (req, res) => {
         });
     }
 
-    // send notification to user if direct chat
-    // the receiver should be the full recever model
-
-    if (type === "direct") {
-      const receiver = await userModel.findById(receiverId);
-      const senderModel = await userModel.findById(sender);
-      sendNotification(senderModel, receiver, "message", savedMessage)
-        .then(() => {
-          console.log("Notification sent successfully");
-        })
-        .catch((error) => {
-          console.error("Failed to send notification:", error);
-        });
-    }
+    // send notification to receiver
+    const receiver = await userModel.findById(receiverId);
+    sendNotification(senderModel, receiver, "message", savedMessage)
+      .then(() => {
+        console.log("Notification sent successfully");
+      })
+      .catch((error) => {
+        console.error("Failed to send notification:", error);
+      });
+    
     res
       .status(200)
       .json({ message: "Message created successfully", data: savedMessage });
@@ -236,7 +208,7 @@ const deleteMessage = async (req, res) => {
   }
 };
 
-// Block User From Messaging
+
 const blockUserFromMessaging = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -254,14 +226,13 @@ const blockUserFromMessaging = async (req, res) => {
       return res.status(404).json({ message: "Blocked user not found" });
     }
 
-    // Check if the user is already blocked
     if (user.blockedUsers.includes(blockedUserId)) {
       return res.status(400).json({ message: "User is already blocked" });
     }
-    // Block the user
+    
     user.blockedUsers.push(blockedUserId);
     await user.save();
-    // return
+    
     res.status(200).json({ message: "User blocked successfully" });
   } catch (err) {
     if (err instanceof customError) {
@@ -280,27 +251,17 @@ const unblockUserFromMessaging = async (req, res) => {
     const userId = req.user.id;
     const blockedUserId = req.params.userId;
 
-    // Fetch current user
     const user = await userModel.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("Before modification, blocked users:", user.blockedUsers);
-
-    // Filter out the blocked user ID directly from the array
     user.blockedUsers = user.blockedUsers.filter(
       (id) => id.toString() !== blockedUserId.toString()
     );
 
-    console.log("After filter, blocked users:", user.blockedUsers);
-
-    // Save the updated user document
     await user.save();
-
-    // Get the most recent state of the user
     const updatedUser = await userModel.findById(userId);
-    console.log("Final blocked users:", updatedUser.blockedUsers);
 
     res.status(200).json({
       message: "User unblocked successfully",
@@ -318,13 +279,11 @@ const getTotalUnreadCount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // First check if the user exists
     const userExists = await userModel.exists({ _id: userId });
     if (!userExists) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Use the shared utility function
     const totalUnread = await calculateTotalUnreadCount(userId);
 
     res.status(200).json({
@@ -348,15 +307,13 @@ const markMessageAsRead = async (req, res) => {
     const messageId = req.params.messageId;
     const userId = req.user.id;
 
-    const { updatedMessage, isNewReadReceipt } = await markMessageReadByUser(
+    const  updatedMessage  = await markMessageReadByUser(
       messageId,
       userId
     );
 
     res.status(200).json({
       message: "Message marked as read successfully",
-      data: updatedMessage,
-      isNewReadReceipt,
     });
   } catch (err) {
     if (err instanceof customError) {

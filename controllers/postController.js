@@ -5,6 +5,7 @@ const repostModel = require("../models/repostModel");
 const reportModel = require("../models/reportModel");
 const cloudinary = require("../utils/cloudinary");
 const commentModel = require("../models/commentModel");
+const {isConnection, isBlocked} = require("../utils/privacyUtils");
 //import { ObjectId } from 'mongodb';
 const mongoose = require("mongoose");
 const {
@@ -133,6 +134,15 @@ const getPost = async (req, res) => {
         "userId",
         "firstName lastName headline profilePicture connections"
       );
+
+    // ADDED: Check if the user is blocked by the post owner
+    const userIsBlocked = await isBlocked(post.userId._id, userId);
+
+    if (userIsBlocked) {
+      return res.status(403).json({
+        message: "You are blocked by this user",
+      });
+    }
 
     // Check if post exists
     if (!post) {

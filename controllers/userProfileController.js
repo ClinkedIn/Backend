@@ -12,6 +12,7 @@ const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
 const customError = require('../utils/customError');
+const { canSendConnectionRequest } = require('../utils/privacyUtils');
 
 const getUserProfile = async (req, res) => {
     try {
@@ -2119,6 +2120,12 @@ const sendConnectionRequest = async (req, res) => {
         const validationResult = await validateConnectionStatus(userId, targetUserId, userModel);
         if (!validationResult.isValid) {
             return res.status(validationResult.statusCode).json({ message: validationResult.message });
+        }
+
+        const privacyConstraint = await canSendConnectionRequest(targetUserId, userId);
+        if (!privacyConstraint) {
+            console.log('Privacy constraint:', privacyConstraint);
+            return res.status(403).json({ message: 'Cannot send connection request due to other user privacy settings' });
         }
 
         const { user, targetUser } = validationResult;

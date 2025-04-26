@@ -32,7 +32,8 @@ router.route('/get-report/:reportId')
 
 
 // Control who can send connection requests
-
+router.route('/connection-request')
+    .patch(protect, privacyController.controlConnectionRequest);
 
 
 module.exports = router;

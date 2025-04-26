@@ -237,6 +237,34 @@ const getRepotedUsers = async (req, res) => {
     }
 }
 
+// Change connection request privacy setting
+const controlConnectionRequest = async (req, res) => {
+    try {
+        const userId = req.user.id;
+         const { connectionRequestPrivacySetting } = req.body;
+
+         const allowedValues = ["everyone", "mutual"];
+
+        if (!allowedValues.includes(connectionRequestPrivacySetting)) {
+            return res.status(400).json({ message: "Invalid value for connection request privacy setting." });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID." });
+        }
+
+        const user = await userModel.findByIdAndUpdate(userId, { connectionRequestPrivacySetting: connectionRequestPrivacySetting });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        return res.status(200).json({ message: "Connection request controlled successfully." });
+    }
+    catch (error) {
+        console.error("Error controlling connection request:", error);
+        return res.status(500).json({ message: "Internal server error." });
+    }
+}
+
 module.exports = {
     blockUser,
     unblockUser,
@@ -244,5 +272,6 @@ module.exports = {
     reportPost,
     getBlockedUsers,
     getReportById,
-    getRepotedUsers
+    getRepotedUsers,
+    controlConnectionRequest,
 }

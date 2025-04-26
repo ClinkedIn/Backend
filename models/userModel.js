@@ -165,7 +165,7 @@ const userSchema = new mongoose.Schema(
     },
     connectionRequestPrivacySetting: {
       type: String,
-      enum: ["everyone", "connectionsOnly"],
+      enum: ["everyone", "mutual"],
       default: "everyone",
     },
     impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],

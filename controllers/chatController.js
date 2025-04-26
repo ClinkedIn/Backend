@@ -9,37 +9,45 @@ const {validateGroupChatData, calculateTotalUnreadCount, markMessageReadByUser} 
 
 const createDirectChat = async (req, res) => {
     try {
-        const userId = req.user.id
+        const userId = req.user.id;
         const { otherUserId } = req.body;
-        // Validate user existence
+        
         const user = await userModel.findById(userId);
         if (!user) {
             throw new customError('User not found', 404);
         }
-        // Validate other user existence
+        
         const otherUser = await userModel.findById(otherUserId);
         if (!otherUser) {
             throw new customError('Other user not found', 404);
         }
-        // Check if chat already exists
+        
+        // Check if chat already exists - corrected query to match schema design
         const existingChat = await directChatModel.findOne({
-            members: { $all: [userId, otherUserId] }
+            $or: [
+                { firstUser: userId, secondUser: otherUserId },
+                { firstUser: otherUserId, secondUser: userId }
+            ]
         });
+        
         if (existingChat) {
             return res.status(200).json({
                 message: 'Chat already exists',
                 chatId: existingChat._id
             });
         }
+        
         // Create new chat
         const newChat = await directChatModel.create({
             firstUser: userId,
             secondUser: otherUserId,
             messages: []
         });
+        
         if (!newChat) {
             throw new customError('Failed to create chat', 500);
         }
+        
         // Add chat to both users' chat lists
         user.chats.push({
             chatId: newChat._id,
@@ -48,6 +56,7 @@ const createDirectChat = async (req, res) => {
             lastReadAt: new Date()
         });
         await user.save();
+        
         otherUser.chats.push({
             chatId: newChat._id,
             chatType: 'DirectChat',
@@ -55,12 +64,14 @@ const createDirectChat = async (req, res) => {
             lastReadAt: new Date()
         });
         await otherUser.save();
-        // Populate chat members
+        
+        // Respond with chat info
         res.status(201).json({
             message: 'Direct chat created successfully',
             chat: {
                 _id: newChat._id,
-                members: [userId, otherUserId],
+                firstUser: userId,
+                secondUser: otherUserId,
                 createdAt: newChat.createdAt,
                 updatedAt: newChat.updatedAt
             }
@@ -161,8 +172,7 @@ const getDirectChat = async (req, res) => {
             .populate({
                 path: 'messages',
                 options: { 
-                    sort: { createdAt: -1 },  // Most recent messages first
-                    limit: 50                  // Limit to latest 50 messages
+                    sort: { createdAt: -1 }  // Most recent messages first
                 },
                 // Populate message sender and attachments
                 populate: [
@@ -185,17 +195,8 @@ const getDirectChat = async (req, res) => {
             throw new customError('Chat not found', 404);
         }
         
-        // Handle different chat structures
-        let chatMembers = [];
-        if (Array.isArray(chat.members)) {
-            chatMembers = chat.members;
-        } else if (chat.firstUser && chat.secondUser) {
-            // Old structure with firstUser and secondUser
-            chatMembers = [chat.firstUser, chat.secondUser];
-        } else {
-            throw new customError('Invalid chat structure', 500);
-        }
-        
+        chatMembers = [chat.firstUser, chat.secondUser];
+       
         // Check if user is a member
         if (!chatMembers.some(member => member && member.toString() === userId)) {
             throw new customError('Not authorized to access this chat', 403);
@@ -222,7 +223,6 @@ const getDirectChat = async (req, res) => {
             await user.save();
         }
         
-        // Mark all unread messages as read
         if (chat.messages && chat.messages.length > 0) {
             // Find messages that aren't from the current user and haven't been read by them
             const messagesToMark = chat.messages.filter(message => 
@@ -237,7 +237,6 @@ const getDirectChat = async (req, res) => {
                     await markMessageReadByUser(message._id, userId);
                 } catch (error) {
                     console.error(`Failed to mark message ${message._id} as read:`, error);
-                    // Continue with other messages even if one fails
                 }
             }
         }
