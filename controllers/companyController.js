@@ -1,6 +1,7 @@
 const companyModel = require('../models/companyModel');
 const userModel = require('../models/userModel');
 const postModel = require('../models/postModel');
+const impressionModel = require('../models/impressionModel');
 const customError = require('./../utils/customError');
 const {
     uploadFile,
@@ -201,96 +202,6 @@ const createCompany = async (req, res) => {
     }
 };
 
-// Get all companies
-const getAllCompanies = async (req, res) => {
-    try {
-        const features = new APIFeatures(companyModel.find(), req.query)
-            .filter()
-            .sort()
-            .limitFields()
-            .paginate();
-        const companies = await features.query;
-
-        if (!companies || companies.length === 0) {
-            return res.status(404).json({ message: 'No companies found' });
-        }
-        const formattedCompanies = companies.map((company) => {
-            return { ...helper(company, req.user) };
-        });
-
-        res.status(200).json(formattedCompanies);
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
-// Get a specific company by ID
-const getCompany = async (req, res) => {
-    try {
-        let company = null;
-
-        if (req.params.companyId) {
-            const slug = slugify(req.params.companyId, {
-                lower: true,
-                strict: true,
-            });
-            company = await companyModel.findOne({
-                address: slug,
-            });
-
-            if (!company) {
-                company = await companyModel.findById(req.params.companyId);
-            }
-        }
-        if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
-        }
-
-        const representation = helper(company, req.user);
-
-        if (
-            representation.userRelationship === 'visitor' ||
-            representation.userRelationship === 'follower'
-        ) {
-            // if the user is a visitor, we need to add him to company's visitors list
-            // Get today's start date (midnight)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            // Check if user already visited today
-            const existingVisit = company.visitors.find(
-                (visitor) => visitor.id.toString() === req.user.id
-            );
-
-            if (existingVisit) {
-                // Convert visitedAt to date object if it's a string
-                const visitDate = new Date(existingVisit.visitedAt);
-                visitDate.setHours(0, 0, 0, 0);
-
-                // Check if last visit was before today
-                if (visitDate < today) {
-                    // Update the visit date to now
-                    existingVisit.visitedAt = new Date();
-                    await company.save();
-                }
-                // If they already visited today, do nothing
-            } else {
-                // Add new visitor
-                company.visitors.push({
-                    id: req.user.id,
-                    visitedAt: new Date(),
-                });
-                await company.save();
-            }
-        }
-
-        res.status(200).json({ ...representation });
-    } catch (error) {
-        console.error('Error fetching company:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
 // Update a company by ID
 const updateCompany = async (req, res) => {
     try {
@@ -420,7 +331,7 @@ const updateCompany = async (req, res) => {
 
         const representation = helper(updatedCompany, req.user);
         res.status(200).json({
-            representation,
+            ...representation,
             pageURL,
         });
     } catch (error) {
@@ -459,197 +370,95 @@ const deleteCompany = async (req, res) => {
     }
 };
 
-const createPost = async (req, res) => {
+// Get all companies
+const getAllCompanies = async (req, res) => {
     try {
-        const companyId = req.params.companyId;
-        const company = await companyModel.findById(companyId);
-        let { description, taggedUsers, whoCanSee, whoCanComment } = req.body;
-        const userId = req.user.id; // From authentication middleware
+        const features = new APIFeatures(companyModel.find(), req.query)
+            .filter()
+            .sort()
+            .limitFields()
+            .paginate();
+        const companies = await features.query;
+
+        if (!companies || companies.length === 0) {
+            return res.status(404).json({ message: 'No companies found' });
+        }
+        const formattedCompanies = companies.map((company) => {
+            return { ...helper(company, req.user) };
+        });
+
+        res.status(200).json(formattedCompanies);
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Get a specific company by ID
+const getCompany = async (req, res) => {
+    try {
+        let company = null;
+
+        if (req.params.companyId) {
+            const slug = slugify(req.params.companyId, {
+                lower: true,
+                strict: true,
+            });
+            company = await companyModel.findOne({
+                address: slug,
+            });
+
+            if (!company) {
+                company = await companyModel.findById(req.params.companyId);
+            }
+        }
         if (!company) {
             return res.status(404).json({ message: 'Company not found' });
         }
-        // Check authorization - only owner or admin can create posts
+
+        const representation = helper(company, req.user);
+
         if (
-            company.ownerId.toString() !== req.user.id &&
-            !company.admins.some((admin) => admin.toString() === req.user.id)
+            representation.userRelationship === 'visitor' ||
+            representation.userRelationship === 'follower'
         ) {
-            return res.status(403).json({
-                message: 'Not authorized to create posts for this company',
-            });
-        }
+            // if the user is a visitor, we need to add him to company's visitors list
+            // Get today's start date (midnight)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-        // Create the post using the utility function
-        let newPost;
-        try {
-            if (!description || description.trim() === '') {
-                return res
-                    .status(400)
-                    .json({ message: 'Post description is required' });
-            }
+            // Check if user already visited today
+            const existingVisit = company.visitors.find(
+                (visitor) => visitor.id.toString() === req.user.id
+            );
 
-            // Initialize post object
-            const newPostData = {
-                companyId,
-                description,
-                attachments: [],
-                taggedUsers: taggedUsers || [],
-                whoCanSee: whoCanSee || 'anyone',
-                whoCanComment: whoCanComment || 'anyone',
-            };
-            if (req.files && req.files.length > 0) {
-                try {
-                    // Use the helper function to handle attachments
-                    newPostData.attachments = await uploadPostAttachments(
-                        req.files
-                    );
-                } catch (uploadError) {
-                    return res
-                        .status(400)
-                        .json({ message: uploadError.message });
+            if (existingVisit) {
+                // Convert visitedAt to date object if it's a string
+                const visitDate = new Date(existingVisit.visitedAt);
+                visitDate.setHours(0, 0, 0, 0);
+
+                // Check if last visit was before today
+                if (visitDate < today) {
+                    // Update the visit date to now
+                    existingVisit.visitedAt = new Date();
+                    await company.save();
                 }
+                // If they already visited today, do nothing
+            } else {
+                // Add new visitor
+                company.visitors.push({
+                    id: req.user.id,
+                    visitedAt: new Date(),
+                });
+                await company.save();
             }
-            const newPost = await postModel.create(newPostData);
-            const postResponse = {
-                postId: newPost._id,
-                companyId: {
-                    id: company._id,
-                    name: company.name,
-                    address: company.address,
-                    logo: company.logo,
-                    industry: company.industry,
-                    organizationSize: company.organizationSize,
-                    organizationType: company.organizationType,
-                }, // Original user ID reference
-                firstName: null,
-                lastName: null,
-                headline: null,
-                postDescription: newPost.description,
-                attachments: newPost.attachments,
-                impressionTypes: [],
-                impressionCounts: newPost.impressionCounts,
-                commentCount: newPost.commentCount,
-                repostCount: newPost.repostCount,
-                createdAt: newPost.createdAt,
-                taggedUsers: newPost.taggedUsers,
-            };
-            company.posts.push(newPost._id); // Add post ID to company's posts array
-            await company.save();
-
-            res.status(201).json({
-                message: 'Post created successfully',
-                post: postResponse,
-            });
-        } catch (error) {
-            console.error('Error creating post:', error);
-            res.status(500).json({
-                message: 'Failed to create post',
-                error: error.message,
-            });
         }
+
+        res.status(200).json({ ...representation });
     } catch (error) {
-        console.error('Error creating post:', error);
-        res.status(500).json({
-            message: 'Failed to create post',
-            error: error.message,
-        });
+        console.error('Error fetching company:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
-
-const updatePost = async (req, res) => {
-    try {
-        const { postId, companyId } = req.params;
-        const userId = req.user.id;
-
-        // Validate required params
-        if (!postId || !companyId) {
-            return res.status(400).json({
-                message: !postId
-                    ? 'Post ID is required'
-                    : 'Company ID is required',
-            });
-        }
-
-        // Fetch post and validate ownership
-        const post = await postModel.findById(postId);
-        if (!post) return res.status(404).json({ message: 'Post not found' });
-
-        if (post.owner.type !== 'Company') {
-            return res.status(403).json({
-                message: 'This route is only for company posts',
-            });
-        }
-
-        if (post.owner.id.toString() !== companyId) {
-            return res.status(403).json({
-                message: 'This post does not belong to the provided company',
-            });
-        }
-
-        if (!post.isActive) {
-            return res
-                .status(400)
-                .json({ message: 'Cannot update inactive posts' });
-        }
-
-        // Fetch company and user
-        const [company, user] = await Promise.all([
-            companyModel.findById(companyId),
-            userModel.findById(userId),
-        ]);
-
-        if (!company || !user) {
-            return res.status(404).json({
-                message: !company ? 'Company not found' : 'User not found',
-            });
-        }
-
-        // Check user is owner or admin
-        const isOwner = company.ownerId.toString() === userId;
-        const isAdmin = company.admins.some(
-            (admin) => admin.toString() === userId
-        );
-
-        if (!isOwner && !isAdmin) {
-            return res.status(403).json({
-                message:
-                    'You are not authorized to update posts for this company',
-            });
-        }
-
-        // Update post using utility
-        let updatedPost;
-        try {
-            updatedPost = await updatePostUtils(req, postId);
-        } catch (err) {
-            return res
-                .status(err.statusCode || 500)
-                .json({ message: err.message });
-        }
-
-        let owner = null;
-        try {
-            owner = await getPostOwnerUtils(updatedPost);
-        } catch (err) {
-            return res
-                .status(err.statusCode || 500)
-                .json({ message: err.message });
-        }
-
-        res.status(200).json({
-            message: 'Post updated successfully',
-            post: updatedPost,
-            owner,
-        });
-    } catch (error) {
-        console.error('Error updating post:', error);
-        res.status(500).json({
-            message: 'Failed to update post',
-            error: error.message,
-        });
-    }
-};
-
-const deletePost = async (req, res) => {};
 
 const addAdmin = async (req, res) => {
     try {
@@ -996,6 +805,394 @@ const getFollowers = async (req, res) => {
     }
 };
 
+const createPost = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const company = await companyModel.findById(companyId);
+        let { description, taggedUsers, whoCanSee, whoCanComment } = req.body;
+        const userId = req.user.id; // From authentication middleware
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+        // Check authorization - only owner or admin can create posts
+        if (
+            company.ownerId.toString() !== req.user.id &&
+            !company.admins.some((admin) => admin.toString() === req.user.id)
+        ) {
+            return res.status(403).json({
+                message: 'Not authorized to create posts for this company',
+            });
+        }
+
+        // Create the post using the utility function
+        let newPost;
+        try {
+            if (!description || description.trim() === '') {
+                return res
+                    .status(400)
+                    .json({ message: 'Post description is required' });
+            }
+
+            // Initialize post object
+            const newPostData = {
+                companyId,
+                description,
+                attachments: [],
+                taggedUsers: taggedUsers || [],
+                whoCanSee: whoCanSee || 'anyone',
+                whoCanComment: whoCanComment || 'anyone',
+            };
+            if (req.files && req.files.length > 0) {
+                try {
+                    // Use the helper function to handle attachments
+                    newPostData.attachments = await uploadPostAttachments(
+                        req.files
+                    );
+                } catch (uploadError) {
+                    return res
+                        .status(400)
+                        .json({ message: uploadError.message });
+                }
+            }
+            const newPost = await postModel.create(newPostData);
+            const postResponse = {
+                postId: newPost._id,
+                companyId: {
+                    id: company._id,
+                    name: company.name,
+                    address: company.address,
+                    logo: company.logo,
+                    industry: company.industry,
+                    organizationSize: company.organizationSize,
+                    organizationType: company.organizationType,
+                }, // Original user ID reference
+                firstName: null,
+                lastName: null,
+                headline: null,
+                postDescription: newPost.description,
+                attachments: newPost.attachments,
+                impressionTypes: [],
+                impressionCounts: newPost.impressionCounts,
+                commentCount: newPost.commentCount,
+                repostCount: newPost.repostCount,
+                createdAt: newPost.createdAt,
+                taggedUsers: newPost.taggedUsers,
+            };
+            company.posts.push(newPost._id); // Add post ID to company's posts array
+            await company.save();
+
+            res.status(201).json({
+                message: 'Post created successfully',
+                post: postResponse,
+            });
+        } catch (error) {
+            console.error('Error creating post:', error);
+            res.status(500).json({
+                message: 'Failed to create post',
+                error: error.message,
+            });
+        }
+    } catch (error) {
+        console.error('Error creating post:', error);
+        res.status(500).json({
+            message: 'Failed to create post',
+            error: error.message,
+        });
+    }
+};
+
+const getCompanyPosts = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Verify company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Convert query parameters to numbers with validation
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limit between 1 and 50
+        const skipIndex = (pageNum - 1) * limitNum;
+
+        // Query posts directly using companyId field and pagination
+        const [posts, totalPosts] = await Promise.all([
+            postModel
+                .find({
+                    companyId: companyId,
+                    isActive: true,
+                })
+                .sort({ createdAt: -1 })
+                .skip(skipIndex)
+                .limit(limitNum)
+                .populate(
+                    'userId',
+                    'firstName lastName profilePicture headline'
+                )
+                .lean(),
+
+            postModel.countDocuments({
+                companyId: companyId,
+                isActive: true,
+            }),
+        ]);
+
+        // Get current user's saved posts and impressions
+        const currentUser = await userModel
+            .findById(req.user.id)
+            .select('savedPosts')
+            .lean();
+        const savedPostIds = new Set(
+            (currentUser?.savedPosts || []).map((id) => id.toString())
+        );
+
+        // Format posts with appropriate data
+        const enhancedPosts = await Promise.all(
+            posts.map(async (post) => {
+                // Check if the current user has liked this post
+                const userImpression = await impressionModel
+                    .findOne({
+                        targetId: post._id,
+                        userId: req.user.id,
+                        targetType: 'Post',
+                    })
+                    .lean();
+
+                return {
+                    id: post._id,
+                    postId: post._id,
+                    userId: post.userId
+                        ? {
+                              id: post.userId._id,
+                              firstName: post.userId.firstName,
+                              lastName: post.userId.lastName,
+                              profilePicture: post.userId.profilePicture,
+                              headline: post.userId.headline || '',
+                          }
+                        : null,
+                    companyId: {
+                        id: company._id,
+                        name: company.name,
+                        logo: company.logo,
+                    },
+                    description: post.description,
+                    attachments: post.attachments || [],
+                    impressionCounts: post.impressionCounts || {},
+                    commentCount: post.commentCount || 0,
+                    repostCount: post.repostCount || 0,
+                    createdAt: post.createdAt,
+                    updatedAt: post.updatedAt,
+                    taggedUsers: post.taggedUsers || [],
+                    whoCanSee: post.whoCanSee || 'anyone',
+                    whoCanComment: post.whoCanComment || 'anyone',
+                    isCompanyPost: true,
+                    isSaved: savedPostIds.has(post._id.toString()),
+                    isLiked: !!userImpression,
+                    impressionType: userImpression?.type || null,
+                    isMine:
+                        post.userId?.toString() === req.user.id ||
+                        company.admins.includes(req.user.id) ||
+                        company.ownerId === req.user.id,
+                };
+            })
+        );
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalPosts / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+        res.status(200).json({
+            message: 'Posts fetched successfully',
+            posts: enhancedPosts,
+            pagination: {
+                total: totalPosts,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching company posts:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const getCompanyAnalytics = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { startDate, endDate, interval = 'day' } = req.query;
+
+        // Validate company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Check authorization - only owner or admin can access analytics
+        const isOwner = company.ownerId.toString() === req.user.id;
+        const isAdmin = company.admins.some(
+            (admin) => admin.toString() === req.user.id
+        );
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({
+                message: 'Not authorized to view company analytics',
+            });
+        }
+
+        // Parse date range parameters
+        const parsedStartDate = startDate
+            ? new Date(startDate)
+            : new Date(new Date().setDate(new Date().getDate() - 30)); // Default to last 30 days
+        const parsedEndDate = endDate ? new Date(endDate) : new Date();
+
+        if (
+            isNaN(parsedStartDate.getTime()) ||
+            isNaN(parsedEndDate.getTime())
+        ) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Set end date to end of day
+        parsedEndDate.setHours(23, 59, 59, 999);
+
+        // Prepare analytics data structure
+        const analytics = {
+            visitors: await getVisitorAnalytics(
+                company,
+                parsedStartDate,
+                parsedEndDate,
+                interval
+            ),
+            followers: await getFollowerAnalytics(
+                company,
+                parsedStartDate,
+                parsedEndDate,
+                interval
+            ),
+            summary: {
+                totalVisitors: company.visitors.length,
+                totalFollowers: company.followers.length,
+                visitorsTrend: 0,
+                followersTrend: 0,
+            },
+        };
+
+        // Calculate trends (% change over period)
+        analytics.summary.visitorsTrend = calculateTrend(analytics.visitors);
+        analytics.summary.followersTrend = calculateTrend(analytics.followers);
+
+        res.status(200).json({
+            message: 'Analytics retrieved successfully',
+            companyId: company._id,
+            companyName: company.name,
+            dateRange: {
+                start: parsedStartDate,
+                end: parsedEndDate,
+            },
+            interval,
+            analytics,
+        });
+    } catch (error) {
+        console.error('Error retrieving company analytics:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Helper function to get visitor analytics by date
+const getVisitorAnalytics = async (company, startDate, endDate, interval) => {
+    // Filter visitors within the date range
+    const relevantVisitors = company.visitors.filter((visitor) => {
+        const visitDate = new Date(visitor.visitedAt);
+        return visitDate >= startDate && visitDate <= endDate;
+    });
+
+    // Group by date according to interval
+    return groupByTimeInterval(relevantVisitors, 'visitedAt', interval);
+};
+
+// Helper function to get follower analytics by date
+const getFollowerAnalytics = async (company, startDate, endDate, interval) => {
+    // Filter followers within the date range
+    const relevantFollowers = company.followers.filter((follower) => {
+        const followDate = new Date(follower.followedAt);
+        return followDate >= startDate && followDate <= endDate;
+    });
+
+    // Group by date according to interval
+    return groupByTimeInterval(relevantFollowers, 'followedAt', interval);
+};
+
+// Helper to group data by time intervals (day, week, month)
+const groupByTimeInterval = (data, dateField, interval) => {
+    const grouped = {};
+
+    data.forEach((item) => {
+        const date = new Date(item[dateField]);
+        let key;
+
+        switch (interval) {
+            case 'week':
+                // Get the week number and year
+                const weekNumber = getWeekNumber(date);
+                key = `${date.getFullYear()}-W${weekNumber}`;
+                break;
+            case 'month':
+                // Format: YYYY-MM
+                key = `${date.getFullYear()}-${String(
+                    date.getMonth() + 1
+                ).padStart(2, '0')}`;
+                break;
+            case 'day':
+            default:
+                // Format: YYYY-MM-DD
+                key = date.toISOString().split('T')[0];
+        }
+
+        if (!grouped[key]) {
+            grouped[key] = 0;
+        }
+        grouped[key]++;
+    });
+
+    // Convert to array format for easier consumption by frontend charting libraries
+    return Object.entries(grouped).map(([date, count]) => ({ date, count }));
+};
+
+// Helper to get week number
+const getWeekNumber = (date) => {
+    const d = new Date(
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+};
+
+// Calculate trend (percentage change)
+const calculateTrend = (data) => {
+    if (data.length < 2) return 0;
+
+    // Sum counts for first and second half of the period
+    const midpoint = Math.floor(data.length / 2);
+    const firstHalf = data
+        .slice(0, midpoint)
+        .reduce((sum, item) => sum + item.count, 0);
+    const secondHalf = data
+        .slice(midpoint)
+        .reduce((sum, item) => sum + item.count, 0);
+
+    if (firstHalf === 0) return secondHalf > 0 ? 100 : 0; // Handle division by zero
+
+    return Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+};
+
 module.exports = {
     createCompany,
     getAllCompanies,
@@ -1003,11 +1200,11 @@ module.exports = {
     updateCompany,
     deleteCompany,
     createPost,
-    updatePost,
-    deletePost,
     followCompany,
     unfollowCompany,
     addAdmin,
     removeAdmin,
     getFollowers,
+    getCompanyAnalytics,
+    getCompanyPosts,
 };

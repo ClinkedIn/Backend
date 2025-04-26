@@ -1350,7 +1350,130 @@ const getPostReposts = async (req, res) => {
     });
   }
 };
+const searchPostsByKeyword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { keyword, page = 1, limit = 10 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    // Validate input
+    if (!keyword || keyword.trim() === "") {
+      return res.status(400).json({ message: "Search keyword is required" });
+    }
+
+    // Create search regex (case insensitive)
+    const searchRegex = new RegExp(keyword, 'i');
+
+    // Find posts matching the keyword
+    const posts = await postModel
+      .find({
+        isActive: true,
+        $or: [
+          { description: { $regex: searchRegex } },
+          { "taggedUsers.firstName": { $regex: searchRegex } },
+          { "taggedUsers.lastName": { $regex: searchRegex } },
+          { "taggedUsers.companyName": { $regex: searchRegex } }
+        ]
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate("userId", "firstName lastName headline profilePicture")
+      .populate("companyId", "name logo tagLine address industry organizationSize organizationType")
+      .lean();
+
+    // Get total count for pagination
+    const total = await postModel.countDocuments({
+      isActive: true,
+      $or: [
+        { description: { $regex: searchRegex } },
+        { "taggedUsers.firstName": { $regex: searchRegex } },
+        { "taggedUsers.lastName": { $regex: searchRegex } },
+        { "taggedUsers.companyName": { $regex: searchRegex } }
+      ]
+    });
+
+    // Get current user's saved posts
+    const currentUser = await userModel.findById(userId).select("savedPosts");
+    const savedPostsSet = new Set(
+      (currentUser.savedPosts || []).map((id) => id.toString())
+    );
+
+    // Format posts with additional information
+    const formattedPosts = await Promise.all(
+      posts.map(async (post) => {
+        const commentCount = await commentModel.countDocuments({ postId: post._id });
+        const isSaved = savedPostsSet.has(post._id.toString());
+        const isLiked = await impressionModel.findOne({
+          targetId: post._id,
+          userId,
+        });
+
+        // Check if post is a repost
+        const repost = await repostModel
+          .findOne({
+            postId: post._id,
+            isActive: true
+          })
+          .populate("userId", "firstName lastName profilePicture headline")
+          .lean();
+
+        return {
+          postId: post._id,
+          userId: post.userId ? post.userId._id : null,
+          companyId: post.companyId ? post.companyId._id : null,
+          firstName: post.userId ? post.userId.firstName : null,
+          lastName: post.userId ? post.userId.lastName : null,
+          headline: post.userId ? post.userId.headline : "",
+          profilePicture: post.userId ? post.userId.profilePicture : null,
+          companyName: post.companyId ? post.companyId.name : null,
+          companyLogo: post.companyId ? post.companyId.logo : null,
+          postDescription: post.description,
+          attachments: post.attachments,
+          impressionCounts: post.impressionCounts,
+          commentCount: commentCount || 0,
+          repostCount: post.repostCount || 0,
+          createdAt: post.createdAt,
+          taggedUsers: post.taggedUsers,
+          isRepost: !!repost,
+          isSaved: isSaved,
+          isLiked: !!isLiked,
+          isMine: (post.userId && post.userId._id.toString() === userId) || false,
+          // Only include repost details if this is a repost
+          ...(repost && {
+            repostId: repost._id,
+            reposterId: repost.userId._id,
+            reposterFirstName: repost.userId.firstName,
+            reposterLastName: repost.userId.lastName,
+            reposterProfilePicture: repost.userId.profilePicture,
+            reposterHeadline: repost.userId.headline || "",
+            repostDescription: repost.description,
+            repostDate: repost.createdAt,
+          }),
+        };
+      })
+    );
+
+    res.status(200).json({
+      posts: formattedPosts,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+        hasNextPage: parseInt(page) * parseInt(limit) < total,
+        hasPrevPage: parseInt(page) > 1,
+      },
+      keyword: keyword
+    });
+  } catch (error) {
+    console.error("Error searching posts:", error);
+    res.status(500).json({
+      message: "Failed to search posts",
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   createPost,
   getAllPosts,
@@ -1366,4 +1489,5 @@ module.exports = {
   updatePost,
   getPostImpressions,
   getPostReposts,
+  searchPostsByKeyword,
 };

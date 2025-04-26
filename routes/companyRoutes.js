@@ -22,16 +22,18 @@ router
     .delete(protect, companyController.unfollowCompany)
     .get(protect, companyController.getFollowers);
 
-router.route('/:companyId/post').post(protect, companyController.createPost);
-
 router
-    .route('/:companyId/post/:postId')
-    .patch(protect, companyController.updatePost)
-    .delete(protect, companyController.deletePost);
+    .route('/:companyId/post')
+    .get(protect, companyController.getCompanyPosts)
+    .post(protect, companyController.createPost);
 
 router
     .route('/:companyId/admin')
     .post(protect, companyController.addAdmin)
     .delete(protect, companyController.removeAdmin);
+
+router
+    .route('/:companyId/analytics')
+    .get(protect, companyController.getCompanyAnalytics);
 
 module.exports = router;
