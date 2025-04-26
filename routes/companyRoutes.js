@@ -28,11 +28,6 @@ router
     .post(protect, companyController.createPost);
 
 router
-    .route('/:companyId/post/:postId')
-    .patch(protect, companyController.updatePost)
-    .delete(protect, companyController.deletePost);
-
-router
     .route('/:companyId/admin')
     .post(protect, companyController.addAdmin)
     .delete(protect, companyController.removeAdmin);
