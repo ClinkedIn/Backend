@@ -1339,7 +1339,7 @@ const editIntro = async (req, res) => {
                 $set: {
                     firstName,
                     lastName,
-                    headLine,
+                    headline:headLine,
                     additinalName,
                     website,
                     location,
@@ -1359,7 +1359,7 @@ const editIntro = async (req, res) => {
             user: {
                 firstName: updatedUser.firstName,
                 lastName: updatedUser.lastName,
-                headLine: updatedUser.headLine,
+                headLine: updatedUser.headline,
                 additionalName: updatedUser.additionalName,
                 website: updatedUser.website,
                 location: updatedUser.location,
