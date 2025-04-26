@@ -248,6 +248,42 @@ const getCompany = async (req, res) => {
 
         const representation = helper(company, req.user);
 
+        if (
+            representation.userRelationship === 'visitor' ||
+            representation.userRelationship === 'follower'
+        ) {
+            // if the user is a visitor, we need to add him to company's visitors list
+            // Get today's start date (midnight)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Check if user already visited today
+            const existingVisit = company.visitors.find(
+                (visitor) => visitor.id.toString() === req.user.id
+            );
+
+            if (existingVisit) {
+                // Convert visitedAt to date object if it's a string
+                const visitDate = new Date(existingVisit.visitedAt);
+                visitDate.setHours(0, 0, 0, 0);
+
+                // Check if last visit was before today
+                if (visitDate < today) {
+                    // Update the visit date to now
+                    existingVisit.visitedAt = new Date();
+                    await company.save();
+                }
+                // If they already visited today, do nothing
+            } else {
+                // Add new visitor
+                company.visitors.push({
+                    id: req.user.id,
+                    visitedAt: new Date(),
+                });
+                await company.save();
+            }
+        }
+
         res.status(200).json({ ...representation });
     } catch (error) {
         console.error('Error fetching company:', error);
