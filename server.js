@@ -21,36 +21,43 @@ const adminRouter = require("./routes/adminRoutes");
 const privacyRouter = require("./routes/privacyRouter");
 //to be removed
 const uploadRouter = require("./routes/uploadRoutes");
+const stripeRouter = require("./routes/stripeRoutes");
 const connectDB = require("./models/db");
 const cookieParser = require("cookie-parser");
+const stripeController = require("./controllers/stripeController"); // Import the controller
 const app = express();
 connectDB();
 const corsOptions = {
-  origin: "http://localhost:5173", // Allow all origins
+  origin: "https://www.lockedin-cufe.me", // Allow all origins
   credentials: true, // Allow credentials (cookies, authorization headers)
   methods: "GET,POST,PUT,DELETE,PATCH,OPTIONS",
 };
 
 app.use(cors(corsOptions));
+// Add these lines BEFORE any JSON body parsing middleware:
+app.post('/stripe/webhook', 
+  express.raw({ type: 'application/json' }),
+  stripeController.handleWebhook  // Direct reference to the controller
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use("/user", userRouter);
-app.use("/user", userProfileRouter);
-app.use("/posts", postRouter);
-app.use("/report", reportRouter);
-app.use("/comments", commentRouter);
-app.use("/chats", chatRouter);
-app.use("/messages", messageRouter);
-app.use("/jobs", jobRouter);
-app.use("/companies", companyRouter);
-app.use("/upload", uploadRouter);
-app.use("/search", searchRouter);
-app.use("/notifications", notificationRouter);
-app.use("/admin", adminRouter);
-app.use("/privacy", privacyRouter);
+app.use("/api/user", userRouter);
+app.use("/api/user", userProfileRouter);
+app.use("/api/posts", postRouter);
+app.use("/api/report", reportRouter);
+app.use("/api/comments", commentRouter);
+app.use("/api/chats", chatRouter);
+app.use("/api/messages", messageRouter);
+app.use("/api/jobs", jobRouter);
+app.use("/api/companies", companyRouter);
+app.use("/api/upload", uploadRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/notifications", notificationRouter);
+app.use("/api/admin", adminRouter);
+app.use("/stripe", stripeRouter);
 app.use(
-  "/",
+  "/api/docs",
   swaggerUI.serve,
   swaggerUI.setup(swaggerSpec, {
     swaggerOptions: {

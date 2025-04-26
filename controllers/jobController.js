@@ -540,7 +540,7 @@ const applyForJob = async (req, res) => {
         });
         
         // Check if user has reached the monthly limit
-        if (monthlyApplicationCount >= 5) {
+        if (monthlyApplicationCount >= 5 && user.isPremium === false) {
             return res.status(429).json({
                 message: 'Monthly application limit reached. You can apply to a maximum of 5 jobs per month.',
                 limitReached: true,

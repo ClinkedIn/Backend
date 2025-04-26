@@ -13256,3 +13256,136 @@
  *                   type: string
  *                   example: "Unauthorized, Admin access required"
  */
+/**
+ * @swagger
+ * /stripe/cancel-subscription:
+ *   post:
+ *     summary: Cancel a subscription immediately
+ *     tags: [Subscription]
+ *     description: |
+ *       Immediately cancels an active subscription for the authenticated user.
+ *       Updates both Stripe and local database records, and removes premium status from the user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription canceled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription has been cancelled immediately"
+ *                 cancelledAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-04-25T12:30:45.123Z"
+ *       404:
+ *         description: No active subscription found for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No active subscription found"
+ *       400:
+ *         description: Invalid subscription data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid subscription data"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to cancel subscription"
+ */
+/**
+ * @swagger
+ * /stripe/create-checkout-session:
+ *   post:
+ *     summary: Create a Stripe checkout session
+ *     tags: [Subscription]
+ *     description: |
+ *       Creates a new Stripe checkout session for subscription payment.
+ *       Validates that the user doesn't already have an active subscription.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               paymentMode:
+ *                 type: string
+ *                 enum: [subscription, payment]
+ *                 default: subscription
+ *                 description: Payment mode (subscription for recurring, payment for one-time)
+ *     responses:
+ *       200:
+ *         description: Checkout session created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: string
+ *                   description: Stripe checkout session ID
+ *                   example: "cs_test_a1b2c3d4e5f6g7h8i9j0"
+ *                 url:
+ *                   type: string
+ *                   description: URL to redirect user to Stripe checkout
+ *                   example: "https://checkout.stripe.com/pay/cs_test_a1b2c3d4e5f6g7h8i9j0"
+ *                 status:
+ *                   type: string
+ *                   example: "created"
+ *       400:
+ *         description: User already has an active subscription
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "already_subscribed"
+ *                 message:
+ *                   type: string
+ *                   example: "You already have an active subscription"
+ *                 subscription:
+ *                   type: object
+ *                   properties:
+ *                     expiryDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-04-25T12:30:45.123Z"
+ *                     planType:
+ *                       type: string
+ *                       example: "premium"
+ *       500:
+ *         description: Error creating checkout session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error message from Stripe"
+ */
