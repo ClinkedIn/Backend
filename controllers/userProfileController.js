@@ -12,6 +12,7 @@ const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
 const customError = require('../utils/customError');
+const { canSendConnectionRequest } = require('../utils/privacyUtils');
 
 const getUserProfile = async (req, res) => {
     try {
@@ -51,9 +52,13 @@ const getUserProfile = async (req, res) => {
         // if (!accessCheck.hasAccess) {
         //     return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
         // }
+
+        // ADDED for privacy settings
+        const canSendConnection = ((await canSendConnectionRequest(userId, requesterId)) && userId !== requesterId);
         res.status(200).json({ 
             message: 'User profile retrieved successfully',
-            user
+            user,
+            canSendConnectionRequest: canSendConnection,
         });
     } catch (error) {
         console.error('Error retrieving user profile:', error);
@@ -2125,6 +2130,13 @@ const sendConnectionRequest = async (req, res) => {
 
         if (!targetUser || !user) {
             return res.status(404).json({ message: 'User or Target User not found' });
+        }
+
+        // Check receiver privacy settings
+        // ADDED
+        const canSendRequest = await canSendConnectionRequest(targetUserId, userId);
+        if (!canSendRequest) {
+            return res.status(403).json({ message: 'Cannot send connection request due to other user privacy settings' });
         }
 
         // Check if request already pending

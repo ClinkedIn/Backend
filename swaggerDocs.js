@@ -88,6 +88,8 @@
  *     responses:
  *       200:
  *         description: Connection request sent successfully
+ *       403:
+ *         description: Cannot send connection request due to other user privacy settings
  *       400:
  *         description: Invalid request or already connected
  *       401:
@@ -1430,7 +1432,15 @@
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "This post is only visible to the author's connections"
+ *             examples:
+ *               connectionsOnly:
+ *                 summary: Post is only visible to connections
+ *                 value:
+ *                   message: "This post is only visible to the author's connections"
+ *               blocked:
+ *                 summary: User is blocked by post author
+ *                 value:
+ *                   message: "User is blocked by the author of this post"
  *       404:
  *         description: Post not found
  *         content:
@@ -7621,6 +7631,9 @@
  *                       type: array
  *                       items:
  *                         type: string
+ *                 canSendConnectionRequest:
+ *                   type: boolean
+ *                   description: check whether the user can send a connection request to this user based on their privacy settings
  *       403:
  *         description: Access denied due to privacy settings
  *         content:
@@ -14809,4 +14822,631 @@
  *                 error:
  *                   type: string
  *                   example: "Error details"
+ */
+
+
+
+/**
+ * @swagger
+ * /privacy/block-user/{userId}:
+ *   patch:
+ *     summary: Block a user
+ *     tags: [Privacy]
+ *     description: Blocks a user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to block
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User blocked successfully."
+ *       400:
+ *         description: Bad request - Invalid user ID or trying to block yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You cannot block yourself."
+ *             examples:
+ *               invalidId:
+ *                 summary: Invalid user ID
+ *                 value:
+ *                   message: "Invalid user ID."
+ *               selfBlock:
+ *                 summary: Trying to block yourself
+ *                 value:
+ *                   message: "You cannot block yourself."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+
+/**
+ * @swagger
+ * /privacy/unblock-user/{userId}:
+ *   patch:
+ *     summary: Unblock a user
+ *     tags: [Privacy]
+ *     description: Removes a user from blocked users list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to unblock
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User unblocked successfully."
+ *       400:
+ *         description: Bad request - Invalid user ID or trying to unblock yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You cannot unblock yourself."
+ *             examples:
+ *               invalidId:
+ *                 summary: Invalid user ID
+ *                 value:
+ *                   message: "Invalid user ID."
+ *               selfUnblock:
+ *                 summary: Trying to unblock yourself
+ *                 value:
+ *                   message: "You cannot unblock yourself."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+
+/**
+ * @swagger
+ * /privacy/report-user/{userId}:
+ *   post:
+ *     summary: Report a user for policy violations
+ *     tags: [Privacy]
+ *     description: Reports a user for violating platform policies
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to report
+ *         example: "65fb2a8e7c5721f123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement",
+ *                   "This person is impersonating someone", 
+ *                   "This account has been hacked", 
+ *                   "This account is not a real person"
+ *                 ]
+ *                 example: "This person is impersonating someone"
+ *                 description: The specific policy that the user is violating
+ *     responses:
+ *       201:
+ *         description: User reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User reported successfully."
+ *                 reportId:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid policy, user ID, or attempting to report yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy
+ *                 value:
+ *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
+ *               selfReport:
+ *                 summary: Trying to report yourself
+ *                 value:
+ *                   message: "You cannot report yourself."
+ *               invalidUserId:
+ *                 summary: Invalid user ID format
+ *                 value:
+ *                   message: "Invalid user ID."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User to report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/report-post/{postId}:
+ *   post:
+ *     summary: Report a post for policy violations
+ *     tags: [Privacy]
+ *     description: Reports a post for violating platform policies
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to report
+ *         example: "65fb2a8e7c5721f123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment", 
+ *                   "Fraud or scam", 
+ *                   "Spam", 
+ *                   "Misinformation", 
+ *                   "Hateful speech", 
+ *                   "Threats or violence", 
+ *                   "Self-harm", 
+ *                   "Graphic content", 
+ *                   "Dangerous or extremist organizations", 
+ *                   "Sexual content", 
+ *                   "Fake account", 
+ *                   "Child exploitation", 
+ *                   "Illegal goods and services", 
+ *                   "Infringement"
+ *                 ]
+ *                 example: "Misinformation"
+ *                 description: The specific policy that the post is violating
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author",
+ *                   "I'm not interested in this topic",
+ *                   "I've seen too many posts on this topic",
+ *                   "I've seen this post before",
+ *                   "This post is old",
+ *                   "It's something else"
+ *                 ]
+ *                 description: Reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
+ *     responses:
+ *       201:
+ *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully."
+ *       400:
+ *         description: Bad request - Invalid policy, post ID, or dontWantToSee value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy
+ *                 value:
+ *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
+ *               invalidPostId:
+ *                 summary: Invalid post ID format
+ *                 value:
+ *                   message: "Invalid post ID."
+ *               invalidDontWantToSee:
+ *                 summary: Invalid dontWantToSee value
+ *                 value:
+ *                   message: "Invalid dontWantToSee value."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post to report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+
+/**
+ * @swagger
+ * /privacy/blocked-users:
+ *   get:
+ *     summary: Get list of blocked users
+ *     tags: [Privacy]
+ *     description: Retrieves a list of all users that the authenticated user has blocked
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of blocked users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 blockedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       email:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+
+/**
+ * @swagger
+ * /privacy/reported-users:
+ *   get:
+ *     summary: Get list of reported users
+ *     tags: [Privacy]
+ *     description: Retrieves a list of all users that the authenticated user has reported
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of reported users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reportedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       email:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+
+/**
+ * @swagger
+ * /privacy/connection-request:
+ *   patch:
+ *     summary: Update connection request privacy setting - ALLOWED VALUES  [everyone, mutual]
+ *     tags: [Privacy]
+ *     description: Controls who can send connection requests to the user
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - connectionRequestPrivacySetting
+ *             properties:
+ *               connectionRequestPrivacySetting:
+ *                 type: string
+ *                 enum: [everyone, mutual]
+ *                 description: Controls who can send connection requests to the user
+ *                 example: "everyone"
+ *     responses:
+ *       200:
+ *         description: Connection request privacy setting updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Connection request updated successfully."
+ *       400:
+ *         description: Bad request - Invalid connection request privacy setting or user ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidSetting:
+ *                 summary: Invalid privacy setting
+ *                 value:
+ *                   message: "Invalid value for connection request privacy setting."
+ *               invalidUserId:
+ *                 summary: Invalid user ID format
+ *                 value:
+ *                   message: "Invalid user ID."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
  */

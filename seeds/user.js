@@ -235,6 +235,7 @@ async function updateUserRelationships() {
             followers,
             connectionList: finalConnectionList,
             blockedUsers: relationship.blockedUsers,
+            reportedUsers: relationship.reportedUsers,
             profileViews: relationship.profileViews,
             savedPosts: relationship.savedPosts,
             savedJobs: relationship.savedJobs,

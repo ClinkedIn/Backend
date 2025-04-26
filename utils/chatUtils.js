@@ -20,7 +20,7 @@ const validateUser = async (userId) => {
 };
 
 const validateChatType = (type) => {
-    if (type !== 'direct' && type !== 'group') {
+    if (type !== 'direct') {
         throw new customError('Invalid chat type', 400);
     }
 };
@@ -45,11 +45,11 @@ const validateReplyMessage = async (replyTo) => {
 };
 
 const getChatMembers = async (chatModel, chatId) => {
-    const chat = await chatModel.findById(chatId, 'firstUser secondUser members');
+    const chat = await chatModel.findById(chatId, 'firstUser secondUser');
     if (!chat) {
         throw new customError('Chat not found', 404);
     }
-    return chat.members || [chat.firstUser, chat.secondUser];
+    return [chat.firstUser, chat.secondUser] ;
 };
 
 const validateChatMembership = async (chatModel, chatId, sender, type) => {
@@ -142,24 +142,14 @@ const findOrCreateDirectChat = async (sender, receiverId) => {
 
 const updateUnreadCount = async (userId, chatId, chatType = 'DirectChat') => {
     try {
-      // First check if the user exists
-      const user = await userModel.findById(userId);
-      
-      if (!user) {
-        console.error(`User ${userId} not found when updating unread count`);
-        return false;
-      }
-      
-      // Find the chat in the user's chats array
+
       const chatIndex = user.chats.findIndex(
         chat => chat.chatId.toString() === chatId.toString() && chat.chatType === chatType
       );
       
       if (chatIndex !== -1) {
-        // Chat exists, increment unread count
         user.chats[chatIndex].unreadCount += 1;
       } else {
-        // Chat doesn't exist in user's list, add it
         user.chats.push({
           chatId: chatId,
           chatType: chatType,
@@ -168,7 +158,6 @@ const updateUnreadCount = async (userId, chatId, chatType = 'DirectChat') => {
         });
       }
       
-      // Save the updated user document
       await user.save();
       return true;
     } catch (error) {
@@ -242,16 +231,13 @@ const isSenderBlocked = async (senderId, receiverId) => {
  */
 const calculateTotalUnreadCount = async (userId) => {
     try {
-      console.log(`Calculating unread count for user: ${userId}`);
       
-      // First get user document to debug
       const user = await userModel.findById(userId);
       if (!user) {
         console.error(`User ${userId} not found in calculateTotalUnreadCount`);
         return 0;
       }
 
-      // Ensure userId is valid
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         throw new Error('Invalid user ID');
       }
@@ -272,63 +258,41 @@ const calculateTotalUnreadCount = async (userId) => {
         }
       ]);
       
-      console.log(`Aggregation result:`, result);
-      
       return result.length > 0 ? result[0].totalUnread : 0;
     } catch (error) {
       console.error('Error calculating unread count:', error);
-      return 0; // Return 0 on error as a fallback
+      return 0;
     }
 };
 
 
 /**
- * Mark a message as read by a specific user and update related unread counts
+ * Mark a message as read by a specific user
  * @param {string} messageId - ID of the message to mark as read
  * @param {string} userId - ID of the user who read the message
- * @returns {Object} Object containing the updated message and whether it was newly marked as read
+ * @returns {Object} Status of the operation
  */
 const markMessageReadByUser = async (messageId, userId) => {
-    // Find the message first to check if it's already read by this user
-    const message = await MessageModel.findById(messageId);
-    
-    if (!message) {
-        throw new customError('Message not found', 404);
-    }
-
-    // Check if message is already read by this user
-    const alreadyRead = message.readBy.includes(userId);
-    
-    // Update the message to mark it as read
-    const updatedMessage = await MessageModel.findByIdAndUpdate(
-        messageId,
-        { $addToSet: { readBy: userId } },
-        { new: true }
-    ).populate('sender', '_id firstName lastName');
-    
-    // If the message wasn't already read by this user, update the unread count
-    if (!alreadyRead && updatedMessage.chatId) {
-        const chatType = updatedMessage.type === 'direct' ? 'DirectChat' : 'ChatGroup';
-        
-        // Find user's chat references
-        const user = await userModel.findById(userId);
-        if (user && user.chats) {
-            const chatRef = user.chats.find(
-                c => c.chatId.toString() === updatedMessage.chatId.toString() && 
-                    c.chatType === chatType
-            );
-            
-            if (chatRef && chatRef.unreadCount > 0) {
-                chatRef.unreadCount -= 1;
-                await user.save();
-            }
+    try {
+        const messageExists = await MessageModel.exists({ _id: messageId });
+        if (!messageExists) {
+            throw new customError('Message not found', 404);
         }
-    }
+        
+        await MessageModel.updateOne(
+            { _id: messageId },
+            { $addToSet: { readBy: userId } }
+        );
 
-    return { 
-        updatedMessage,
-        isNewReadReceipt: !alreadyRead
-    };
+        return { 
+            success: true
+        };
+    } catch (error) {
+        if (error instanceof customError) {
+            throw error;
+        }
+        throw new customError('Failed to mark message as read', 500);
+    }
 };
 
 

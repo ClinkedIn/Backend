@@ -18,6 +18,8 @@ const jobRouter = require("./routes/jobRoutes");
 const companyRouter = require("./routes/companyRoutes");
 const searchRouter = require("./routes/searchRoutes");
 const adminRouter = require("./routes/adminRoutes");
+const privacyRouter = require("./routes/privacyRouter");
+//to be removed
 const uploadRouter = require("./routes/uploadRoutes");
 const stripeRouter = require("./routes/stripeRoutes");
 const connectDB = require("./models/db");
@@ -53,6 +55,7 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/privacy", privacyRouter);
 app.use("/api/stripe", stripeRouter);
 app.use(
   "/api/docs",

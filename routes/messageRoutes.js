@@ -13,7 +13,7 @@ router.route('/block-user/:userId')
 router.route('/unblock-user/:userId')
     .patch(protect, messageController.unblockUserFromMessaging);
 
-router.route('/read-receipt/:messageId')
+router.route('/mark-as-read/:messageId')
     .patch(protect, messageController.markMessageAsRead);
 
 router.route('/:messageId')
