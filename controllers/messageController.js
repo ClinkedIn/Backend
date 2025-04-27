@@ -226,11 +226,11 @@ const blockUserFromMessaging = async (req, res) => {
       return res.status(404).json({ message: "Blocked user not found" });
     }
 
-    if (user.blockedUsers.includes(blockedUserId)) {
+    if (user.blockedFromMessaging.includes(blockedUserId)) {
       return res.status(400).json({ message: "User is already blocked" });
     }
     
-    user.blockedUsers.push(blockedUserId);
+    user.blockedFromMessaging.push(blockedUserId);
     await user.save();
     
     res.status(200).json({ message: "User blocked successfully" });
@@ -256,7 +256,7 @@ const unblockUserFromMessaging = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.blockedUsers = user.blockedUsers.filter(
+    user.blockedFromMessaging = user.blockedFromMessaging.filter(
       (id) => id.toString() !== blockedUserId.toString()
     );
 
@@ -265,7 +265,7 @@ const unblockUserFromMessaging = async (req, res) => {
 
     res.status(200).json({
       message: "User unblocked successfully",
-      blockedUsers: updatedUser.blockedUsers,
+      blockedUsers: updatedUser.blockedFromMessaging,
     });
   } catch (err) {
     console.error("Error unblocking user:", err);
