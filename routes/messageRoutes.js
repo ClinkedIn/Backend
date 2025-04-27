@@ -20,7 +20,7 @@ router.route('/:messageId')
     .delete(protect, messageController.deleteMessage)
     .patch(protect, messageController.editMessage);
 
-router.route('/is-blcoked-from-messaging/:userId')
+router.route('/is-blocked-from-messaging/:userId')
     .get(protect, messageController.isUserBlocked);
 
 router.route('/')
