@@ -20,6 +20,9 @@ router.route('/:messageId')
     .delete(protect, messageController.deleteMessage)
     .patch(protect, messageController.editMessage);
 
+router.route('/is-blcoked-from-messaging/:userId')
+    .get(protect, messageController.isUserBlocked);
+
 router.route('/')
     .post(protect, upload.array('files', 10), messageController.sendMessage);
 

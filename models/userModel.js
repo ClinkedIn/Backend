@@ -194,6 +194,7 @@ const userSchema = new mongoose.Schema(
     ],
     connectionList: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    blockedFromMessaging: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     reportedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User"}],
     profileViews: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],

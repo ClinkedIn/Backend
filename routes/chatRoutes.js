@@ -17,7 +17,7 @@ router.route('/group-chat/:groupId')
     .get(protect, chatController.getGroupChat);
 
 router.route('/all-chats')
-    .get(protect, chatController.getAllChats);
+    .get(protect, chatController.getAllDirectChats);
 
 router.route('/mark-as-read/:chatId')
     .patch(protect, chatController.markChatAsRead);

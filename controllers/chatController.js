@@ -322,19 +322,16 @@ const getDirectChat = async (req, res) => {
 @access Private
 */
 
-const getAllChats = async (req, res) => {
+const getAllDirectChats = async (req, res) => {
     try {
         const userId = req.user.id;
-        // Find user and validate existence
         const user = await userModel.findById(userId);
         if (!user) {
             throw new customError('User not found', 404);
         }
         
-        // Get chat references from user model
         const userChats = user.chats || [];
         
-        // If user has no chats, return empty array
         if (!userChats || userChats.length === 0) {
             return res.status(200).json({
                 success: true,
@@ -344,27 +341,29 @@ const getAllChats = async (req, res) => {
             });
         }
         
-        // Split chat IDs by type
         const directChatIds = [];
-        const groupChatIds = [];
         userChats.forEach(chat => {
-            // Make sure chatId is valid before adding to arrays
-            if (!chat.chatId) return;
+            if (!chat.chatId || chat.chatType !== 'DirectChat') return;
             
             try {
-                if (chat.chatType === 'DirectChat') {
-                    directChatIds.push(new mongoose.Types.ObjectId(chat.chatId));
-                } else if (chat.chatType === 'ChatGroup') {
-                    groupChatIds.push(new mongoose.Types.ObjectId(chat.chatId));
-                }
+                directChatIds.push(new mongoose.Types.ObjectId(chat.chatId));
             } catch (error) {
                 console.error(`Invalid chat ID: ${chat.chatId}`, error);
-                // Skip this chat but continue processing others
+                
             }
         });
+
+        if (directChatIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                totalChats: 0,
+                totalUnread: 0,
+                chats: []
+            });
+        }
         
         // Query for direct chats
-        const directChats = directChatIds.length > 0 ? await directChatModel.find({
+        const directChats = await directChatModel.find({
             _id: { $in: directChatIds }
         }).populate({
             path: 'messages',
@@ -376,46 +375,20 @@ const getAllChats = async (req, res) => {
                 path: 'sender',
                 select: 'firstName lastName profilePicture'
             }
-        }) : [];
-        
-        const groupChats = groupChatIds.length > 0 ? await groupChatModel.find({
-            _id: { $in: groupChatIds }
-        }).populate({
-            path: 'messages',
-            options: { 
-                sort: { createdAt: -1 },
-                limit: 1 
-            },
-            populate: {
-                path: 'sender',
-                select: 'firstName lastName profilePicture'
-            }
-        }) : [];
+        });
         
         // Get other users' info for direct chats
         let otherUserIds = [];
         directChats.forEach(chat => {
-            // Check both member structures (new and old)
             let otherUserId = null;
-            
-            // Handle newer schema with members array
-            if (chat.members && Array.isArray(chat.members)) {
-                otherUserId = chat.members.find(memberId => 
-                    memberId && memberId.toString() !== userId
-                );
-            }
-            // Handle older schema with firstUser and secondUser
-            else if (chat.firstUser && chat.secondUser) {
-                otherUserId = chat.firstUser.toString() === userId ? 
-                    chat.secondUser : chat.firstUser;
-            }
+            otherUserId = chat.firstUser.toString() === userId ? 
+                chat.secondUser : chat.firstUser;
             
             if (otherUserId) {
                 otherUserIds.push(otherUserId);
             }
         });
         
-        // Get other users' details
         const otherUsers = otherUserIds.length > 0 ? 
             await userModel.find({ _id: { $in: otherUserIds } })
                 .select('_id firstName lastName profilePicture headLine') : [];
@@ -427,19 +400,11 @@ const getAllChats = async (req, res) => {
                 uc.chatId && chat._id && uc.chatId.toString() === chat._id.toString()
             );
             
-            // Find the other user in the chat
             let otherUser = null;
             let otherUserId = null;
             
-            // Check both schemas
-            if (chat.members && Array.isArray(chat.members)) {
-                otherUserId = chat.members.find(memberId => 
-                    memberId && memberId.toString() !== userId
-                );
-            } else if (chat.firstUser && chat.secondUser) {
-                otherUserId = chat.firstUser.toString() === userId ? 
-                    chat.secondUser : chat.firstUser;
-            }
+            otherUserId = chat.firstUser.toString() === userId ? 
+                chat.secondUser : chat.firstUser;
             
             if (otherUserId) {
                 otherUser = otherUsers.find(user => 
@@ -482,40 +447,8 @@ const getAllChats = async (req, res) => {
             };
         });
         
-        const processedGroupChats = groupChats.map(chat => {
-            const userChatRef = userChats.find(uc => 
-                uc.chatId && chat._id && uc.chatId.toString() === chat._id.toString()
-            );
-            
-            const latestMessage = chat.messages && chat.messages.length > 0 ? chat.messages[0] : null;
-            
-            return {
-                _id: chat._id,
-                chatType: 'group',
-                name: chat.name || 'Group Chat',
-                participants: {
-                    count: chat.members ? chat.members.length : 0,
-                    list: chat.members || [] 
-                },
-                unreadCount: userChatRef ? userChatRef.unreadCount || 0 : 0,
-                lastMessage: latestMessage ? {
-                    _id: latestMessage._id,
-                    sender: latestMessage.sender,
-                    messageText: latestMessage.messageText,
-                    createdAt: latestMessage.createdAt,
-                    formattedTime: latestMessage.createdAt ? new Date(latestMessage.createdAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }) : '',
-                    isMine: latestMessage.sender && latestMessage.sender._id && 
-                        latestMessage.sender._id.toString() === userId
-                } : null,
-                lastActive: chat.updatedAt || chat.createdAt || new Date(),
-                createdAt: chat.createdAt || new Date()
-            };
-        });
-        
-        const allChats = [...processedDirectChats, ...processedGroupChats]
+        // Sort by most recent activity
+        const sortedChats = processedDirectChats
             .filter(chat => chat.lastActive)
             .sort((a, b) => {
                 const dateA = new Date(a.lastActive || 0);
@@ -523,27 +456,28 @@ const getAllChats = async (req, res) => {
                 return dateB - dateA;
             });
         
-        // Use the shared utility function instead of client-side calculation
-        const totalUnread = await calculateTotalUnreadCount(userId);
+        // Calculate unread count for direct chats only
+        const directUnreadCount = userChats
+            .filter(chat => chat.chatType === 'DirectChat')
+            .reduce((total, chat) => total + (chat.unreadCount || 0), 0);
         
-        // Return the chats
+        // Return the direct chats only
         res.status(200).json({
             success: true,
-            totalChats: allChats.length,
-            totalUnread: totalUnread,
-            chats: allChats
+            totalChats: sortedChats.length,
+            totalUnread: directUnreadCount,
+            chats: sortedChats
         });
         
     } catch (err) {
         if (err instanceof customError) {
             res.status(err.statusCode).json({ message: err.message });
         } else {
-            console.error('Error fetching all chats:', err);
+            console.error('Error fetching direct chats:', err);
             res.status(500).json({ message: 'Internal server error', error: err.message });
         }
     }
 };
-
 
 const getGroupChat = async (req, res) => {
     try {
@@ -758,7 +692,7 @@ module.exports = {
     createGroupChat,
     getDirectChat,
     getGroupChat,
-    getAllChats,
+    getAllDirectChats,
     updateDirectChat,
     updateGroupChat,
     markChatAsRead,
