@@ -142,6 +142,12 @@ const findOrCreateDirectChat = async (sender, receiverId) => {
 
 const updateUnreadCount = async (userId, chatId, chatType = 'DirectChat') => {
     try {
+      // Find the user by ID - this line is missing in your code
+      const user = await userModel.findById(userId);
+      if (!user) {
+        console.error(`User ${userId} not found in updateUnreadCount`);
+        return false;
+      }
 
       const chatIndex = user.chats.findIndex(
         chat => chat.chatId.toString() === chatId.toString() && chat.chatType === chatType
@@ -164,7 +170,7 @@ const updateUnreadCount = async (userId, chatId, chatType = 'DirectChat') => {
       console.error('Error updating unread count:', error);
       return false;
     }
-  }
+}
 
 const updateGroupUnreadCounts = async (chatId, sender) => {
     const chat = await chatGroupModel.findById(chatId, 'members');
