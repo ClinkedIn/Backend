@@ -21,8 +21,7 @@ const postSchema = new mongoose.Schema(
                     default: 'User',
                 },
                 firstName: { type: String },
-                lastName: { type: String },
-                companyName: { type: String },
+                lastName: { type: String }
             },
         ],
         impressions: [

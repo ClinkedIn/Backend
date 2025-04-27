@@ -93,8 +93,7 @@ const addComment = async (req, res) => {
         userId: user.userId,
         userType: user.userType || "User",
         firstName: user.firstName,
-        lastName: user.lastName,
-        companyName: user.companyName,
+        lastName: user.lastName
       }));
     }
 
@@ -199,8 +198,7 @@ const updateComment = async (req, res) => {
         userId: user.userId,
         userType: user.userType || "User",
         firstName: user.firstName,
-        lastName: user.lastName,
-        companyName: user.companyName,
+        lastName: user.lastName
       }));
 
       comment.taggedUsers = processedTaggedUsers;

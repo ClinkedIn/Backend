@@ -7,8 +7,7 @@ const repostSchema = new mongoose.Schema({
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
       userType: { type: String, enum: ["User", "Company"], default: "User" },
       firstName: { type: String },
-      lastName: { type: String },
-      companyName: { type: String },
+      lastName: { type: String }
     }],
     isActive: { type: Boolean, default: true }
   }, { timestamps: true }); // Adds createdAt & updatedAt automatically
