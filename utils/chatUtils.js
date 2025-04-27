@@ -142,35 +142,47 @@ const findOrCreateDirectChat = async (sender, receiverId) => {
 
 const updateUnreadCount = async (userId, chatId, chatType = 'DirectChat') => {
     try {
-      // Find the user by ID - this line is missing in your code
-      const user = await userModel.findById(userId);
-      if (!user) {
-        console.error(`User ${userId} not found in updateUnreadCount`);
-        return false;
-      }
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            console.error(`Invalid user ID: ${userId}`);
+            return false;
+        }
+        
+        const user = await userModel.findById(userId);
+        if (!user) {
+            console.error(`User ${userId} not found in updateUnreadCount`);
+            return false;
+        }
 
-      const chatIndex = user.chats.findIndex(
-        chat => chat.chatId.toString() === chatId.toString() && chat.chatType === chatType
-      );
-      
-      if (chatIndex !== -1) {
-        user.chats[chatIndex].unreadCount += 1;
-      } else {
-        user.chats.push({
-          chatId: chatId,
-          chatType: chatType,
-          unreadCount: 1,
-          lastReadAt: new Date()
-        });
-      }
-      
-      await user.save();
-      return true;
+        if (!user.chats) {
+            user.chats = [];
+        }
+
+        const chatIndex = user.chats.findIndex(
+            chat => chat.chatId && 
+                   chat.chatId.toString() === chatId.toString() && 
+                   chat.chatType === chatType
+        );
+        
+        if (chatIndex !== -1) {
+            user.chats[chatIndex].unreadCount = (user.chats[chatIndex].unreadCount || 0) + 1;
+            user.chats[chatIndex].lastActive = new Date();
+        } else {
+            user.chats.push({
+                chatId: chatId,
+                chatType: chatType,
+                unreadCount: 1,
+                lastReadAt: null,
+                lastActive: new Date()
+            });
+        }
+        
+        await user.save();
+        return true;
     } catch (error) {
-      console.error('Error updating unread count:', error);
-      return false;
+        console.error('Error updating unread count:', error);
+        return false;
     }
-}
+};
 
 const updateGroupUnreadCounts = async (chatId, sender) => {
     const chat = await chatGroupModel.findById(chatId, 'members');
@@ -217,13 +229,20 @@ const validateGroupChatData = async (userId, groupName, groupMembers) => {
 }
 
 const isSenderBlocked = async (senderId, receiverId) => {
-    console.log("Receiver ID:", receiverId);
-    const receiver = await userModel.findById(receiverId);
-    if (!receiver) {
-        console.error(`Receiver ${receiverId} not found`);
-        throw new customError('Receiver not found', 404);
+    try {
+        console.log("Receiver ID:", receiverId);
+        const receiver = await userModel.findById(receiverId);
+        if (!receiver) {
+            console.error(`Receiver ${receiverId} not found`);
+            throw new customError('Receiver not found', 404);
+        }
+        return receiver.blockedFromMessaging && 
+               Array.isArray(receiver.blockedFromMessaging) && 
+               receiver.blockedFromMessaging.includes(senderId);
+    } catch (error) {
+        console.error(`Error checking if sender is blocked: ${error}`);
+        return false;
     }
-    return receiver.blockedFromMessaging.includes(senderId);
 };
 
 
