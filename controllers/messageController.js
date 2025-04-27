@@ -327,6 +327,33 @@ const markMessageAsRead = async (req, res) => {
   }
 };
 
+const isUserBlocked = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const blockedUserId = req.params.userId;
+
+    if (!blockedUserId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isBlocked = user.blockedFromMessaging.includes(blockedUserId);
+
+    res.status(200).json({
+      isBlocked,
+    });
+  } catch (err) {
+    console.error("Error checking block status:", err);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: err.message });
+  }
+};
+
 module.exports = {
   sendMessage,
   editMessage,
@@ -335,4 +362,5 @@ module.exports = {
   unblockUserFromMessaging,
   getTotalUnreadCount,
   markMessageAsRead,
+  isUserBlocked
 };
