@@ -6,7 +6,7 @@ const reportModel = require("../models/reportModel");
 const cloudinary = require("../utils/cloudinary");
 const commentModel = require("../models/commentModel");
 const companyModel = require("../models/companyModel");
-const {isConnection, isBlocked} = require("../utils/privacyUtils");
+const { isConnection, isBlocked } = require("../utils/privacyUtils");
 //import { ObjectId } from 'mongodb';
 const mongoose = require("mongoose");
 const {
@@ -130,23 +130,27 @@ const getPost = async (req, res) => {
       isActive: true,
     });
     // Get the post and check if it's active
-    if (post.userId!=null) {
+    if (post.userId != null) {
       console.log("Post:", post.userId);
-      post = await postModel.findOne({
-        _id: postId,
-        isActive: true,
-      }).populate(
-        "userId",
-        "firstName lastName headline profilePicture connections",
-      );
-    } else if (post.companyId!=null) {
-      post = await postModel.findOne({
-        _id: postId,
-        isActive: true,
-      }).populate(
-        "companyId",
-        "name logo tagLine address industry organizationSize organizationType"
-      );
+      post = await postModel
+        .findOne({
+          _id: postId,
+          isActive: true,
+        })
+        .populate(
+          "userId",
+          "firstName lastName headline profilePicture connections"
+        );
+    } else if (post.companyId != null) {
+      post = await postModel
+        .findOne({
+          _id: postId,
+          isActive: true,
+        })
+        .populate(
+          "companyId",
+          "name logo tagLine address industry organizationSize organizationType"
+        );
     }
     console.log("Post:", post.companyId);
     // Check if post exists
@@ -155,7 +159,7 @@ const getPost = async (req, res) => {
     }
 
     // Check privacy settings - if post is connections only (OR BLOCKED)
-    if(post.userId!=null){
+    if (post.userId != null) {
       // ADDED
       const isUserBlocked = await isBlocked(post.userId._id, userId);
       if (isUserBlocked) {
@@ -209,12 +213,12 @@ const getPost = async (req, res) => {
     // Format post response
     const postResponse = {
       postId: post._id,
-      userId: post.userId ?post.userId._id:null,
+      userId: post.userId ? post.userId._id : null,
       companyId: post.companyId ? post.companyId : null,
-      firstName: post.userId?post.userId.firstName : null,
-      lastName: post.userId?post.userId.lastName: null,
-      headline: post.userId?post.userId.headline :"",
-      profilePicture: post.userId?post.userId.profilePicture: null,
+      firstName: post.userId ? post.userId.firstName : null,
+      lastName: post.userId ? post.userId.lastName : null,
+      headline: post.userId ? post.userId.headline : "",
+      profilePicture: post.userId ? post.userId.profilePicture : null,
       postDescription: post.description,
       attachments: post.attachments,
       impressionCounts: post.impressionCounts,
@@ -228,7 +232,7 @@ const getPost = async (req, res) => {
       isRepost,
       isSaved,
       isLiked,
-      isMine: post.userId?post.userId._id.toString() === userId: false,
+      isMine: post.userId ? post.userId._id.toString() === userId : false,
       // Include repost details if applicable
       ...(isRepost && {
         repostId: repost._id,
@@ -268,11 +272,16 @@ const deletePost = async (req, res) => {
       return res.status(400).json({ message: "Invalid post ID format" });
     }
     // Find the post
-    const post = await postModel.findOne({
-      _id:postId,
-      isActive: true
-    })
-    .populate("userId", "firstName lastName headline profilePicture").populate("companyId", "name logo tagLine address industry organizationSize organizationType");
+    const post = await postModel
+      .findOne({
+        _id: postId,
+        isActive: true,
+      })
+      .populate("userId", "firstName lastName headline profilePicture")
+      .populate(
+        "companyId",
+        "name logo tagLine address industry organizationSize organizationType"
+      );
 
     // Check if post exists
     if (!post) {
@@ -287,12 +296,15 @@ const deletePost = async (req, res) => {
     }
 
     // Check if user is the owner of the post
-    let company
+    let company;
     if (post.companyId != null) {
       company = await companyModel.findById(post.companyId);
     }
     // Check if user is the owner of the post
-    if (post.userId?.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
+    if (
+      post.userId?._id.toString() !== userId &&
+      (company == null || company.admins.indexOf(userId) === -1)
+    ) {
       return res
         .status(403)
         .json({ message: "You can only delete your own posts" });
@@ -332,12 +344,15 @@ const updatePost = async (req, res) => {
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
     }
-    let company
+    let company;
     if (post.companyId != null) {
       company = await companyModel.findById(post.companyId);
     }
     // Check if user is the owner of the post
-    if (post.userId?.toString() !== userId && (company == null || company.admins.indexOf(userId) === -1)) {
+    if (
+      post.userId?._id.toString() !== userId &&
+      (company == null || company.admins.indexOf(userId) === -1)
+    ) {
       return res
         .status(403)
         .json({ message: "You can only update your own posts" });
@@ -384,12 +399,14 @@ const updatePost = async (req, res) => {
     // Format response to match your API standard
     const postResponse = {
       postId: updatedPost._id,
-      userId: updatedPost.userId?updatedPost.userId._id : null,
+      userId: updatedPost.userId ? updatedPost.userId._id : null,
       companyId: updatedPost.companyId ? updatedpost.companyId : null,
-      firstName: updatedPost.userId?updatedPost.userId.firstName: null,
-      lastName: updatedPost.userId?updatedPost.userId.lastName:null,
-      headline: updatedPost.userId?updatedPost.userId.headline : "",
-      profilePicture: updatedPost.userId?updatedPost.userId.profilePicture: null,
+      firstName: updatedPost.userId ? updatedPost.userId.firstName : null,
+      lastName: updatedPost.userId ? updatedPost.userId.lastName : null,
+      headline: updatedPost.userId ? updatedPost.userId.headline : "",
+      profilePicture: updatedPost.userId
+        ? updatedPost.userId.profilePicture
+        : null,
       postDescription: updatedPost.description,
       attachments: updatedPost.attachments,
       impressionCounts: updatedPost.impressionCounts,
@@ -497,7 +514,7 @@ const getAllPosts = async (req, res) => {
                   $in: followedCompanyIds.length
                     ? followedCompanyIds
                     : ["000000000000000000000000"],
-                }
+                },
               },
 
               // Posts that were reposted by connections or followed users
@@ -510,7 +527,10 @@ const getAllPosts = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .populate("userId", "firstName lastName headline profilePicture")
-      .populate("companyId", "name logo tagLine address industry organizationSize organizationType")
+      .populate(
+        "companyId",
+        "name logo tagLine address industry organizationSize organizationType"
+      )
       .lean();
     // Count total posts for pagination
     const total = await postModel.countDocuments({
@@ -544,12 +564,12 @@ const getAllPosts = async (req, res) => {
         });
         return {
           postId: post._id,
-          userId: post.userId?post.userId._id: null,
+          userId: post.userId ? post.userId._id : null,
           companyId: post.companyId ? post.companyId : null,
-          firstName: post.userId?post.userId.firstName:null,
-          lastName: post.userId?post.userId.lastName: null,
-          headline: post.userId?post.userId.headline :"",
-          profilePicture: post.userId?post.userId.profilePicture: null,
+          firstName: post.userId ? post.userId.firstName : null,
+          lastName: post.userId ? post.userId.lastName : null,
+          headline: post.userId ? post.userId.headline : "",
+          profilePicture: post.userId ? post.userId.profilePicture : null,
           postDescription: post.description,
           attachments: post.attachments,
           impressionCounts: post.impressionCounts,
@@ -1362,7 +1382,7 @@ const searchPostsByKeyword = async (req, res) => {
     }
 
     // Create search regex (case insensitive)
-    const searchRegex = new RegExp(keyword, 'i');
+    const searchRegex = new RegExp(keyword, "i");
 
     // Find posts matching the keyword
     const posts = await postModel
@@ -1372,14 +1392,17 @@ const searchPostsByKeyword = async (req, res) => {
           { description: { $regex: searchRegex } },
           { "taggedUsers.firstName": { $regex: searchRegex } },
           { "taggedUsers.lastName": { $regex: searchRegex } },
-          { "taggedUsers.companyName": { $regex: searchRegex } }
-        ]
+          { "taggedUsers.companyName": { $regex: searchRegex } },
+        ],
       })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate("userId", "firstName lastName headline profilePicture")
-      .populate("companyId", "name logo tagLine address industry organizationSize organizationType")
+      .populate(
+        "companyId",
+        "name logo tagLine address industry organizationSize organizationType"
+      )
       .lean();
 
     // Get total count for pagination
@@ -1389,8 +1412,8 @@ const searchPostsByKeyword = async (req, res) => {
         { description: { $regex: searchRegex } },
         { "taggedUsers.firstName": { $regex: searchRegex } },
         { "taggedUsers.lastName": { $regex: searchRegex } },
-        { "taggedUsers.companyName": { $regex: searchRegex } }
-      ]
+        { "taggedUsers.companyName": { $regex: searchRegex } },
+      ],
     });
 
     // Get current user's saved posts
@@ -1402,7 +1425,9 @@ const searchPostsByKeyword = async (req, res) => {
     // Format posts with additional information
     const formattedPosts = await Promise.all(
       posts.map(async (post) => {
-        const commentCount = await commentModel.countDocuments({ postId: post._id });
+        const commentCount = await commentModel.countDocuments({
+          postId: post._id,
+        });
         const isSaved = savedPostsSet.has(post._id.toString());
         const isLiked = await impressionModel.findOne({
           targetId: post._id,
@@ -1413,7 +1438,7 @@ const searchPostsByKeyword = async (req, res) => {
         const repost = await repostModel
           .findOne({
             postId: post._id,
-            isActive: true
+            isActive: true,
           })
           .populate("userId", "firstName lastName profilePicture headline")
           .lean();
@@ -1438,7 +1463,8 @@ const searchPostsByKeyword = async (req, res) => {
           isRepost: !!repost,
           isSaved: isSaved,
           isLiked: !!isLiked,
-          isMine: (post.userId && post.userId._id.toString() === userId) || false,
+          isMine:
+            (post.userId && post.userId._id.toString() === userId) || false,
           // Only include repost details if this is a repost
           ...(repost && {
             repostId: repost._id,
@@ -1464,7 +1490,7 @@ const searchPostsByKeyword = async (req, res) => {
         hasNextPage: parseInt(page) * parseInt(limit) < total,
         hasPrevPage: parseInt(page) > 1,
       },
-      keyword: keyword
+      keyword: keyword,
     });
   } catch (error) {
     console.error("Error searching posts:", error);
