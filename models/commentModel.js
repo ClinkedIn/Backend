@@ -8,8 +8,7 @@ const commentSchema = new mongoose.Schema({
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
       userType: { type: String, enum: ["User", "Company"], default: "User" },
       firstName: { type: String },
-      lastName: { type: String },
-      companyName: { type: String },
+      lastName: { type: String }
     }],
     impressions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Impression" }],
     impressionCounts: {
