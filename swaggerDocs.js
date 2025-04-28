@@ -9522,13 +9522,7 @@
  */
 
 // *********************************** Connections APIs ******************************************//
-/**
- * @swagger
- * tags:
- *   - name: Connections
- *     description: Managing connections and connection requests
-*/
-/**
+
 /**
  * @swagger
  * /user/connections/request/{targetUserId}:
