@@ -2437,7 +2437,127 @@ const handleMessageRequest = async (req, res) => {
     }
 };
 
+const getRelatedUsers = async (req, res) => {
+    try {
+        const { page = 1, limit = 30 } = req.query;
+        const userId = req.user.id;
+        const { skip, limit: limitNum } = handlePagination(page, limit);
 
+        // Get current user's details
+        const currentUser = await userModel.findById(userId)
+            .select('connectionList education lastJobTitle industry location');
+
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Build query conditions
+        const matchConditions = [];
+
+        // Base condition to exclude current user and inactive users
+        const baseCondition = {
+            _id: { $ne: new mongoose.Types.ObjectId(userId) }, // Convert userId to ObjectId
+            isActive: true
+        };
+
+        // Rest of the conditions
+        if (currentUser.industry) {
+            matchConditions.push({ industry: currentUser.industry });
+        }
+
+        if (currentUser.lastJobTitle) {
+            matchConditions.push({ lastJobTitle: currentUser.lastJobTitle });
+        }
+
+        if (currentUser.education && currentUser.education.length > 0) {
+            matchConditions.push({
+                'education.school': currentUser.education[0].school
+            });
+        }
+
+        if (currentUser.connectionList && currentUser.connectionList.length > 0) {
+            matchConditions.push({
+                connectionList: {
+                    $in: currentUser.connectionList
+                }
+            });
+        }
+
+        const query = {
+            ...baseCondition,
+            ...(matchConditions.length > 0 ? { $or: matchConditions } : {})
+        };
+
+        // Aggregate pipeline with explicit user exclusion
+        const relatedUsers = await userModel.aggregate([
+            {
+                $match: {
+                    $and: [
+                        { _id: { $ne: new mongoose.Types.ObjectId(userId) } }, // Explicit exclusion
+                        query
+                    ]
+                }
+            },
+            // ... rest of the aggregation pipeline remains the same ...
+            {
+                $addFields: {
+                    commonConnectionsCount: {
+                        $size: {
+                            $setIntersection: ["$connectionList", currentUser.connectionList]
+                        }
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    matchScore: {
+                        $sum: [
+                            { $cond: [{ $eq: ["$industry", currentUser.industry] }, 2, 0] },
+                            { $cond: [{ $eq: ["$lastJobTitle", currentUser.lastJobTitle] }, 2, 0] },
+                            { $cond: [{ $eq: ["$education.0.school", currentUser.education?.[0]?.school] }, 2, 0] },
+                            { $multiply: [{ $divide: ["$commonConnectionsCount", 20] }, 2] }
+                        ]
+                    }
+                }
+            },
+            { $sort: { matchScore: -1, commonConnectionsCount: -1 } },
+            { $skip: skip },
+            { $limit: limitNum },
+            {
+                $project: {
+                    _id: 1,
+                    firstName: 1,
+                    lastName: 1,
+                    profilePicture: 1,
+                    lastJobTitle: 1,
+                    industry: 1,
+                    commonConnectionsCount: 1,
+                    matchScore: 1
+                }
+            }
+        ]);
+
+        // Get total count excluding current user
+        const total = await userModel.countDocuments(query);
+
+        res.status(200).json({
+            message: 'Related users retrieved successfully',
+            relatedUsers,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting related users:', error);
+        res.status(500).json({
+            message: 'Failed to get related users',
+            error: error.message
+        });
+    }
+};
 
 module.exports = {
     getAllUsers,
@@ -2490,5 +2610,6 @@ module.exports = {
     getBlockedUsers,
     sendMessageRequest,
     getMessageRequests,
-    handleMessageRequest
+    handleMessageRequest,
+    getRelatedUsers
 };
