@@ -41,3 +41,6 @@ Module 14: Admin Panel
 ●	Manage job postings and flagged job listings ✅
 ●	View platform analytics ✅
 
+
+
+related Users: connectionList,mainEducation[0].education.school lastJobTitle ,industry  , *location
