@@ -200,4 +200,181 @@ const seedJobApplications = async () => {
   }
 };
 
-module.exports = seedJobApplications;
+const seedCompanyJobApplications = async (companyId = '680d3202e28c829f246a27d6') => {
+  try {
+    console.log(`Starting job application seeding for company ${companyId}...`);
+    
+    // Find all jobs for this specific company
+    const companyJobs = await JobModel.find({ 
+      companyId: companyId,
+      isActive: true 
+    }).lean();
+    
+    console.log(`Found ${companyJobs.length} active jobs for this company`);
+    
+    if (companyJobs.length === 0) {
+      console.log('No jobs found for this company. Exiting.');
+      return { success: false, message: 'No jobs found' };
+    }
+    
+    // Get all users as potential applicants (limit to a reasonable number)
+    const users = await UserModel.find({})
+      .select('_id firstName lastName email phone')
+      .limit(50)
+      .lean();
+    
+    console.log(`Found ${users.length} users as potential applicants`);
+    
+    if (users.length === 0) {
+      console.log('No users found to serve as applicants. Exiting.');
+      return { success: false, message: 'No users found' };
+    }
+    
+    let totalApplications = 0;
+    const applications = [];
+    const jobUpdates = [];
+    
+    // Process each job
+    for (const job of companyJobs) {
+      console.log(`Processing job: ${job.title} (${job._id})`);
+      
+      // Determine the number of applicants for this job (random between 5-25)
+      const applicantCount = faker.number.int({ min: 5, max: 25 });
+      
+      // Select random users as applicants
+      const applicants = faker.helpers.arrayElements(users, applicantCount);
+      
+      // Create applicant, accepted, and rejected lists
+      const applicantIds = applicants.map(user => user._id);
+      
+      // Determine how many to accept and reject
+      const acceptCount = faker.number.int({ min: 0, max: Math.floor(applicantCount * 0.3) });
+      const rejectCount = faker.number.int({ min: 0, max: Math.floor(applicantCount * 0.4) });
+      
+      // Randomly select users to accept and reject (ensuring no overlap)
+      const shuffledApplicants = [...applicantIds];
+      faker.helpers.shuffle(shuffledApplicants);
+      
+      const acceptedIds = shuffledApplicants.slice(0, acceptCount);
+      const rejectedIds = shuffledApplicants.slice(acceptCount, acceptCount + rejectCount);
+      
+      // Create sets for easier checking
+      const acceptedSet = new Set(acceptedIds.map(id => id.toString()));
+      const rejectedSet = new Set(rejectedIds.map(id => id.toString()));
+      
+      // Prepare job update
+      jobUpdates.push({
+        updateOne: {
+          filter: { _id: job._id },
+          update: { 
+            $set: { 
+              applicants: applicantIds,
+              accepted: acceptedIds,
+              rejected: rejectedIds
+            } 
+          }
+        }
+      });
+      
+      // Process each applicant
+      for (const applicant of applicants) {
+        const userId = applicant._id.toString();
+        const isAccepted = acceptedSet.has(userId);
+        const isRejected = rejectedSet.has(userId);
+        
+        // Determine application status
+        let status;
+        if (isAccepted) status = "accepted";
+        else if (isRejected) status = "rejected";
+        else status = faker.helpers.arrayElement(["pending", "viewed", "pending", "pending"]);
+        
+        // Generate application answers to screening questions
+        const screeningAnswers = (job.screeningQuestions || []).map(sq => {
+          return {
+            questionId: new mongoose.Types.ObjectId(),
+            question: sq.question,
+            questionType: sq.question,
+            answer: generateScreeningAnswer(sq.question, sq.idealAnswer, isAccepted, sq.mustHave),
+            meetsCriteria: isAccepted ? true : isRejected ? false : Math.random() > 0.3
+          };
+        });
+        
+        // Create application object
+        const application = {
+          jobId: job._id,
+          userId: userId,
+          companyId: companyId,
+          status,
+          contactEmail: applicant.email || faker.internet.email(),
+          contactPhone: applicant.phone || faker.phone.number(),
+          screeningAnswers,
+          createdAt: faker.date.recent({ days: 30 }),
+          updatedAt: faker.date.recent({ days: 15 })
+        };
+        
+        // Add rejection reason if rejected
+        if (status === "rejected") {
+          application.rejectionReason = faker.helpers.arrayElement([
+            "We've decided to move forward with candidates whose qualifications better match our needs.",
+            "We found candidates with more experience in this specific role.",
+            "Your qualifications are impressive, but we're looking for someone with more industry-specific experience.",
+            "Thank you for your interest, but we've selected candidates who more closely align with our current requirements.",
+            null
+          ]);
+          
+          application.autoRejected = Math.random() > 0.7;
+          application.lastViewed = faker.date.recent({ days: 10 });
+        }
+        
+        // Add lastViewed date for viewed or accepted applications
+        if (status === "viewed" || status === "accepted") {
+          application.lastViewed = faker.date.recent({ days: 10 });
+        }
+        
+        // Add cover letter for some applications (60% chance)
+        if (Math.random() > 0.4) {
+          application.coverLetter = faker.lorem.paragraphs({ min: 1, max: 3 });
+        }
+        
+        applications.push(application);
+        totalApplications++;
+      }
+      
+      console.log(`Created ${applicantCount} applications for job: ${job.title}`);
+    }
+    
+    // Update jobs with applicant lists
+    if (jobUpdates.length > 0) {
+      const jobUpdateResult = await JobModel.bulkWrite(jobUpdates);
+      console.log(`Updated ${jobUpdateResult.modifiedCount} jobs with applicant lists`);
+    }
+    
+    // Insert all applications in batch
+    if (applications.length > 0) {
+      await JobApplicationModel.insertMany(applications);
+      console.log(`Successfully seeded ${totalApplications} job applications`);
+    } else {
+      console.log('No applications to seed');
+    }
+    
+    // Verify seeding
+    const count = await JobApplicationModel.countDocuments({ companyId });
+    console.log(`Total job applications for company ${companyId} in database: ${count}`);
+    
+    return { 
+      success: true, 
+      jobsUpdated: jobUpdates.length,
+      applicationsCreated: totalApplications 
+    };
+    
+  } catch (error) {
+    console.error('Error seeding company job applications:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Export both seeding functions
+module.exports = {
+  seedJobApplications,
+  seedCompanyJobApplications
+};

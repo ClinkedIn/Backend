@@ -18,7 +18,7 @@ const repostSeeder = require('./repost');
 const subscriptionSeeder = require('./subscription');
 const transactionSeeder = require('./transaction');
 const notificationSeeder = require('./notification');
-const jobApplicationSeeder = require('./jobApplication');
+const { seedCompanyJobApplications, seedJobApplications } = require('./jobApplication');
 const { createRandomIds } = require('./init');
 
 (async () => {
@@ -42,7 +42,7 @@ const { createRandomIds } = require('./init');
         
         //await reportSeeder();
         //await notificationSeeder();
-        await jobApplicationSeeder();
+        await seedCompanyJobApplications();
         // await otherSeeder();
 
         console.log('✅ Seeding completed successfully!');
