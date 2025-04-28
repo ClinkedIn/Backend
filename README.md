@@ -41,3 +41,6 @@ Module 14: Admin Panel
 ●	Manage job postings and flagged job listings ✅
 ●	View platform analytics ✅
 
+People you may know based on education, compay or other
+
+Return list of all connections

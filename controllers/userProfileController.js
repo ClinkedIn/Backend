@@ -2242,9 +2242,9 @@ const handleConnectionRequest = async (req, res) => {
 
 
 
-const getConnections = async (req, res) => {
+const getConnectionsList = async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 100 } = req.query;
         const userId = req.user.id;
         const { skip, limit: limitNum } = handlePagination(page, limit);
 
@@ -2482,7 +2482,7 @@ module.exports = {
     searchUsersByName,
     sendConnectionRequest,
     handleConnectionRequest,
-    getConnections,
+    getConnectionsList,
     getPendingRequests,
     removeConnection,
     blockUser,
