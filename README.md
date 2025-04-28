@@ -41,6 +41,6 @@ Module 14: Admin Panel
 ●	Manage job postings and flagged job listings ✅
 ●	View platform analytics ✅
 
-People you may know based on education, compay or other
+related Users based on: connectionList,mainEducation[0].education.school lastJobTitle ,industry  , *location ✅
 
 Return list of all connections ✅
