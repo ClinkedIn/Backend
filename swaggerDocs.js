@@ -2,7 +2,82 @@
  * @swagger
  * /user/search:
  *   get:
- *     summary: Search for users
+ *     summary: Search for  user or company  by query
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *     responses:
+ *       200:
+ *         description: List of users matching search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ * 
+ * 
+ * @swagger
+ * /user/search/users:
+ *   get:
+ *     summary: Search for users by name 
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -9962,82 +10037,6 @@
  *     description: API endpoints for search
  */
 /**
- * @swagger
- * /user/search:
- *   get:
- *     summary: Search for users
- *     tags: [Connections & Networking]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: query
- *         schema:
- *           type: string
- *         description: General search query
- *       - in: query
- *         name: company
- *         schema:
- *           type: string
- *         description: Filter by company name
- *       - in: query
- *         name: industry
- *         schema:
- *           type: string
- *         description: Filter by industry
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Results per page
- *     responses:
- *       200:
- *         description: List of users matching search criteria
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                       firstName:
- *                         type: string
- *                       lastName:
- *                         type: string
- *                       company:
- *                         type: string
- *                       industry:
- *                         type: string
- *                       profilePicture:
- *                         type: string
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: number
- *                     page:
- *                       type: number
- *                     pages:
- *                       type: number
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Server error
- */
-
-
 /**
  * @swagger
  * /user/profile:
