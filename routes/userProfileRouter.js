@@ -102,7 +102,7 @@ router.route('/connections/requests/:senderId')
     
     
 router.route('/connections')
-        .get(protect, user.getConnections);  // Get list of connections
+    .get(protect, user.getConnectionsList);  // Get list of connections
 
 router.route('/connections/:connectionId')
     .delete(protect, user.removeConnection);  // Remove an existing connection
@@ -140,7 +140,8 @@ router.route('/:userId')
     .get(protect, user.getUserProfile);
 
 
-
+router.route('/connections/related-users')
+    .get(protect, user.getRelatedUsers);
 
 
 
