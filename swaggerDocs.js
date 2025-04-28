@@ -454,7 +454,126 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
+ */  
+/**
+ * @swagger
+ * /user/connections/related-users:
+ *   get:
+ *     summary: Get related users based on common attributes
+ *     tags: [Connections & Networking]
+ *     description: Retrieves a list of users who share similar attributes with the logged-in user, such as industry, education, job title, or common connections
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 30
+ *         description: Number of users per page
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved related users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Related users retrieved successfully"
+ *                 relatedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: User ID
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       firstName:
+ *                         type: string
+ *                         description: User's first name
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         description: User's last name
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         description: URL to user's profile picture
+ *                         example: "https://example.com/profile.jpg"
+ *                       lastJobTitle:
+ *                         type: string
+ *                         description: User's most recent job title
+ *                         example: "Software Engineer"
+ *                       commonConnectionsCount:
+ *                         type: number
+ *                         description: Number of connections in common
+ *                         example: 25
+ *                       matchScore:
+ *                         type: number
+ *                         description: Relevancy score based on common attributes
+ *                         example: 4.5
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of related users
+ *                       example: 100
+ *                     page:
+ *                       type: number
+ *                       description: Current page number
+ *                       example: 1
+ *                     pages:
+ *                       type: number
+ *                       description: Total number of pages
+ *                       example: 4
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get related users"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
+
 /**
  * @swagger
  * components:
