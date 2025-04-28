@@ -140,7 +140,8 @@ router.route('/:userId')
     .get(protect, user.getUserProfile);
 
 
-
+router.route('/connections/related-users')
+    .get(protect, user.getRelatedUsers);
 
 
 
