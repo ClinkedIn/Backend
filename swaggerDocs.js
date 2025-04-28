@@ -197,10 +197,7 @@
  *                       profilePicture:
  *                         type: string
  *                         description: URL to connection's profile picture
- *                       company:
- *                         type: string
- *                         description: Connection's company name
- *                       position:
+ *                       lastJobTitle:
  *                         type: string
  *                         description: Connection's job position
  *                 pagination:

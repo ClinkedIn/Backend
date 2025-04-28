@@ -2252,7 +2252,7 @@ const getConnectionsList = async (req, res) => {
             .findById(userId)
             .populate({
                 path: 'connectionList',
-                select: 'firstName lastName profilePicture company position',
+                select: 'firstName lastName profilePicture lastJobTitle',
                 options: { skip, limit: limitNum }
             });
 
