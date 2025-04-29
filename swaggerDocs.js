@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /user/search:
+ * /api/user/search:
  *   get:
  *     summary: Search for  user or company  by query
  *     tags: [Connections & Networking]
@@ -75,7 +75,7 @@
  * 
  * 
  * @swagger
- * /user/search/users:
+ * /api/user/search/users:
  *   get:
  *     summary: Search for users by name 
  *     tags: [Connections & Networking]
@@ -149,7 +149,7 @@
  *         description: Server error
  * 
  * 
- * /user/connections:
+ * /api/user/connections:
  *   get:
  *     summary: Get user's connections list
  *     tags: [Connections & Networking]
@@ -220,7 +220,7 @@
  *               type: object
  *               properties:
  *                 message:
- * /user/connections/request/{targetUserId}:
+ * /api/user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -242,7 +242,7 @@
  *       404:
  *         description: User not found
  * 
- * /user/connections/requests:
+ * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -272,7 +272,7 @@
  *                       headline:
  *                         type: string
  *
- * /user/connections/requests/{senderId}:
+ * /api/user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -298,7 +298,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /user/connections/{connectionId}:
+ * /api/user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -314,7 +314,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /user/follow/{userId}:
+ * /api/user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -344,7 +344,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -374,7 +374,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -402,7 +402,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /user/message-requests:
+ * /api/user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -429,7 +429,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /user/message-requests/{requestId}:
+ * /api/user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -457,7 +457,7 @@
  */  
 /**
  * @swagger
- * /user/connections/related-users:
+ * /api/user/connections/related-users:
  *   get:
  *     summary: Get related users based on common attributes
  *     tags: [Connections & Networking]
@@ -1044,7 +1044,7 @@
  */
 
 
-// ******************************************* Posts APIs ************************************* //
+// ******************************************* Posts APIs ************************************* /api//
 
 /**
  * @swagger
@@ -1055,7 +1055,7 @@
 
 /**
  * @swagger
- * /posts:
+ * /api/posts:
  *   post:
  *     summary: Create a new post
  *     tags: [Posts]
@@ -1247,7 +1247,7 @@
 
 /**
  * @swagger
- * /posts:
+ * /api/posts:
  *   get:
  *     summary: Get feed posts including reposts
  *     tags: [Posts]
@@ -1485,7 +1485,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   get:
  *     summary: Get a single post
  *     tags: [Posts]
@@ -1719,7 +1719,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   delete:
  *     summary: Delete a post
  *     tags: [Posts]
@@ -1791,7 +1791,7 @@
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /api/posts/{postId}:
  *   put:
  *     summary: Update a post
  *     tags: [Posts]
@@ -1980,7 +1980,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/save:
+ * /api/posts/{postId}/save:
  *   post:
  *     summary: Save a post
  *     tags: [Posts]
@@ -2052,7 +2052,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/like:
+ * /api/posts/{postId}/like:
  *   post:
  *     summary: Like or react to a post
  *     tags: [Posts]
@@ -2257,7 +2257,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/repost:
+ * /api/posts/{postId}/repost:
  *   post:
  *     summary: Repost a post
  *     tags: [Posts]
@@ -2370,7 +2370,7 @@
 
 /**
  * @swagger
- * /posts/{repostId}/repost:
+ * /api/posts/{repostId}/repost:
  *   delete:
  *     summary: Delete a repost
  *     tags: [Posts]
@@ -2452,7 +2452,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/report:
+ * /api/posts/{postId}/report:
  *   post:
  *     summary: Report a post for policy violations
  *     tags: [Posts]
@@ -2601,7 +2601,7 @@
 
 /**
  * @swagger
- * /comments:
+ * /api/comments:
  *   post:
  *     summary: Add a new comment or reply to a post
  *     tags: [Comments]
@@ -2828,7 +2828,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   put:
  *     summary: Update an existing comment
  *     tags: [Comments]
@@ -3055,7 +3055,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   delete:
  *     summary: Delete a comment
  *     tags: [Comments]
@@ -3138,7 +3138,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}:
+ * /api/comments/{commentId}:
  *   get:
  *     summary: Get a single comment by ID
  *     tags: [Comments]
@@ -3313,7 +3313,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}/like:
+ * /api/comments/{commentId}/like:
  *   post:
  *     summary: Add an impression (like, celebrate, etc.) to a comment
  *     tags: [Comments]
@@ -3581,7 +3581,7 @@
 
 /**
  * @swagger
- * /comments/{postId}/post:
+ * /api/comments/{postId}/post:
  *   get:
  *     summary: Get comments for a specific post
  *     tags: [Comments]
@@ -3803,7 +3803,7 @@
 
 /**
  * @swagger
- * /messages:
+ * /api/messages:
  *   post:
  *     summary: Send a message
  *     tags: [Messages]
@@ -3829,7 +3829,7 @@
 
 /**
  * @swagger
- * /messages/{messageId}:
+ * /api/messages/{messageId}:
  *   get:
  *     summary: Get a message
  *     tags: [Messages]
@@ -3925,7 +3925,7 @@
 
 /**
  * @swagger
- * /messages/block/{userId}:
+ * /api/messages/block/{userId}:
  *   post:
  *     summary: Block a user from messaging
  *     tags: [Messages]
@@ -4011,7 +4011,7 @@
 
 /**
  * @swagger
- * /messages/unblock/{userId}:
+ * /api/messages/unblock/{userId}:
  *   post:
  *     summary: Unblock a user from messaging
  *     tags: [Messages]
@@ -4093,7 +4093,7 @@
 
 /**
  * @swagger
- * /messages/unread-count:
+ * /api/messages/unread-count:
  *   get:
  *     summary: Get total unread message count
  *     tags: [Messages]
@@ -4948,7 +4948,7 @@
 
 /**
  * @swagger
- * /jobs:
+ * /api/jobs:
  *   post:
  *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
  *     tags: [Jobs]
@@ -5057,7 +5057,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}:
+ * /api/jobs/{jobId}:
  *   get:
  *     summary: Retrieve a specific job
  *     tags: [Jobs]
@@ -5142,7 +5142,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/apply:
+ * /api/jobs/{jobId}/apply:
  *   post:
  *     summary: Submit an application for a job
  *     tags: [Jobs]
@@ -5288,7 +5288,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/applications/{userId}/accept:
+ * /api/jobs/{jobId}/applications/{userId}/accept:
  *   put:
  *     summary: Accept a job applicant
  *     tags: [Jobs]
@@ -5327,7 +5327,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/applications/{userId}/reject:
+ * /api/jobs/{jobId}/applications/{userId}/reject:
  *   put:
  *     summary: Reject a job applicant
  *     tags: [Jobs]
@@ -5366,7 +5366,7 @@
 
 /**
  * @swagger
- * /jobs/company/{companyId}:
+ * /api/jobs/company/{companyId}:
  *   get:
  *     summary: Retrieve jobs by company
  *     tags: [Jobs]
@@ -5401,7 +5401,7 @@
 
 /**
  * @swagger
- * /companies:
+ * /api/companies:
  *   post:
  *     summary: Create a new company
  *     tags: [Companies]
@@ -5447,7 +5447,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}:
+ * /api/companies/{companyId}:
  *   get:
  *     summary: Retrieve a specific company
  *     tags: [Companies]
@@ -5532,7 +5532,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/follow:
+ * /api/companies/{companyId}/follow:
  *   post:
  *     summary: Follow a company
  *     tags: [Companies]
@@ -5616,7 +5616,7 @@
 
 /**
  * @swagger
- * /companies/{companyId}/visit:
+ * /api/companies/{companyId}/visit:
  *   post:
  *     summary: Add a visitor to a company
  *     tags: [Companies]
@@ -5668,7 +5668,7 @@
 
 /**
  * @swagger
- * /user/:
+ * /api/user/:
  *   post:
  *     summary: Register a new user
  *     tags: [Users]
@@ -5793,7 +5793,7 @@
 
 /**
  * @swagger
- * /user/login:
+ * /api/user/login:
  *   post:
  *     summary: Login user
  *     tags: [Users]
@@ -5883,7 +5883,7 @@
 
 /**
  * @swagger
- * /user/auth/google:
+ * /api/user/auth/google:
  *   post:
  *     summary: Login with Google
  *     tags: [Users]
@@ -5938,7 +5938,7 @@
 
 /**
  * @swagger
- * /user/logout:
+ * /api/user/logout:
  *    get:
  *     summary: Logout user
  *     tags: [Users]
@@ -5967,7 +5967,7 @@
 
 /**
  * @swagger
- * /user/forgot-password:
+ * /api/user/forgot-password:
  *   post:
  *     summary: Request a password reset link
  *     tags: [Users]
@@ -6027,7 +6027,7 @@
 
 /**
  * @swagger
- * /user/update-password:
+ * /api/user/update-password:
  *   patch:
  *     summary: Update user password
  *     tags: [Users]
@@ -6085,7 +6085,7 @@
 
 /**
  * @swagger
- * /user/reset-password/{token}:
+ * /api/user/reset-password/{token}:
  *   patch:
  *     summary: Reset user password
  *     tags: [Users]
@@ -6178,7 +6178,7 @@
 
 /**
  * @swagger
- * /user/update-email:
+ * /api/user/update-email:
  *   patch:
  *     summary: Update user email
  *     description: Allows authenticated users to update their email. Requires password confirmation. The new email must not be already registered.
@@ -6269,7 +6269,7 @@
 
 /**
  * @swagger
- * /user/confirm-email:
+ * /api/user/confirm-email:
  *   get:
  *     summary: Resend confirmation email
  *     description: Resends the confirmation email for a user who has not yet confirmed their account.
@@ -6299,7 +6299,7 @@
 
 /**
  * @swagger
- * /user/confirm-email/{emailVerificationToken}:
+ * /api/user/confirm-email/{emailVerificationToken}:
  *   get:
  *     summary: Confirm user email
  *     description: Confirms a user's email address using the provided email verification token.
@@ -6344,7 +6344,7 @@
 
 /**
  * @swagger
- * /user/{userId}:
+ * /api/user/{userId}:
  *   get:
  *     summary: Get user profile by ID
  *     tags: [Users]
@@ -6540,7 +6540,7 @@
 
 /**
  * @swagger
- * /user/me:
+ * /api/user/me:
  *   get:
  *     summary: Get logged in user profile
  *     tags: [Users]
@@ -6729,7 +6729,7 @@
 
 /**
  * @swagger
- * /user:
+ * /api/user:
  *   get:
  *     summary: Get a list of users
  *     tags: [Users]
@@ -6867,7 +6867,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   post:
  *     summary: Upload or update the user's profile picture
  *     tags: [Users]
@@ -6950,7 +6950,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's profile picture.
@@ -7006,7 +7006,7 @@
 
 /**
  * @swagger
- * /user/pictures/profile-picture:
+ * /api/user/pictures/profile-picture:
  *   delete:
  *     summary: Delete the user's profile picture
  *     description: Removes the user's profile picture by setting the profilePicture field to null.
@@ -7062,7 +7062,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   post:
  *     summary: Upload or update the user's cover picture
  *     tags: [Users]
@@ -7145,7 +7145,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   get:
  *     summary: Get the user's profile picture
  *     description: Retrieves the URL of the user's cover picture.
@@ -7201,7 +7201,7 @@
 
 /**
  * @swagger
- * /user/pictures/cover-picture:
+ * /api/user/pictures/cover-picture:
  *   delete:
  *     summary: Delete the user's cover picture
  *     description: Removes the user's cover picture by setting the coverPicture field to null.
@@ -7261,7 +7261,7 @@
 
 /**
  * @swagger
- * /user/resume:
+ * /api/user/resume:
  *   get:
  *     summary: Get user resume
  *     tags: [Users]
@@ -7391,7 +7391,7 @@
 
 /**
  * @swagger
- * /user/experience:
+ * /api/user/experience:
  *   post:
  *     summary: Add a new work experience for the authenticated user.
  *     description: Allows a user to add a new experience entry to their profile, including job details, employment type, location, skills, and optional media uploads.
@@ -7592,7 +7592,7 @@
 
 /**
  * @swagger
- * /user/experience:
+ * /api/user/experience:
  *   get:
  *     summary: Retrieve all work experiences of the authenticated user.
  *     description: Fetches the list of work experiences associated with the authenticated user.
@@ -7688,7 +7688,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   get:
  *     summary: Get a specific work experience
  *     tags: [Users]
@@ -7770,7 +7770,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   patch:
  *     summary: Update a specific work experience entry of the authenticated user.
  *     description: Updates an existing work experience entry using the provided index and request body.
@@ -7936,7 +7936,7 @@
 
 /**
  * @swagger
- * /user/experience/{index}:
+ * /api/user/experience/{index}:
  *   delete:
  *     summary: Delete a specific work experience entry of the authenticated user.
  *     description: Removes a work experience entry by index and updates associated skills.
@@ -8054,7 +8054,7 @@
 
 /**
  * @swagger
- * /user/education:
+ * /api/user/education:
  *   post:
  *     summary: Add education
  *     tags: [Users]
@@ -8079,7 +8079,7 @@
  */
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   patch:
  *     summary: Update a specific education entry
  *     tags: [Users]
@@ -8154,7 +8154,7 @@
 
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   get:
  *     summary: Get a specific education entry
  *     tags: [Users]
@@ -8233,7 +8233,7 @@
 
 /**
  * @swagger
- * /user/education:
+ * /api/user/education:
  *   get:
  *     summary: Get all education entries
  *     tags: [Users]
@@ -8303,7 +8303,7 @@
 
 /**
  * @swagger
- * /user/education/{index}:
+ * /api/user/education/{index}:
  *   delete:
  *     summary: Delete an education entry
  *     tags: [Users]
@@ -8403,7 +8403,7 @@
 
 /**
  * @swagger
- * /user/skills:
+ * /api/user/skills:
  *   post:
  *     summary: Add a new skill to the authenticated user's profile.
  *     description: Adds a skill associated with education and work experience indices.
@@ -8509,7 +8509,7 @@
 
 /**
  * @swagger
- * /user/skills:
+ * /api/user/skills:
  *   get:
  *     summary: Get all user skills
  *     tags: [Users]
@@ -8584,7 +8584,7 @@
 
 /**
  * @swagger
- * /user/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   get:
  *     summary: Get a specific user skill
  *     tags: [Users]
@@ -8664,7 +8664,7 @@
 
 /**
  * @swagger
- * /user/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   patch:
  *     summary: Update an existing skill for the authenticated user.
  *     description: Updates a skill's name, education indices, and work experience indices.
@@ -8775,7 +8775,7 @@
 
 /**
  * @swagger
- * /users/skills/{skillName}:
+ * /api/users/skills/{skillName}:
  *   delete:
  *     summary: Delete a skill from the user's profile
  *     tags: [Users]
@@ -8838,7 +8838,7 @@
 
 /**
  * @swagger
- * /user/skills/endorsements/add-endorsement:
+ * /api/user/skills/endorsements/add-endorsement:
  *   post:
  *     summary: Endorse a user's skill
  *     tags: [Users]
@@ -8897,7 +8897,7 @@
  *       500:
  *         description: Internal Server Error
  *
- * /user/skills/endorsements/remove-endorsement/{skillName}:
+ * /api/user/skills/endorsements/remove-endorsement/{skillName}:
  *   delete:
  *     summary: Remove endorsement from a skill
  *     tags: [Users]
@@ -8963,7 +8963,7 @@
 
 /**
  * @swagger
- * /user/certifications:
+ * /api/user/certifications:
  *   post:
  *     summary: Add certification
  *     tags: [Users]
@@ -8993,7 +8993,7 @@
 
 /**
  * @swagger
- * /user/certifications:
+ * /api/user/certifications:
  *   post:
  *     summary: Add certification
  *     tags: [Users]
@@ -9019,7 +9019,7 @@
 
 /**
  * @swagger
- * /user/privacy-settings:
+ * /api/user/privacy-settings:
  *   patch:
  *     summary: Update profile visibility privacy settings
  *     tags: [Users]
@@ -9048,7 +9048,7 @@
 
 /**
  * @swagger
- * /user/follow/{entityId}:
+ * /api/user/follow/{entityId}:
  *   post:
  *     summary: Follow an entity (user or company)
  *     tags: [Users]
@@ -9132,7 +9132,7 @@
 
 /**
  * @swagger
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Users]
@@ -9152,7 +9152,7 @@
 
 /**
  * @swagger
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Users]
@@ -9205,7 +9205,7 @@
 
 /**
  * @swagger
- * /user/message-requests:
+ * /api/user/message-requests:
  *   post:
  *     summary: Send a message request to a non-connection
  *     tags: [Messaging]
@@ -9716,7 +9716,7 @@
 
 /**
  * @swagger
- * /user/connections/request/{targetUserId}:
+ * /api/user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -9738,7 +9738,7 @@
  *       404:
  *         description: User not found
  * 
- * /user/connections/requests:
+ * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -9768,7 +9768,7 @@
  *                       headline:
  *                         type: string
  *
- * /user/connections/requests/{senderId}:
+ * /api/user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -9794,7 +9794,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /user/connections/{connectionId}:
+ * /api/user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -9810,7 +9810,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /user/follow/{userId}:
+ * /api/user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -9840,7 +9840,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /user/block/{userId}:
+ * /api/user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -9870,7 +9870,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /user/blocked:
+ * /api/user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -9898,7 +9898,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /user/message-requests:
+ * /api/user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -9925,7 +9925,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /user/message-requests/{requestId}:
+ * /api/user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -9963,7 +9963,7 @@
 
 /**
  * @swagger
- * /notifications:
+ * /api/notifications:
  *   get:
  *     summary: Get all notifications
  *     tags: [Notifications]
@@ -10001,7 +10001,7 @@
 
 /**
  * @swagger
- * /notifications/mark-read/{id}:
+ * /api/notifications/mark-read/{id}:
  *   patch:
  *     summary: Mark a notification as read
  *     tags: [Notifications]
@@ -10024,7 +10024,7 @@
 
 /**
  * @swagger
- * /notifications/mark-unread/{id}:
+ * /api/notifications/mark-unread/{id}:
  *   patch:
  *     summary: Mark a notification as unread
  *     tags: [Notifications]
@@ -10047,7 +10047,7 @@
 
 /**
  * @swagger
- * /notifications/unread-count:
+ * /api/notifications/unread-count:
  *   get:
  *     summary: Get count of unread notifications
  *     tags: [Notifications]
@@ -10063,7 +10063,7 @@
 
 /**
  * @swagger
- * /notifications/pause-notifications:
+ * /api/notifications/pause-notifications:
  *   patch:
  *     summary: Pause receiving notifications
  *     tags: [Notifications]
@@ -10087,7 +10087,7 @@
 
 /**
  * @swagger
- * /notifications/resume-notifications:
+ * /api/notifications/resume-notifications:
  *   patch:
  *     summary: Resume receiving notifications
  *     tags: [Notifications]
@@ -10099,7 +10099,7 @@
 
 /**
  * @swagger
- * /notifications/restore-notification/{id}:
+ * /api/notifications/restore-notification/{id}:
  *   patch:
  *     summary: Restore a deleted notification
  *     tags: [Notifications]
@@ -10124,7 +10124,7 @@
 
 /**
  * @swagger
- * /notifications/{id}:
+ * /api/notifications/{id}:
  *   delete:
  *     summary: Soft delete a notification
  *     tags: [Notifications]
@@ -10155,7 +10155,7 @@
 /**
 /**
  * @swagger
- * /user/profile:
+ * /api/user/profile:
  *   patch:
  *     summary: Update user profile intro information
  *     tags: [Users]
@@ -10280,7 +10280,7 @@
 
 /**
  * @swagger
- * /user/contact-info:
+ * /api/user/contact-info:
  *   patch:
  *     summary: Update user contact information
  *     tags: [Users]
@@ -10406,7 +10406,7 @@
 
 /**
  * @swagger
- * /user/about:
+ * /api/user/about:
  *   patch:
  *     summary: Update user about section
  *     tags: [Users]
@@ -10515,7 +10515,7 @@
 
 /**
  * @swagger
- * /search/users:
+ * /api/search/users:
  *   get:
  *     summary: Search for users by name
  *     tags: [Search]
@@ -10637,7 +10637,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/like:
+ * /api/posts/{postId}/like:
  *   get:
  *     summary: Get users who reacted to a post
  *     tags: [Posts]
@@ -10842,7 +10842,7 @@
 
 /**
  * @swagger
- * /comments/{commentId}/like:
+ * /api/comments/{commentId}/like:
  *   get:
  *     summary: Get users who reacted to a comment
  *     tags: [Comments]
@@ -11047,7 +11047,7 @@
 
 /**
  * @swagger
- * /posts/{postId}/reposts:
+ * /api/posts/{postId}/reposts:
  *   get:
  *     summary: Get reposts of a specific post
  *     tags: [Posts]
@@ -11304,7 +11304,7 @@
 
 /**
  * @swagger
- * /user/{userId}/activity:
+ * /api/user/{userId}/activity:
  *   get:
  *     summary: Get posts that a user has posted, reposted, or commented on
  *     tags: [Users, Posts]
@@ -11643,7 +11643,7 @@
 
 /**
  * @swagger
- * /search/jobs:
+ * /api/search/jobs:
  *   get:
  *     summary: Search for jobs with advanced filters
  *     tags: [Search, Jobs]
@@ -11892,7 +11892,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/save:
+ * /api/jobs/{jobId}/save:
  *   post:
  *     summary: Save a job for the authenticated user
  *     tags: [Jobs]
@@ -12046,7 +12046,7 @@
  *                   type: string
  *                   example: "Internal server error details"
  *
- * /jobs/saved:
+ * /api/jobs/saved:
  *   get:
  *     summary: Get all saved jobs for the authenticated user
  *     tags: [Jobs, Users]
@@ -12197,7 +12197,7 @@
 
 /**
  * @swagger
- * /jobs/my-applications:
+ * /api/jobs/my-applications:
  *   get:
  *     summary: Get all job applications for the authenticated user
  *     tags: [Jobs, Users]
@@ -12402,7 +12402,7 @@
 
 /**
  * @swagger
- * /jobs/{jobId}/apply:
+ * /api/jobs/{jobId}/apply:
  *   get:
  *     summary: Get all applications for a specific job
  *     tags: [Jobs, Applications]
@@ -12697,7 +12697,7 @@
 
 /**
  * @swagger
- * /admin/reports:
+ * /api/admin/reports:
  *   get:
  *     summary: Get all reports
  *     tags: [Admin]
@@ -12727,7 +12727,7 @@
 
 /**
  * @swagger
- * /admin/reports/{reportId}:
+ * /api/admin/reports/{reportId}:
  *   get:
  *     summary: Get a specific report
  *     tags: [Admin - Reports]
@@ -12913,7 +12913,7 @@
 
 /**
  * @swagger
- * /admin/jobs:
+ * /api/admin/jobs:
  *   get:
  *     summary: Get flagged jobs
  *     tags: [Admin]
@@ -12933,7 +12933,7 @@
 
 /**
  * @swagger
- * /admin/jobs/{jobId}:
+ * /api/admin/jobs/{jobId}:
  *   delete:
  *     summary: Remove job
  *     tags: [Admin]
@@ -12956,7 +12956,7 @@
 
 /**
  * @swagger
- * /admin/analytics/overview:
+ * /api/admin/analytics/overview:
  *   get:
  *     summary: Get analytics overview (Admin only)
  *     tags: [Admin]
@@ -13201,7 +13201,7 @@
  */
 /**
  * @swagger
- * /user/saved-posts:
+ * /api/user/saved-posts:
  *   get:
  *     summary: Get user's saved posts
  *     tags: [Posts, Users]
@@ -13474,6 +13474,144 @@
  *                   type: string
  *                   example: "Failed to fetch saved posts"
  *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+/**
+ * @swagger
+ * /api/user/default-mode:
+ *   get:
+ *     summary: Get user's UI display mode preference
+ *     tags: [User Settings]
+ *     description: Retrieves the current user's default UI display mode (light or dark)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's display mode retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mode:
+ *                   type: string
+ *                   enum: [light, dark]
+ *                   example: "dark"
+ *                   description: User's current display mode preference
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to fetch display mode"
+ *                 details:
+ *                   type: string
+ *                   example: "Error details"
+ *   patch:
+ *     summary: Update user's UI display mode preference
+ *     tags: [User Settings]
+ *     description: Sets the authenticated user's default UI mode to either light or dark
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - mode
+ *             properties:
+ *               mode:
+ *                 type: string
+ *                 enum: [light, dark]
+ *                 example: "dark"
+ *                 description: The UI mode preference to set
+ *     responses:
+ *       200:
+ *         description: Display mode updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Display mode updated successfully"
+ *                 mode:
+ *                   type: string
+ *                   enum: [light, dark]
+ *                   example: "dark"
+ *                   description: The updated display mode value
+ *       400:
+ *         description: Invalid mode value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid mode value"
+ *                 message:
+ *                   type: string
+ *                   example: "Mode must be either \"light\" or \"dark\""
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update display mode"
+ *                 details:
  *                   type: string
  *                   example: "Error details"
  */

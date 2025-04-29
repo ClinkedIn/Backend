@@ -2694,6 +2694,67 @@ const getRelatedUsers = async (req, res) => {
     }
 };
 
+const setDefaultMode = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { mode } = req.body;
+  
+      // Validate mode value
+      if (!mode || !['light', 'dark'].includes(mode)) {
+        return res.status(400).json({ 
+          error: 'Invalid mode value',
+          message: 'Mode must be either "light" or "dark"'
+        });
+      }
+  
+      // Update user's default mode
+      const updatedUser = await userModel.findByIdAndUpdate(
+        userId,
+        { defaultMode: mode },
+        { new: true, runValidators: true }
+      ).select('defaultMode');
+  
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      res.status(200).json({
+        message: 'Display mode updated successfully',
+        mode: updatedUser.defaultMode
+      });
+  
+    } catch (error) {
+      console.error('Error updating display mode:', error);
+      res.status(500).json({
+        error: 'Failed to update display mode',
+        details: error.message
+      });
+    }
+  };
+
+  const getDefaultMode = async (req, res) => {
+    try {
+      const userId = req.user.id;
+  
+      const user = await userModel.findById(userId).select('defaultMode');
+  
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      res.status(200).json({
+        mode: user.defaultMode
+      });
+  
+    } catch (error) {
+      console.error('Error fetching display mode:', error);
+      res.status(500).json({
+        error: 'Failed to fetch display mode',
+        details: error.message
+      });
+    }
+  };
+
 module.exports = {
     getAllUsers,
     getMe,
@@ -2747,5 +2808,7 @@ module.exports = {
     getMessageRequests,
     handleMessageRequest,
     getRelatedUsers,
-    getSavedPosts
+    getSavedPosts,
+    setDefaultMode,
+    getDefaultMode,
 };

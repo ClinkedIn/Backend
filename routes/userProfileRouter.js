@@ -8,7 +8,6 @@ const user = require('../controllers/userProfileController');
 // 1. STATIC ROUTES FIRST
 router.route('/')
     .get(protect, user.getAllUsers);
-
 router.route('/me')
     .get(protect, user.getMe);
 
@@ -59,7 +58,10 @@ router.route('/skills/:skillName')
 router.route('/skills')
     .get(protect, user.getAllSkills)
     .post(protect, user.addSkill);
-
+    
+router.route('/default-mode')
+    .patch(protect, user.setDefaultMode)
+    .get(protect, user.getDefaultMode);
 // 5. MEDIA ROUTES
 router.route('/pictures/profile-picture')
     .post(protect, upload.single('file'), user.uploadProfilePicture)
