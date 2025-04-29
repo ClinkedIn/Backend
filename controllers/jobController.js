@@ -883,7 +883,7 @@ const getJobApplications = async (req, res) => {
             .find(query)
             .populate(
                 'userId',
-                'firstName lastName email profilePicture headline'
+                'firstName lastName email profilePicture headline resume education workExperience'
             )
             .skip(skipIndex)
             .limit(limitNum)
