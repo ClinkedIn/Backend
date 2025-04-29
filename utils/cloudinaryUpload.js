@@ -42,17 +42,34 @@ const uploadFile = (fileBuffer, type = 'auto') => {
       folder = 'documents';
     }
     cloudinary.uploader.upload_stream(
-      { resource_type: resourceType, folder },
+      { 
+        resource_type: resourceType, 
+        folder,
+        ...(resourceType === 'video' && {
+          eager: [
+            { format: 'mp4', quality: 'auto' }
+          ],
+          eager_async: true
+        })
+      },
       (error, uploadResult) => {
         if (error) {
           console.error('Cloudinary upload error:', error);
           return reject(error);
         }
+        
         const isPdf = uploadResult.format === 'pdf' ||
           type === 'application/pdf' ||
           (typeof type === 'string' && type.includes('/') && type.includes('pdf'));
+        
         console.log('Cloudinary upload successful:', uploadResult.secure_url);
-        if (isPdf) {
+        
+        // For videos, return both original and MP4 URLs
+        if (resourceType === 'video') {
+          resolve({ 
+            url: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url
+          });
+        } else if (isPdf) {
           resolve({ url: `https://docs.google.com/viewer?url=${encodeURIComponent(uploadResult.secure_url)}&embedded=true` });
         } else {
           resolve({ url: uploadResult.secure_url });
