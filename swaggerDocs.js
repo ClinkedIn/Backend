@@ -1,8 +1,8 @@
 /**
  * @swagger
- * /api/user/search:
+ * /user/search:
  *   get:
- *     summary: Search for users
+ *     summary: Search for  user or company  by query
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -72,8 +72,155 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- *
- * /api/user/connections/request/{targetUserId}:
+ * 
+ * 
+ * @swagger
+ * /user/search/users:
+ *   get:
+ *     summary: Search for users by name 
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *     responses:
+ *       200:
+ *         description: List of users matching search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ * 
+ * 
+ * /user/connections:
+ *   get:
+ *     summary: Get user's connections list
+ *     tags: [Connections & Networking]
+ *     description: Retrieve paginated list of user's connections with basic profile information
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 100
+ *         description: Number of connections per page
+ *     responses:
+ *       200:
+ *         description: List of connections retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connections:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: Connection's user ID
+ *                       firstName:
+ *                         type: string
+ *                         description: Connection's first name
+ *                       lastName:
+ *                         type: string
+ *                         description: Connection's last name
+ *                       profilePicture:
+ *                         type: string
+ *                         description: URL to connection's profile picture
+ *                       lastJobTitle:
+ *                         type: string
+ *                         description: Connection's job position
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of connections
+ *                     page:
+ *                       type: integer
+ *                       description: Current page number
+ *                     pages:
+ *                       type: integer
+ *                       description: Total number of pages
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ * /user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -88,16 +235,14 @@
  *     responses:
  *       200:
  *         description: Connection request sent successfully
- *       403:
- *         description: Cannot send connection request due to other user privacy settings
  *       400:
  *         description: Invalid request or already connected
  *       401:
  *         description: Unauthorized
  *       404:
  *         description: User not found
- *
- * /api/user/connections/requests:
+ * 
+ * /user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -127,7 +272,7 @@
  *                       headline:
  *                         type: string
  *
- * /api/user/connections/requests/{senderId}:
+ * /user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -153,7 +298,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /api/user/connections/{connectionId}:
+ * /user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -169,7 +314,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /api/user/follow/{userId}:
+ * /user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -199,7 +344,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /api/user/block/{userId}:
+ * /user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -229,7 +374,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /api/user/blocked:
+ * /user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -257,7 +402,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /api/user/message-requests:
+ * /user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -284,7 +429,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /api/user/message-requests/{requestId}:
+ * /user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -309,7 +454,126 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
+ */  
+/**
+ * @swagger
+ * /user/connections/related-users:
+ *   get:
+ *     summary: Get related users based on common attributes
+ *     tags: [Connections & Networking]
+ *     description: Retrieves a list of users who share similar attributes with the logged-in user, such as industry, education, job title, or common connections
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 30
+ *         description: Number of users per page
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved related users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Related users retrieved successfully"
+ *                 relatedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: User ID
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       firstName:
+ *                         type: string
+ *                         description: User's first name
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         description: User's last name
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         description: URL to user's profile picture
+ *                         example: "https://example.com/profile.jpg"
+ *                       lastJobTitle:
+ *                         type: string
+ *                         description: User's most recent job title
+ *                         example: "Software Engineer"
+ *                       commonConnectionsCount:
+ *                         type: number
+ *                         description: Number of connections in common
+ *                         example: 25
+ *                       matchScore:
+ *                         type: number
+ *                         description: Relevancy score based on common attributes
+ *                         example: 4.5
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of related users
+ *                       example: 100
+ *                     page:
+ *                       type: number
+ *                       description: Current page number
+ *                       example: 1
+ *                     pages:
+ *                       type: number
+ *                       description: Total number of pages
+ *                       example: 4
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get related users"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
+
 /**
  * @swagger
  * components:
@@ -9905,7 +10169,7 @@
 
 /**
  * @swagger
- * /api/users/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   delete:
  *     summary: Delete a skill from the user's profile
  *     tags: [Users]
@@ -14824,8 +15088,6 @@
  *                   example: "Error details"
  */
 
-
-
 /**
  * @swagger
  * /privacy/block-user/{userId}:
@@ -14903,7 +15165,6 @@
  *                   type: string
  *                   example: "Internal server error."
  */
-
 
 /**
  * @swagger
@@ -14983,7 +15244,6 @@
  *                   example: "Internal server error."
  */
 
-
 /**
  * @swagger
  * /privacy/report-user/{userId}:
@@ -15013,22 +15273,22 @@
  *               policy:
  *                 type: string
  *                 enum: [
- *                   "Harassment", 
- *                   "Fraud or scam", 
- *                   "Spam", 
- *                   "Misinformation", 
- *                   "Hateful speech", 
- *                   "Threats or violence", 
- *                   "Self-harm", 
- *                   "Graphic content", 
- *                   "Dangerous or extremist organizations", 
- *                   "Sexual content", 
- *                   "Fake account", 
- *                   "Child exploitation", 
- *                   "Illegal goods and services", 
+ *                   "Harassment",
+ *                   "Fraud or scam",
+ *                   "Spam",
+ *                   "Misinformation",
+ *                   "Hateful speech",
+ *                   "Threats or violence",
+ *                   "Self-harm",
+ *                   "Graphic content",
+ *                   "Dangerous or extremist organizations",
+ *                   "Sexual content",
+ *                   "Fake account",
+ *                   "Child exploitation",
+ *                   "Illegal goods and services",
  *                   "Infringement",
- *                   "This person is impersonating someone", 
- *                   "This account has been hacked", 
+ *                   "This person is impersonating someone",
+ *                   "This account has been hacked",
  *                   "This account is not a real person"
  *                 ]
  *                 example: "This person is impersonating someone"
@@ -15134,19 +15394,19 @@
  *               policy:
  *                 type: string
  *                 enum: [
- *                   "Harassment", 
- *                   "Fraud or scam", 
- *                   "Spam", 
- *                   "Misinformation", 
- *                   "Hateful speech", 
- *                   "Threats or violence", 
- *                   "Self-harm", 
- *                   "Graphic content", 
- *                   "Dangerous or extremist organizations", 
- *                   "Sexual content", 
- *                   "Fake account", 
- *                   "Child exploitation", 
- *                   "Illegal goods and services", 
+ *                   "Harassment",
+ *                   "Fraud or scam",
+ *                   "Spam",
+ *                   "Misinformation",
+ *                   "Hateful speech",
+ *                   "Threats or violence",
+ *                   "Self-harm",
+ *                   "Graphic content",
+ *                   "Dangerous or extremist organizations",
+ *                   "Sexual content",
+ *                   "Fake account",
+ *                   "Child exploitation",
+ *                   "Illegal goods and services",
  *                   "Infringement"
  *                 ]
  *                 example: "Misinformation"
@@ -15232,7 +15492,6 @@
  *                   example: "Internal server error."
  */
 
-
 /**
  * @swagger
  * /privacy/blocked-users:
@@ -15299,7 +15558,6 @@
  *                   example: "Internal server error."
  */
 
-
 /**
  * @swagger
  * /privacy/reported-users:
@@ -15365,7 +15623,6 @@
  *                   type: string
  *                   example: "Internal server error."
  */
-
 
 /**
  * @swagger
@@ -15449,4 +15706,422 @@
  *                 message:
  *                   type: string
  *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /user/saved-posts:
+ *   get:
+ *     summary: Get user's saved posts
+ *     tags: [Posts, Users]
+ *     description: |
+ *       Retrieves all posts saved by the authenticated user with pagination.
+ *       Returns comprehensive post details including creator information, engagement metrics,
+ *       and personalized flags (liked, saved, ownership status).
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of posts per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Saved posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier of the post
+ *                       userId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the user who created the post (null for company posts)
+ *                       companyId:
+ *                         type: object
+ *                         nullable: true
+ *                         description: Company details (if posted by a company)
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f123456791"
+ *                           name:
+ *                             type: string
+ *                             example: "Tech Company Inc."
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                       firstName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Jane"
+ *                         description: First name of the post creator (null for company posts)
+ *                       lastName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Doe"
+ *                         description: Last name of the post creator (null for company posts)
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Headline/job title of the post creator
+ *                       profilePicture:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the post creator's profile picture
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Excited to share my recent project!"
+ *                         description: Text content of the post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/post1.jpg"]
+ *                         description: Media files attached to the post
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 10
+ *                           support:
+ *                             type: number
+ *                             example: 5
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 12
+ *                           insightful:
+ *                             type: number
+ *                             example: 3
+ *                           funny:
+ *                             type: number
+ *                             example: 2
+ *                           total:
+ *                             type: number
+ *                             example: 40
+ *                         description: Counts of reactions by type
+ *                       commentCount:
+ *                         type: number
+ *                         example: 7
+ *                         description: Number of comments on this post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 3
+ *                         description: Number of times this post has been reposted
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-04-15T14:30:00.000Z"
+ *                         description: When the post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456792"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "John"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Smith"
+ *                             companyName:
+ *                               type: string
+ *                               nullable: true
+ *                               example: null
+ *                         description: Users tagged in the post
+ *                       whoCanSee:
+ *                         type: string
+ *                         enum: [anyone, connections]
+ *                         default: anyone
+ *                         example: "anyone"
+ *                         description: Privacy setting for post visibility
+ *                       whoCanComment:
+ *                         type: string
+ *                         enum: [anyone, connections, noOne]
+ *                         default: anyone
+ *                         example: "anyone"
+ *                         description: Setting for who can comment on the post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether this post is a repost
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the requesting user has saved this post (always true for this endpoint)
+ *                       isLiked:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the requesting user has liked this post
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the requesting user is the creator of this post
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456793"
+ *                         description: ID of the repost (only present if isRepost is true)
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456794"
+ *                         description: ID of the user who reposted (only present if isRepost is true)
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "Mike"
+ *                         description: First name of the reposter (only present if isRepost is true)
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Johnson"
+ *                         description: Last name of the reposter (only present if isRepost is true)
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/reposter.jpg"
+ *                         description: Profile picture of the reposter (only present if isRepost is true)
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Product Manager at Tech Co"
+ *                         description: Headline of the reposter (only present if isRepost is true)
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great insights here!"
+ *                         description: Text added by the reposter (only present if isRepost is true)
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-04-16T09:15:00.000Z"
+ *                         description: When the repost was created (only present if isRepost is true)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of saved posts
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of posts per page
+ *                     pages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages after the current one
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are pages before the current one
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to fetch saved posts"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /api/user/default-mode:
+ *   get:
+ *     summary: Get user's UI display mode preference
+ *     tags: [User Settings]
+ *     description: Retrieves the current user's default UI display mode (light or dark)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's display mode retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mode:
+ *                   type: string
+ *                   enum: [light, dark]
+ *                   example: "dark"
+ *                   description: User's current display mode preference
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to fetch display mode"
+ *                 details:
+ *                   type: string
+ *                   example: "Error details"
+ *   patch:
+ *     summary: Update user's UI display mode preference
+ *     tags: [User Settings]
+ *     description: Sets the authenticated user's default UI mode to either light or dark
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - mode
+ *             properties:
+ *               mode:
+ *                 type: string
+ *                 enum: [light, dark]
+ *                 example: "dark"
+ *                 description: The UI mode preference to set
+ *     responses:
+ *       200:
+ *         description: Display mode updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Display mode updated successfully"
+ *                 mode:
+ *                   type: string
+ *                   enum: [light, dark]
+ *                   example: "dark"
+ *                   description: The updated display mode value
+ *       400:
+ *         description: Invalid mode value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Invalid mode value"
+ *                 message:
+ *                   type: string
+ *                   example: "Mode must be either \"light\" or \"dark\""
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to update display mode"
+ *                 details:
+ *                   type: string
+ *                   example: "Error details"
  */

@@ -25,7 +25,7 @@ router
 router
     .route('/:companyId/post')
     .get(protect, companyController.getCompanyPosts)
-    .post(protect, companyController.createPost);
+    .post(protect, upload.array('files'), companyController.createPost);
 
 router
     .route('/:companyId/admin')

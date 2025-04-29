@@ -8,7 +8,6 @@ const user = require('../controllers/userProfileController');
 // 1. STATIC ROUTES FIRST
 router.route('/')
     .get(protect, user.getAllUsers);
-
 router.route('/me')
     .get(protect, user.getMe);
 
@@ -59,7 +58,10 @@ router.route('/skills/:skillName')
 router.route('/skills')
     .get(protect, user.getAllSkills)
     .post(protect, user.addSkill);
-
+    
+router.route('/default-mode')
+    .patch(protect, user.setDefaultMode)
+    .get(protect, user.getDefaultMode);
 // 5. MEDIA ROUTES
 router.route('/pictures/profile-picture')
     .post(protect, upload.single('file'), user.uploadProfilePicture)
@@ -95,14 +97,14 @@ router.route('/connections/request/:targetUserId')
     .post(protect, user.sendConnectionRequest);  // Send connection request
 
 router.route('/connections/requests')
-    .get( protect,user.getPendingRequests);  // Get pending connection requests
+    .get(protect, user.getPendingRequests);  // Get pending connection requests
 
 router.route('/connections/requests/:senderId')
     .patch(protect, user.handleConnectionRequest)  // Accept/Decline connection request
-    
-    
+
+
 router.route('/connections')
-        .get(protect, user.getConnections);  // Get list of connections
+    .get(protect, user.getConnectionsList);  // Get list of connections
 
 router.route('/connections/:connectionId')
     .delete(protect, user.removeConnection);  // Remove an existing connection
@@ -112,8 +114,8 @@ router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
 
-    router.route('/blocked')
-        .get(protect, user.getBlockedUsers);
+router.route('/blocked')
+    .get(protect, user.getBlockedUsers);
 // Blocking functionality
 router.route('/block/:userId')
     .post(protect, user.blockUser)
@@ -122,12 +124,13 @@ router.route('/block/:userId')
 
 // Messaging requests for non-connections (as per /user/message-requests in Swagger)
 router.route('/message-requests')
-.get(protect, user.getMessageRequests);  // Get list of message requests
+    .get(protect, user.getMessageRequests);  // Get list of message requests
 
 router.route('/message-requests/:requestId')
-.patch(protect, user.handleMessageRequest)  // Accept/decline message request
-.post(protect, user.sendMessageRequest);// Send message request to non-connection
+    .patch(protect, user.handleMessageRequest)  // Accept/decline message request
+    .post(protect, user.sendMessageRequest);// Send message request to non-connection
 
+router.get('/saved-posts', protect, user.getSavedPosts);
 // Keep existing routes...
 router.route('/education')
     .post(protect, upload.single('file'), user.addEducation)
@@ -140,6 +143,8 @@ router.route('/:userId')
     .get(protect, user.getUserProfile);
 
 
+router.route('/connections/related-users')
+    .get(protect, user.getRelatedUsers);
 
 
 
@@ -148,5 +153,4 @@ router.route('/:userId')
 
 
 
-    
 module.exports = router;
