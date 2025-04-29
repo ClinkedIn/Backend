@@ -2,7 +2,7 @@
  * @swagger
  * /api/user/search:
  *   get:
- *     summary: Search for  user or company  by query
+ *     summary: Search for user or company  by query
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -72,154 +72,11 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
- * 
+ */
+
+/**
+ *
  * @swagger
- * /api/user/search/users:
- *   get:
- *     summary: Search for users by name 
- *     tags: [Connections & Networking]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: query
- *         schema:
- *           type: string
- *         description: General search query
- *       - in: query
- *         name: company
- *         schema:
- *           type: string
- *         description: Filter by company name
- *       - in: query
- *         name: industry
- *         schema:
- *           type: string
- *         description: Filter by industry
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Results per page
- *     responses:
- *       200:
- *         description: List of users matching search criteria
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                       firstName:
- *                         type: string
- *                       lastName:
- *                         type: string
- *                       company:
- *                         type: string
- *                       industry:
- *                         type: string
- *                       profilePicture:
- *                         type: string
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: number
- *                     page:
- *                       type: number
- *                     pages:
- *                       type: number
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Server error
- * 
- * 
- * /api/user/connections:
- *   get:
- *     summary: Get user's connections list
- *     tags: [Connections & Networking]
- *     description: Retrieve paginated list of user's connections with basic profile information
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number for pagination
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 100
- *         description: Number of connections per page
- *     responses:
- *       200:
- *         description: List of connections retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 connections:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         description: Connection's user ID
- *                       firstName:
- *                         type: string
- *                         description: Connection's first name
- *                       lastName:
- *                         type: string
- *                         description: Connection's last name
- *                       profilePicture:
- *                         type: string
- *                         description: URL to connection's profile picture
- *                       lastJobTitle:
- *                         type: string
- *                         description: Connection's job position
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                       description: Total number of connections
- *                     page:
- *                       type: integer
- *                       description: Current page number
- *                     pages:
- *                       type: integer
- *                       description: Total number of pages
- *       401:
- *         description: Unauthorized - invalid or missing token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
  * /api/user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
@@ -235,13 +92,19 @@
  *     responses:
  *       200:
  *         description: Connection request sent successfully
+ *       403:
+ *         description: Cannot send connection request due to other user privacy settings
  *       400:
  *         description: Invalid request or already connected
  *       401:
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ */
+
+/**
+ *
+ * @swagger
  * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
@@ -271,7 +134,10 @@
  *                         type: string
  *                       headline:
  *                         type: string
- *
+ */
+
+/**
+ * @swagger
  * /api/user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
@@ -454,126 +320,7 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
- */  
-/**
- * @swagger
- * /api/user/connections/related-users:
- *   get:
- *     summary: Get related users based on common attributes
- *     tags: [Connections & Networking]
- *     description: Retrieves a list of users who share similar attributes with the logged-in user, such as industry, education, job title, or common connections
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number for pagination
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 30
- *         description: Number of users per page
- *     responses:
- *       200:
- *         description: Successfully retrieved related users
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Related users retrieved successfully"
- *                 relatedUsers:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         description: User ID
- *                         example: "60d21b4667d0d8992e610c85"
- *                       firstName:
- *                         type: string
- *                         description: User's first name
- *                         example: "John"
- *                       lastName:
- *                         type: string
- *                         description: User's last name
- *                         example: "Doe"
- *                       profilePicture:
- *                         type: string
- *                         description: URL to user's profile picture
- *                         example: "https://example.com/profile.jpg"
- *                       lastJobTitle:
- *                         type: string
- *                         description: User's most recent job title
- *                         example: "Software Engineer"
- *                       commonConnectionsCount:
- *                         type: number
- *                         description: Number of connections in common
- *                         example: 25
- *                       matchScore:
- *                         type: number
- *                         description: Relevancy score based on common attributes
- *                         example: 4.5
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: number
- *                       description: Total number of related users
- *                       example: 100
- *                     page:
- *                       type: number
- *                       description: Current page number
- *                       example: 1
- *                     pages:
- *                       type: number
- *                       description: Total number of pages
- *                       example: 4
- *       401:
- *         description: Unauthorized - invalid or missing token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Not authorized, no token"
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "User not found"
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Failed to get related users"
- *                 error:
- *                   type: string
- *                   example: "Internal server error details"
  */
-
 /**
  * @swagger
  * components:
@@ -1043,7 +790,6 @@
  *
  */
 
-
 // ******************************************* Posts APIs ************************************* /api//
 
 /**
@@ -1392,6 +1138,9 @@
  *                           __v:
  *                             type: number
  *                             example: 0
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
  *                       isRepost:
  *                         type: boolean
  *                         example: true
@@ -1634,6 +1383,9 @@
  *                         __v:
  *                           type: number
  *                           example: 0
+ *                     isMine:
+ *                       type: boolean
+ *                       example: true
  *                     isRepost:
  *                       type: boolean
  *                       example: true
@@ -1691,7 +1443,15 @@
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "This post is only visible to the author's connections"
+ *             examples:
+ *               connectionsOnly:
+ *                 summary: Post is only visible to connections
+ *                 value:
+ *                   message: "This post is only visible to the author's connections"
+ *               blocked:
+ *                 summary: User is blocked by post author
+ *                 value:
+ *                   message: "User is blocked by the author of this post"
  *       404:
  *         description: Post not found
  *         content:
@@ -2625,10 +2385,6 @@
  *                 type: string
  *                 description: Text content of the comment
  *                 example: "This is a great post! Thanks for sharing."
- *               commentAttachment:
- *                 type: string
- *                 description: URL of an image (alternative to file upload)
- *                 example: "https://example.com/image.jpg"
  *               file:
  *                 type: string
  *                 format: binary
@@ -4161,7 +3917,7 @@
 
 /**
  * @swagger
- * /api/chats/group-chat:
+ * /api/api/chats/group-chat:
  *   post:
  *     summary: Create a new group chat
  *     description: Creates a new group chat with specified members and the authenticated user as admin
@@ -4223,7 +3979,7 @@
 
 /**
  * @swagger
- * /api/chats/direct-chat/{chatId}:
+ * /api/api/chats/direct-chat/{chatId}:
  *   get:
  *     summary: Get a direct chat by ID
  *     description: Retrieves a direct chat by its ID, including message history and other user details. Also marks messages as read for the authenticated user.
@@ -4328,7 +4084,7 @@
 
 /**
  * @swagger
- * /api/chats/all-chats:
+ * /api/api/chats/all-chats:
  *   get:
  *     summary: Get all chats for the authenticated user
  *     description: Returns all direct and group chats for the authenticated user, with preview information including latest message and unread counts.
@@ -4371,7 +4127,7 @@
 
 /**
  * @swagger
- * /api/chats/group/{chatId}:
+ * /api/api/chats/group/{chatId}:
  *   get:
  *     summary: Get a group chat by ID
  *     description: Retrieves a group chat by its ID, including message history and member details
@@ -4405,7 +4161,7 @@
 
 /**
  * @swagger
- * /api/chats/direct/{chatId}:
+ * /api/api/chats/direct/{chatId}:
  *   put:
  *     summary: Update a direct chat
  *     description: Updates direct chat settings such as muting, archiving or starring
@@ -4455,7 +4211,7 @@
 
 /**
  * @swagger
- * /api/chats/group/{chatId}:
+ * /api/api/chats/group/{chatId}:
  *   put:
  *     summary: Update a group chat
  *     description: Updates group chat settings or details such as name, members, or user-specific settings
@@ -4508,7 +4264,7 @@
 
 /**
  * @swagger
- * /api/chats/mark-as-read/{chatId}:
+ * /api/api/chats/mark-as-read/{chatId}:
  *   patch:
  *     summary: Mark a chat as read
  *     description: Marks all messages in a chat as read for the authenticated user by setting unread count to zero
@@ -4546,7 +4302,7 @@
 
 /**
  * @swagger
- * /api/chats/mark-as-unread/{chatId}:
+ * /api/api/chats/mark-as-unread/{chatId}:
  *   patch:
  *     summary: Mark a chat as unread
  *     description: Marks a chat as unread for the authenticated user by incrementing the unread count
@@ -4950,26 +4706,232 @@
  * @swagger
  * /api/jobs:
  *   post:
- *     summary: Create a new job (NOT IMPLEMENTED YET, DON'T USE) 
+ *     summary: Create a new job
  *     tags: [Jobs]
- *     description: Create a new job posting
+ *     description: Create a new job posting for a company you own or administer
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateJobRequest'
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - companyId
+ *               - title
+ *               - industry
+ *               - workplaceType
+ *               - jobLocation
+ *               - jobType
+ *               - description
+ *               - applicationEmail
+ *             properties:
+ *               companyId:
+ *                 type: string
+ *                 description: ID of the company for which the job is being created
+ *                 example: "6579e4e5aa22b80e54a0d0e6"
+ *               title:
+ *                 type: string
+ *                 description: Job title
+ *                 example: "Senior Software Engineer"
+ *               industry:
+ *                 type: string
+ *                 description: Industry category for the job
+ *                 example: "Information Technology"
+ *               workplaceType:
+ *                 type: string
+ *                 description: Type of workplace
+ *                 enum: ["Onsite", "Hybrid", "Remote"]
+ *                 example: "Remote"
+ *               jobLocation:
+ *                 type: string
+ *                 example: "San Francisco, CA"
+ *               jobType:
+ *                 type: string
+ *                 description: Type of employment
+ *                 enum: ["Full Time", "Part Time", "Contract", "Temporary", "Other", "Volunteer", "Internship"]
+ *                 example: "Full Time"
+ *               description:
+ *                 type: string
+ *                 description: Detailed job description
+ *                 example: "We are looking for a Senior Software Engineer with 5+ years of experience in React and Node.js..."
+ *               applicationEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email where applications will be sent
+ *                 example: "careers@techcompany.com"
+ *               screeningQuestions:
+ *                 type: array
+ *                 description: Optional screening questions for applicants
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - question
+ *                   properties:
+ *                     question:
+ *                       type: string
+ *                       description: Question type
+ *                       enum: [
+ *                         "Background Check",
+ *                         "Driver's License",
+ *                         "Drug Test",
+ *                         "Education",
+ *                         "Expertise with Skill",
+ *                         "Hybrid Work",
+ *                         "Industry Experience",
+ *                         "Language",
+ *                         "Location",
+ *                         "Onsite Work",
+ *                         "Remote Work",
+ *                         "Urgent Hiring Need",
+ *                         "Visa Status",
+ *                         "Work Authorization",
+ *                         "Work Experience",
+ *                         "Custom Question"
+ *                       ]
+ *                       example: "Work Experience"
+ *                     idealAnswer:
+ *                       type: string
+ *                       description: The ideal or required answer to the question
+ *                       example: "5"
+ *                     mustHave:
+ *                       type: boolean
+ *                       description: Whether this qualification is mandatory
+ *                       example: true
+ *               autoRejectMustHave:
+ *                 type: boolean
+ *                 description: Automatically reject applications that don't meet must-have criteria
+ *                 default: false
+ *                 example: true
+ *               rejectPreview:
+ *                 type: string
+ *                 description: Preview message for rejected applications
+ *                 example: "Thank you for your interest, but this position requires experience that matches our needs."
  *     responses:
  *       201:
  *         description: Job created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Job created successfully"
+ *                 job:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "60d21b4667d0d8992e610c85"
+ *                     title:
+ *                       type: string
+ *                       example: "Senior Software Engineer"
+ *                     company:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: "60d21b4667d0d8992e610c84"
+ *                         name:
+ *                           type: string
+ *                           example: "Tech Solutions Inc."
+ *                     industry:
+ *                       type: string
+ *                       example: "Information Technology"
+ *                     workplaceType:
+ *                       type: string
+ *                       example: "Remote"
+ *                     jobLocation:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     jobType:
+ *                       type: string
+ *                       example: "Full Time"
+ *                     description:
+ *                       type: string
+ *                       example: "We are looking for a Senior Software Engineer with 5+ years of experience in React and Node.js..."
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-09-30T14:48:00.000Z"
  *       400:
- *         description: Bad request, invalid input
+ *         description: Bad request - validation failed
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingCompanyId:
+ *                 summary: Missing company ID
+ *                 value:
+ *                   message: "Company ID is required to create a job"
+ *               invalidCompanyId:
+ *                 summary: Invalid company ID format
+ *                 value:
+ *                   message: "Invalid company ID format"
+ *               missingRequiredField:
+ *                 summary: Missing required field
+ *                 value:
+ *                   message: "Title is required to create a job"
+ *               invalidWorkplaceType:
+ *                 summary: Invalid workplace type
+ *                 value:
+ *                   message: "Workplace type must be one of: Onsite, Hybrid, Remote"
+ *               invalidJobType:
+ *                 summary: Invalid job type
+ *                 value:
+ *                   message: "Job type must be one of: Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship"
+ *               invalidEmail:
+ *                 summary: Invalid email format
+ *                 value:
+ *                   message: "Please provide a valid application email address"
+ *               invalidQuestions:
+ *                 summary: Invalid screening questions
+ *                 value:
+ *                   message: "Screening questions must be an array"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user doesn't have permission for this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized. You can only create jobs for companies you own or administer"
+ *       404:
+ *         description: Company not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Company not found"
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create job"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
  *
  *   get:
  *     summary: Retrieve all jobs
@@ -5397,7 +5359,6 @@
  *         description: Internal server error
  */
 // *********************************** Company APIs ***************************************//
-/**
 
 /**
  * @swagger
@@ -5405,31 +5366,194 @@
  *   post:
  *     summary: Create a new company
  *     tags: [Companies]
- *     description: Create a new company profile
+ *     description: Create a new company profile. Requires authentication. The creator becomes the owner and admin.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateCompanyRequest'
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - address
+ *               - industry
+ *               - organizationSize
+ *               - organizationType
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Company name
+ *                 example: "Acme Corporation"
+ *               address:
+ *                 type: string
+ *                 description: Unique company address (will be slugified)
+ *                 example: "acme-corporation"
+ *               website:
+ *                 type: string
+ *                 description: Company website URL
+ *                 example: "https://www.acmecorp.com"
+ *               industry:
+ *                 type: string
+ *                 description: Company industry
+ *                 example: "Technology"
+ *               organizationSize:
+ *                 type: string
+ *                 enum: [
+ *                   "Self-employed",
+ *                   "1-10 employees",
+ *                   "11-50 employees",
+ *                   "51-200 employees",
+ *                   "201-500 employees",
+ *                   "501-1,000 employees",
+ *                   "1,001-5,000 employees",
+ *                   "5,001-10,000 employees",
+ *                   "10,001+ employees"
+ *                 ]
+ *                 description: Size of the organization
+ *                 example: "51-200 employees"
+ *               organizationType:
+ *                 type: string
+ *                 enum: [
+ *                   "Public Company",
+ *                   "Self-Employed",
+ *                   "Government Agency",
+ *                   "Non-Profit",
+ *                   "Privately Held",
+ *                   "Partnership",
+ *                   "Sole Proprietorship"
+ *                 ]
+ *                 description: Type of organization
+ *                 example: "Privately Held"
+ *               tagLine:
+ *                 type: string
+ *                 description: Company tagline or slogan
+ *                 example: "Innovation for the future"
+ *               location:
+ *                 type: string
+ *                 description: Physical location of the company
+ *                 example: "San Francisco, CA"
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Company logo image file
  *     responses:
  *       201:
  *         description: Company created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
+ *               type: object
+ *               properties:
+ *                 company:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                     name:
+ *                       type: string
+ *                       example: "Acme Corporation"
+ *                     address:
+ *                       type: string
+ *                       example: "acme-corporation"
+ *                     website:
+ *                       type: string
+ *                       example: "https://www.acmecorp.com"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     tagLine:
+ *                       type: string
+ *                       example: "Innovation for the future"
+ *                     logo:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1234/acme-logo.jpg"
+ *                     industry:
+ *                       type: string
+ *                       example: "Technology"
+ *                     organizationSize:
+ *                       type: string
+ *                       example: "51-200 employees"
+ *                     followersCount:
+ *                       type: integer
+ *                       example: 0
+ *                 userRelationship:
+ *                   type: string
+ *                   enum: [owner, admin, follower, visitor]
+ *                   example: "owner"
+ *                 pageURL:
+ *                   type: string
+ *                   example: "https://example.com/companies/acme-corporation"
+ *                 message:
+ *                   type: string
+ *                   example: "Company created successfully"
  *       400:
- *         description: Bad request, invalid input
+ *         description: Bad request - Missing required fields or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "All fields are required"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  *
  *   get:
  *     summary: Retrieve all companies
  *     tags: [Companies]
- *     description: Retrieve a list of all companies
+ *     description: Retrieve a paginated list of all companies with filtering, sorting, and pagination options.
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of companies per page
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         description: Sort field(s), prefix with - for descending order (e.g. -name,industry)
+ *       - in: query
+ *         name: fields
+ *         schema:
+ *           type: string
+ *         description: Comma-separated list of fields to include in the response
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter companies by industry
  *     responses:
  *       200:
  *         description: List of companies retrieved successfully
@@ -5438,9 +5562,57 @@
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Company'
+ *                 type: object
+ *                 properties:
+ *                   company:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       name:
+ *                         type: string
+ *                         example: "Acme Corporation"
+ *                       address:
+ *                         type: string
+ *                         example: "acme-corporation"
+ *                       website:
+ *                         type: string
+ *                         example: "https://www.acmecorp.com"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                       tagLine:
+ *                         type: string
+ *                         example: "Innovation for the future"
+ *                       logo:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1234/acme-logo.jpg"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       organizationSize:
+ *                         type: string
+ *                         example: "51-200 employees"
+ *                       followersCount:
+ *                         type: integer
+ *                         example: 42
+ *                   userRelationship:
+ *                     type: string
+ *                     enum: [owner, admin, follower, visitor]
+ *                     example: "visitor"
+ *       404:
+ *         description: No companies found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No companies found"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
  *       500:
  *         description: Internal server error
  */
@@ -5451,7 +5623,7 @@
  *   get:
  *     summary: Retrieve a specific company
  *     tags: [Companies]
- *     description: Retrieve details of a company by its ID
+ *     description: Retrieve details of a company by its ID or address slug. Also tracks visitor analytics.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5460,25 +5632,85 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the company to retrieve
+ *         description: The ID or address slug of the company to retrieve
+ *         example: "acme-corporation"
  *     responses:
  *       200:
  *         description: Company details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
+ *               type: object
+ *               properties:
+ *                 company:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                     name:
+ *                       type: string
+ *                       example: "Acme Corporation"
+ *                     address:
+ *                       type: string
+ *                       example: "acme-corporation"
+ *                     website:
+ *                       type: string
+ *                       example: "https://www.acmecorp.com"
+ *                     location:
+ *                       type: string
+ *                       example: "San Francisco, CA"
+ *                     tagLine:
+ *                       type: string
+ *                       example: "Innovation for the future"
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g9h"
+ *                     logo:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/example/image/upload/v1234/acme-logo.jpg"
+ *                     industry:
+ *                       type: string
+ *                       example: "Technology"
+ *                     organizationSize:
+ *                       type: string
+ *                       example: "51-200 employees"
+ *                     followersCount:
+ *                       type: integer
+ *                       example: 42
+ *                 userRelationship:
+ *                   type: string
+ *                   enum: [owner, admin, follower, visitor]
+ *                   example: "visitor"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
  *       404:
  *         description: Company not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Company not found"
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  *
- *   put:
+ *   patch:
  *     summary: Update a company
  *     tags: [Companies]
- *     description: Update details of an existing company profile
+ *     description: Update a company's details. Only the owner or admin can perform this action.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5489,18 +5721,118 @@
  *           type: string
  *         description: The ID of the company to update
  *     requestBody:
- *       $ref: '#/components/requestBodies/CreateCompanyRequest'
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Company name
+ *               address:
+ *                 type: string
+ *                 description: Unique company address (will be slugified)
+ *               website:
+ *                 type: string
+ *                 description: Company website URL
+ *               industry:
+ *                 type: string
+ *                 description: Company industry
+ *               organizationSize:
+ *                 type: string
+ *                 enum: [
+ *                   "Self-employed",
+ *                   "1-10 employees",
+ *                   "11-50 employees",
+ *                   "51-200 employees",
+ *                   "201-500 employees",
+ *                   "501-1,000 employees",
+ *                   "1,001-5,000 employees",
+ *                   "5,001-10,000 employees",
+ *                   "10,001+ employees"
+ *                 ]
+ *                 description: Size of the organization
+ *               organizationType:
+ *                 type: string
+ *                 enum: [
+ *                   "Public Company",
+ *                   "Self-Employed",
+ *                   "Government Agency",
+ *                   "Non-Profit",
+ *                   "Privately Held",
+ *                   "Partnership",
+ *                   "Sole Proprietorship"
+ *                 ]
+ *                 description: Type of organization
+ *               tagLine:
+ *                 type: string
+ *                 description: Company tagline or slogan
+ *               location:
+ *                 type: string
+ *                 description: Physical location of the company
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Company logo image file
  *     responses:
  *       200:
  *         description: Company updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
+ *               type: object
+ *               properties:
+ *                 company:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *                     website:
+ *                       type: string
+ *                     location:
+ *                       type: string
+ *                     tagLine:
+ *                       type: string
+ *                     logo:
+ *                       type: string
+ *                     industry:
+ *                       type: string
+ *                     organizationSize:
+ *                       type: string
+ *                     followersCount:
+ *                       type: integer
+ *                 userRelationship:
+ *                   type: string
+ *                   enum: [owner, admin, follower, visitor]
+ *                 pageURL:
+ *                   type: string
+ *                   example: "https://example.com/companies/acme-corporation"
  *       400:
- *         description: Bad request, invalid input
+ *         description: Bad request - Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid organization size"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to update this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized to update this company"
  *       404:
  *         description: Company not found
  *       500:
@@ -5509,7 +5841,7 @@
  *   delete:
  *     summary: Delete a company
  *     tags: [Companies]
- *     description: Delete a company profile by its ID
+ *     description: Soft delete a company profile (marks as deleted but doesn't remove from database). Only the owner or admin can perform this action.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5520,10 +5852,31 @@
  *           type: string
  *         description: The ID of the company to delete
  *     responses:
- *       200:
+ *       204:
  *         description: Company deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: null
+ *                   example: null
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to delete this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized to delete this company"
  *       404:
  *         description: Company not found
  *       500:
@@ -5536,7 +5889,7 @@
  *   post:
  *     summary: Follow a company
  *     tags: [Companies]
- *     description: Follow a company by adding a user to the company's followers list
+ *     description: Follow a company by adding the authenticated user to the company's followers list
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5546,37 +5899,46 @@
  *         schema:
  *           type: string
  *         description: The ID of the company to follow
- *     requestBody:
- *       description: User ID of the follower
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID of the user who wants to follow the company
  *     responses:
  *       200:
  *         description: Company followed successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully followed the company"
  *       400:
- *         description: Bad request, invalid input or user already following
+ *         description: Bad request - Already following the company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are already following this company"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
  *       404:
- *         description: Company not found
+ *         description: Company or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Company not found"
  *       500:
  *         description: Internal server error
  *
  *   delete:
  *     summary: Unfollow a company
  *     tags: [Companies]
- *     description: Remove a user from the company's followers list
+ *     description: Remove the authenticated user from the company's followers list
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5586,41 +5948,38 @@
  *         schema:
  *           type: string
  *         description: The ID of the company to unfollow
- *     requestBody:
- *       description: User ID of the follower
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID of the user who wants to unfollow the company
  *     responses:
  *       200:
  *         description: Company unfollowed successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Successfully unfollowed the company"
  *       400:
- *         description: Bad request, invalid input
+ *         description: Bad request - Not following the company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not following this company"
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
  *       404:
- *         description: Company not found
+ *         description: Company or user not found
  *       500:
  *         description: Internal server error
- */
-
-/**
- * @swagger
- * /api/companies/{companyId}/visit:
- *   post:
- *     summary: Add a visitor to a company
+ *
+ *   get:
+ *     summary: Get company followers
  *     tags: [Companies]
- *     description: Record a visit to a company's profile by a user
+ *     description: Retrieve a paginated list of followers for a company. Only available to company admins.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -5629,34 +5988,778 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the company being visited
- *     requestBody:
- *       description: User ID of the visitor
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID of the user who visited the company
+ *         description: The ID of the company
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of followers per page (max 50)
  *     responses:
  *       200:
- *         description: Visitor added successfully
+ *         description: Company followers retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Company'
- *       400:
- *         description: Bad request, invalid input
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Followers fetched successfully"
+ *                 followers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1234/profile.jpg"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       bio:
+ *                         type: string
+ *                         example: "Software Engineer with 5+ years of experience"
+ *                       followedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-04-15T10:30:00.000Z"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 42
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       example: 5
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
  *       401:
- *         description: Unauthorized, invalid or missing token
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to see followers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized to see followers of this company"
  *       404:
  *         description: Company not found
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/companies/{companyId}/admin:
+ *   post:
+ *     summary: Add a company admin
+ *     tags: [Companies]
+ *     description: Add a user as an admin to the company. Only the company owner can perform this action.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID to be added as admin
+ *                 example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *     responses:
+ *       200:
+ *         description: User added as admin successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User added as admin successfully"
+ *                 admins:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["615f5c6e1a2b3c4d5e6f7g8h", "615f5c6e1a2b3c4d5e6f7g9h"]
+ *       400:
+ *         description: Bad request - User ID missing or user already an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User is already an admin of this company"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to add admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Only the owner can add admins"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ *
+ *   delete:
+ *     summary: Remove a company admin
+ *     tags: [Companies]
+ *     description: Remove a user from company admin role. Only the company owner can perform this action.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: User ID to be removed as admin
+ *                 example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *     responses:
+ *       200:
+ *         description: User removed as admin successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User removed as admin successfully"
+ *                 admins:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: ["615f5c6e1a2b3c4d5e6f7g9h"]
+ *       400:
+ *         description: Bad request - User ID missing or user not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User is not an admin of this company"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to remove admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Only the owner can remove admins"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * api/companies/{companyId}/post:
+ *   post:
+ *     summary: Create a company post
+ *     tags: [Companies, Posts]
+ *     description: Create a new post for a company. Only the company owner or admins can create posts.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the company to create a post for
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - description
+ *             properties:
+ *               description:
+ *                 type: string
+ *                 description: Content of the post
+ *                 example: "We're excited to announce our new product launch!"
+ *               taggedUsers:
+ *                 type: array
+ *                 description: Array of users to tag in the post
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                     userType:
+ *                       type: string
+ *                       enum: [User, Company]
+ *                       example: "User"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *                     companyName:
+ *                       type: string
+ *                       example: "Acme Inc"
+ *               whoCanSee:
+ *                 type: string
+ *                 enum: [anyone, connections]
+ *                 default: anyone
+ *                 description: Visibility setting for the post
+ *               whoCanComment:
+ *                 type: string
+ *                 enum: [anyone, connections, noOne]
+ *                 default: anyone
+ *                 description: Comment permission setting for the post
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Image or video attachments for the post (max 10)
+ *     responses:
+ *       201:
+ *         description: Post created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post created successfully"
+ *                 post:
+ *                   type: object
+ *                   properties:
+ *                     postId:
+ *                       type: string
+ *                       example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                     companyId:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           example: "615f5c6e1a2b3c4d5e6f7g8i"
+ *                         name:
+ *                           type: string
+ *                           example: "Acme Corporation"
+ *                         address:
+ *                           type: string
+ *                           example: "acme-corporation"
+ *                         logo:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/example/image/upload/v1234/acme-logo.jpg"
+ *                         industry:
+ *                           type: string
+ *                           example: "Technology"
+ *                         organizationSize:
+ *                           type: string
+ *                           example: "51-200 employees"
+ *                         organizationType:
+ *                           type: string
+ *                           example: "Privately Held"
+ *                     postDescription:
+ *                       type: string
+ *                       example: "We're excited to announce our new product launch!"
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1234/post-image.jpg"
+ *                     impressionTypes:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     impressionCounts:
+ *                       type: object
+ *                       properties:
+ *                         like:
+ *                           type: number
+ *                           example: 0
+ *                         support:
+ *                           type: number
+ *                           example: 0
+ *                         celebrate:
+ *                           type: number
+ *                           example: 0
+ *                         love:
+ *                           type: number
+ *                           example: 0
+ *                         insightful:
+ *                           type: number
+ *                           example: 0
+ *                         funny:
+ *                           type: number
+ *                           example: 0
+ *                         total:
+ *                           type: number
+ *                           example: 0
+ *                     commentCount:
+ *                       type: number
+ *                       example: 0
+ *                     repostCount:
+ *                       type: number
+ *                       example: 0
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-05-20T15:30:45.123Z"
+ *                     taggedUsers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       400:
+ *         description: Bad request - Missing or invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post description is required"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to create posts for this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized to create posts for this company"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Failed to create post
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to create post"
+ *                 error:
+ *                   type: string
+ *
+ *   get:
+ *     summary: Get company posts
+ *     tags: [Companies, Posts]
+ *     description: Retrieve paginated posts for a specific company. Includes reaction data for the current user.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the company to get posts for
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 50
+ *         description: Number of posts per page (max 50)
+ *     responses:
+ *       200:
+ *         description: Posts fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Posts fetched successfully"
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       postId:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       userId:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "615f5c6e1a2b3c4d5e6f7g9h"
+ *                           firstName:
+ *                             type: string
+ *                             example: "John"
+ *                           lastName:
+ *                             type: string
+ *                             example: "Doe"
+ *                           profilePicture:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/v1234/profile.jpg"
+ *                           headline:
+ *                             type: string
+ *                             example: "Software Engineer at Acme Corp"
+ *                       companyId:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "615f5c6e1a2b3c4d5e6f7g8i"
+ *                           name:
+ *                             type: string
+ *                             example: "Acme Corporation"
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/v1234/acme-logo.jpg"
+ *                       description:
+ *                         type: string
+ *                         example: "We're excited to announce our new product launch!"
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/example/image/upload/v1234/post-image.jpg"
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 5
+ *                           support:
+ *                             type: number
+ *                             example: 2
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 3
+ *                           insightful:
+ *                             type: number
+ *                             example: 1
+ *                           funny:
+ *                             type: number
+ *                             example: 0
+ *                           total:
+ *                             type: number
+ *                             example: 19
+ *                       commentCount:
+ *                         type: number
+ *                         example: 7
+ *                       repostCount:
+ *                         type: number
+ *                         example: 2
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-05-20T15:30:45.123Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-05-20T16:45:12.456Z"
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                       whoCanSee:
+ *                         type: string
+ *                         enum: [anyone, connections]
+ *                         example: "anyone"
+ *                       whoCanComment:
+ *                         type: string
+ *                         enum: [anyone, connections, noOne]
+ *                         example: "anyone"
+ *                       isCompanyPost:
+ *                         type: boolean
+ *                         example: true
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: false
+ *                       isLiked:
+ *                         type: boolean
+ *                         example: true
+ *                       impressionType:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "celebrate"
+ *                       isMine:
+ *                         type: boolean
+ *                         example: true
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 42
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       example: 5
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       404:
+ *         description: Company not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Company not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * api/companies/{companyId}/analytics:
+ *   get:
+ *     summary: Retrieve company analytics
+ *     tags: [Companies]
+ *     description: Get detailed analytics about company visitors and followers over time. Only accessible to company owner and admins.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for analytics data (YYYY-MM-DD format). Defaults to 30 days ago if not provided.
+ *         example: "2023-04-01"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for analytics data (YYYY-MM-DD format). Defaults to today if not provided.
+ *         example: "2023-04-30"
+ *       - in: query
+ *         name: interval
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month]
+ *           default: day
+ *         description: Time interval for grouping analytics data
+ *     responses:
+ *       200:
+ *         description: Analytics data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Analytics retrieved successfully"
+ *                 companyId:
+ *                   type: string
+ *                   example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                 companyName:
+ *                   type: string
+ *                   example: "Acme Corporation"
+ *                 dateRange:
+ *                   type: object
+ *                   properties:
+ *                     start:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-04-01T00:00:00.000Z"
+ *                     end:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-04-30T23:59:59.999Z"
+ *                 interval:
+ *                   type: string
+ *                   enum: [day, week, month]
+ *                   example: "day"
+ *                 analytics:
+ *                   type: object
+ *                   properties:
+ *                     visitors:
+ *                       type: array
+ *                       description: Visitor data grouped by time interval
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             example: "2023-04-15"
+ *                           count:
+ *                             type: integer
+ *                             example: 7
+ *                     followers:
+ *                       type: array
+ *                       description: Follower data grouped by time interval
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             example: "2023-04-16"
+ *                           count:
+ *                             type: integer
+ *                             example: 3
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         totalVisitors:
+ *                           type: integer
+ *                           example: 42
+ *                         totalFollowers:
+ *                           type: integer
+ *                           example: 15
+ *                         visitorsTrend:
+ *                           type: integer
+ *                           description: Percentage change in visitors over the period
+ *                           example: 25
+ *                         followersTrend:
+ *                           type: integer
+ *                           description: Percentage change in followers over the period
+ *                           example: 15
+ *       400:
+ *         description: Bad request - Invalid date format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid date format"
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to view company analytics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized to view company analytics"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
+ */
+
 // *********************************** User APIs ******************************************//
 
 /**
@@ -5939,7 +7042,7 @@
 /**
  * @swagger
  * /api/user/logout:
- *    get:
+ *    post:
  *     summary: Logout user
  *     tags: [Users]
  *     description: Logout a user
@@ -5971,7 +7074,7 @@
  *   post:
  *     summary: Request a password reset link
  *     tags: [Users]
- *     description: Sends a password reset link to the user's email.
+ *     description: Sends a password reset OTP to the user's email.
  *     operationId: forgotPassword
  *     requestBody:
  *       required: true
@@ -5993,35 +7096,86 @@
  *           application/json:
  *             example:
  *               success: true
- *               message: "Forgot password email sent successfully"
+ *               message: "forgot password email sent successfully"
  *               email: "user@email.com"
  *       400:
  *         description: Missing required fields
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Please fill all required fields"
+ *       401:
+ *         description: Google account - cannot reset password
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Please login with google"
  *       422:
  *         description: Invalid email format
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Please enter a valid email"
  *       404:
  *         description: Email is not registered
  *         content:
  *           application/json:
  *             example:
- *               success: false
- *               message: "This email is not registered"
+ *               message: "This email is not registerd"
+ *       500:
+ *         description: Internal server error or email sending error
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /api/user/verify-reset-password-otp:
+ *   post:
+ *     summary: Verify password reset OTP
+ *     tags: [Users]
+ *     description: Verifies the OTP sent to the user's email for password reset and returns a reset token if valid.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The one-time password sent to the user's email.
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "OTP verified successfully"
+ *               resetToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - missing or invalid OTP
+ *         content:
+ *           application/json:
+ *             examples:
+ *               missingOTP:
+ *                 summary: Missing OTP
+ *                 value:
+ *                   message: "Please fill all required fields"
+ *               invalidOTP:
+ *                 summary: Invalid or expired OTP
+ *                 value:
+ *                   message: "OTP is invalid or has expired"
  *       500:
  *         description: Internal server error
  *         content:
  *           application/json:
  *             example:
- *               success: false
  *               message: "Internal server error"
  */
 
@@ -6085,18 +7239,22 @@
 
 /**
  * @swagger
- * /api/user/reset-password/{token}:
+ * /api/user/reset-password:
  *   patch:
  *     summary: Reset user password
  *     tags: [Users]
- *     description: Allows a user to reset their password using a valid reset token.
+ *     description: Allows a user to reset their password using a valid reset token provided in the Authorization header.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: token
+ *       - in: header
+ *         name: Authorization
  *         required: true
- *         description: The password reset token sent via email.
  *         schema:
  *           type: string
+ *           format: Bearer {token}
+ *         description: "Reset token received via email, prefixed with 'Bearer '"
+ *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     requestBody:
  *       required: true
  *       content:
@@ -6116,7 +7274,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Password reset successfully"
+ *               message: "Password reseted successfully"
  *       400:
  *         description: Bad request, password is missing.
  *         content:
@@ -6128,7 +7286,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Token is invalid or has expired"
+ *               message: "Unauthorized"
  *       422:
  *         description: Unprocessable entity, password does not meet security requirements.
  *         content:
@@ -6140,39 +7298,7 @@
  *         content:
  *           application/json:
  *             example:
- *               message: "Internal server error"
- *
- *   get:
- *     summary: Verify the password reset token
- *     tags: [Users]
- *     description: Check if the reset token is valid before allowing the user to proceed with resetting their password.
- *     parameters:
- *       - in: path
- *         name: token
- *         required: true
- *         description: The password reset token sent via email.
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Token is valid.
- *         content:
- *           application/json:
- *             example:
- *               status: "success"
- *               data:
- *                 email: "user@example.com"
- *       400:
- *         description: Token is invalid or has expired.
- *         content:
- *           application/json:
- *             example:
- *               message: "Token is invalid or has expired"
- *       500:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             example:
+ *               success: false
  *               message: "Internal server error"
  */
 
@@ -6269,7 +7395,7 @@
 
 /**
  * @swagger
- * /api/user/confirm-email:
+ * /api/user/resend-confirmation-email:
  *   get:
  *     summary: Resend confirmation email
  *     description: Resends the confirmation email for a user who has not yet confirmed their account.
@@ -6299,18 +7425,24 @@
 
 /**
  * @swagger
- * /api/user/confirm-email/{emailVerificationToken}:
+ * /api/user/confirm-email:
  *   get:
  *     summary: Confirm user email
- *     description: Confirms a user's email address using the provided email verification token.
+ *     description: Confirms a user's email address using a one-time password (OTP).
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: emailVerificationToken
- *         required: true
- *         description: The email verification token sent to the user's email.
- *         schema:
- *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The OTP sent to the user's email
+ *                 example: "123456"
  *     responses:
  *       200:
  *         description: Email confirmed successfully.
@@ -6320,18 +7452,25 @@
  *               success: true
  *               message: "Email is confirmed successfully"
  *       400:
- *         description: Bad request. Either the token is missing or invalid/expired.
+ *         description: Bad request. Either the OTP is missing or invalid/expired.
  *         content:
  *           application/json:
  *             examples:
- *               missingToken:
+ *               missingOTP:
  *                 value:
  *                   success: false
- *                   message: "Verification Token is required"
- *               invalidToken:
+ *                   message: "OTP is required"
+ *               invalidOTP:
  *                 value:
  *                   success: false
- *                   message: "Invalid or expired token"
+ *                   message: "Invalid or expired OTP"
+ *       401:
+ *         description: Unauthorized. User authentication required.
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: "Not authenticated"
  *       500:
  *         description: Internal server error.
  *         content:
@@ -6340,7 +7479,6 @@
  *               success: false
  *               message: "Internal server error"
  */
-
 
 /**
  * @swagger
@@ -6504,6 +7642,9 @@
  *                       type: array
  *                       items:
  *                         type: string
+ *                 canSendConnectionRequest:
+ *                   type: boolean
+ *                   description: check whether the user can send a connection request to this user based on their privacy settings
  *       403:
  *         description: Access denied due to privacy settings
  *         content:
@@ -8775,7 +9916,7 @@
 
 /**
  * @swagger
- * /api/users/skills/{skillName}:
+ * /api/user/skills/{skillName}:
  *   delete:
  *     summary: Delete a skill from the user's profile
  *     tags: [Users]
@@ -9713,7 +10854,13 @@
  */
 
 // *********************************** Connections APIs ******************************************//
-
+/**
+ * @swagger
+ * tags:
+ *   - name: Connections
+ *     description: Managing connections and connection requests
+ */
+/**
 /**
  * @swagger
  * /api/user/connections/request/{targetUserId}:
@@ -10153,6 +11300,81 @@
  *     description: API endpoints for search
  */
 /**
+ * @swagger
+ * /api/user/search:
+ *   get:
+ *     summary: Search for users
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *     responses:
+ *       200:
+ *         description: List of users matching search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+
 /**
  * @swagger
  * /api/user/profile:
@@ -11304,7 +12526,7 @@
 
 /**
  * @swagger
- * /api/user/{userId}/activity:
+ * /api/user/{userId}/user-activity:
  *   get:
  *     summary: Get posts that a user has posted, reposted, or commented on
  *     tags: [Users, Posts]
@@ -13201,7 +14423,1041 @@
  */
 /**
  * @swagger
- * /api/user/saved-posts:
+ * /api/stripe/cancel-subscription:
+ *   delete:
+ *     summary: Cancel a subscription immediately
+ *     tags: [Subscription]
+ *     description: |
+ *       Immediately cancels an active subscription for the authenticated user.
+ *       Updates both Stripe and local database records, and removes premium status from the user.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription canceled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Subscription has been cancelled immediately"
+ *                 cancelledAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-04-25T12:30:45.123Z"
+ *       404:
+ *         description: No active subscription found for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No active subscription found"
+ *       400:
+ *         description: Invalid subscription data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid subscription data"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Failed to cancel subscription"
+ */
+/**
+ * @swagger
+ * /api/stripe/create-checkout-session:
+ *   post:
+ *     summary: Create a Stripe checkout session
+ *     tags: [Subscription]
+ *     description: |
+ *       Creates a new Stripe checkout session for subscription payment.
+ *       Validates that the user doesn't already have an active subscription.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               paymentMode:
+ *                 type: string
+ *                 enum: [subscription, payment]
+ *                 default: subscription
+ *                 description: Payment mode (subscription for recurring, payment for one-time)
+ *     responses:
+ *       200:
+ *         description: Checkout session created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: string
+ *                   description: Stripe checkout session ID
+ *                   example: "cs_test_a1b2c3d4e5f6g7h8i9j0"
+ *                 url:
+ *                   type: string
+ *                   description: URL to redirect user to Stripe checkout
+ *                   example: "https://checkout.stripe.com/pay/cs_test_a1b2c3d4e5f6g7h8i9j0"
+ *                 status:
+ *                   type: string
+ *                   example: "created"
+ *       400:
+ *         description: User already has an active subscription
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "already_subscribed"
+ *                 message:
+ *                   type: string
+ *                   example: "You already have an active subscription"
+ *                 subscription:
+ *                   type: object
+ *                   properties:
+ *                     expiryDate:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-04-25T12:30:45.123Z"
+ *                     planType:
+ *                       type: string
+ *                       example: "premium"
+ *       500:
+ *         description: Error creating checkout session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Error message from Stripe"
+ */
+/**
+ * @swagger
+ * /api/search/posts:
+ *   get:
+ *     summary: Search for posts by keyword
+ *     tags: [Search]
+ *     description: |
+ *       Searches for posts matching a keyword in post descriptions or tagged users.
+ *       Results are sorted by creation date (newest first) and include full post details
+ *       with user/company information, impression counts, and personalized flags like
+ *       whether the post is saved or liked by the requesting user.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: keyword
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *         description: Search term to match against post descriptions and tagged users
+ *         example: "javascript"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of posts per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Posts matching the search criteria retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier for the post
+ *                       userId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the user who created the post (null for company posts)
+ *                       companyId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456791"
+ *                         description: ID of the company that created the post (null for user posts)
+ *                       firstName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "John"
+ *                         description: First name of the user who created the post (null for company posts)
+ *                       lastName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Smith"
+ *                         description: Last name of the user who created the post (null for company posts)
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer"
+ *                         description: Professional headline of the user who created the post
+ *                       profilePicture:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://example.com/profile.jpg"
+ *                         description: Profile picture URL of the user who created the post
+ *                       companyName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Tech Company Inc."
+ *                         description: Name of the company that created the post (null for user posts)
+ *                       companyLogo:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://example.com/logo.png"
+ *                         description: Logo URL of the company that created the post (null for user posts)
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Excited to share our latest JavaScript project!"
+ *                         description: Content of the post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+ *                         description: URLs of attached media files
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 10
+ *                           support:
+ *                             type: number
+ *                             example: 5
+ *                           celebrate:
+ *                             type: number
+ *                             example: 3
+ *                           love:
+ *                             type: number
+ *                             example: 7
+ *                           insightful:
+ *                             type: number
+ *                             example: 4
+ *                           funny:
+ *                             type: number
+ *                             example: 2
+ *                           total:
+ *                             type: number
+ *                             example: 31
+ *                         description: Counts of different reaction types on the post
+ *                       commentCount:
+ *                         type: number
+ *                         example: 8
+ *                         description: Number of comments on the post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 3
+ *                         description: Number of reposts of this post
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-01-15T08:30:00.000Z"
+ *                         description: When the post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456792"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "Jane"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Doe"
+ *                             companyName:
+ *                               type: string
+ *                               nullable: true
+ *                               example: null
+ *                         description: Users tagged in the post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether this post is a repost
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the current user has saved this post
+ *                       isLiked:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the current user has liked this post
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the post was created by the current user
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456793"
+ *                         description: ID of the repost (only present if isRepost is true)
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456794"
+ *                         description: ID of the user who reposted (only present if isRepost is true)
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "Alex"
+ *                         description: First name of the reposter (only present if isRepost is true)
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Johnson"
+ *                         description: Last name of the reposter (only present if isRepost is true)
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://example.com/alex.jpg"
+ *                         description: Profile picture URL of the reposter (only present if isRepost is true)
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Product Manager"
+ *                         description: Headline of the reposter (only present if isRepost is true)
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great post about JavaScript!"
+ *                         description: Description added by the reposter (only present if isRepost is true)
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-01-16T10:15:00.000Z"
+ *                         description: When the repost was created (only present if isRepost is true)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 45
+ *                       description: Total number of posts matching the search criteria
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of results per page
+ *                     pages:
+ *                       type: number
+ *                       example: 5
+ *                       description: Total number of pages
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there is a next page of results
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there is a previous page of results
+ *                 keyword:
+ *                   type: string
+ *                   example: "javascript"
+ *                   description: The search keyword used
+ *       400:
+ *         description: Bad request - missing or invalid search parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Search keyword is required"
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to search posts"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
+
+/**
+ * @swagger
+ * /privacy/block-user/{userId}:
+ *   patch:
+ *     summary: Block a user
+ *     tags: [Privacy]
+ *     description: Blocks a user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to block
+ *     responses:
+ *       200:
+ *         description: User blocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User blocked successfully."
+ *       400:
+ *         description: Bad request - Invalid user ID or trying to block yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You cannot block yourself."
+ *             examples:
+ *               invalidId:
+ *                 summary: Invalid user ID
+ *                 value:
+ *                   message: "Invalid user ID."
+ *               selfBlock:
+ *                 summary: Trying to block yourself
+ *                 value:
+ *                   message: "You cannot block yourself."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/unblock-user/{userId}:
+ *   patch:
+ *     summary: Unblock a user
+ *     tags: [Privacy]
+ *     description: Removes a user from blocked users list
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to unblock
+ *     responses:
+ *       200:
+ *         description: User unblocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User unblocked successfully."
+ *       400:
+ *         description: Bad request - Invalid user ID or trying to unblock yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You cannot unblock yourself."
+ *             examples:
+ *               invalidId:
+ *                 summary: Invalid user ID
+ *                 value:
+ *                   message: "Invalid user ID."
+ *               selfUnblock:
+ *                 summary: Trying to unblock yourself
+ *                 value:
+ *                   message: "You cannot unblock yourself."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/report-user/{userId}:
+ *   post:
+ *     summary: Report a user for policy violations
+ *     tags: [Privacy]
+ *     description: Reports a user for violating platform policies
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to report
+ *         example: "65fb2a8e7c5721f123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment",
+ *                   "Fraud or scam",
+ *                   "Spam",
+ *                   "Misinformation",
+ *                   "Hateful speech",
+ *                   "Threats or violence",
+ *                   "Self-harm",
+ *                   "Graphic content",
+ *                   "Dangerous or extremist organizations",
+ *                   "Sexual content",
+ *                   "Fake account",
+ *                   "Child exploitation",
+ *                   "Illegal goods and services",
+ *                   "Infringement",
+ *                   "This person is impersonating someone",
+ *                   "This account has been hacked",
+ *                   "This account is not a real person"
+ *                 ]
+ *                 example: "This person is impersonating someone"
+ *                 description: The specific policy that the user is violating
+ *     responses:
+ *       201:
+ *         description: User reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User reported successfully."
+ *                 reportId:
+ *                   type: string
+ *                   example: "65fb2a8e7c5721f123456789"
+ *       400:
+ *         description: Bad request - Invalid policy, user ID, or attempting to report yourself
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy
+ *                 value:
+ *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
+ *               selfReport:
+ *                 summary: Trying to report yourself
+ *                 value:
+ *                   message: "You cannot report yourself."
+ *               invalidUserId:
+ *                 summary: Invalid user ID format
+ *                 value:
+ *                   message: "Invalid user ID."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User to report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/report-post/{postId}:
+ *   post:
+ *     summary: Report a post for policy violations
+ *     tags: [Privacy]
+ *     description: Reports a post for violating platform policies
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the post to report
+ *         example: "65fb2a8e7c5721f123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - policy
+ *             properties:
+ *               policy:
+ *                 type: string
+ *                 enum: [
+ *                   "Harassment",
+ *                   "Fraud or scam",
+ *                   "Spam",
+ *                   "Misinformation",
+ *                   "Hateful speech",
+ *                   "Threats or violence",
+ *                   "Self-harm",
+ *                   "Graphic content",
+ *                   "Dangerous or extremist organizations",
+ *                   "Sexual content",
+ *                   "Fake account",
+ *                   "Child exploitation",
+ *                   "Illegal goods and services",
+ *                   "Infringement"
+ *                 ]
+ *                 example: "Misinformation"
+ *                 description: The specific policy that the post is violating
+ *               dontWantToSee:
+ *                 type: string
+ *                 enum: [
+ *                   "I'm not interested in the author",
+ *                   "I'm not interested in this topic",
+ *                   "I've seen too many posts on this topic",
+ *                   "I've seen this post before",
+ *                   "This post is old",
+ *                   "It's something else"
+ *                 ]
+ *                 description: Reason why the user doesn't want to see similar content
+ *                 example: "I'm not interested in this topic"
+ *     responses:
+ *       201:
+ *         description: Post reported successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post reported successfully."
+ *       400:
+ *         description: Bad request - Invalid policy, post ID, or dontWantToSee value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidPolicy:
+ *                 summary: Invalid policy
+ *                 value:
+ *                   message: "Invalid policy."
+ *               policyRequired:
+ *                 summary: Missing policy
+ *                 value:
+ *                   message: "Policy is required."
+ *               invalidPostId:
+ *                 summary: Invalid post ID format
+ *                 value:
+ *                   message: "Invalid post ID."
+ *               invalidDontWantToSee:
+ *                 summary: Invalid dontWantToSee value
+ *                 value:
+ *                   message: "Invalid dontWantToSee value."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Post to report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Post not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/blocked-users:
+ *   get:
+ *     summary: Get list of blocked users
+ *     tags: [Privacy]
+ *     description: Retrieves a list of all users that the authenticated user has blocked
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of blocked users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 blockedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       email:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/reported-users:
+ *   get:
+ *     summary: Get list of reported users
+ *     tags: [Privacy]
+ *     description: Retrieves a list of all users that the authenticated user has reported
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of reported users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reportedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                       name:
+ *                         type: string
+ *                         example: "John Doe"
+ *                       email:
+ *                         type: string
+ *                         example: "john.doe@example.com"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /privacy/connection-request:
+ *   patch:
+ *     summary: Update connection request privacy setting - ALLOWED VALUES  [everyone, mutual]
+ *     tags: [Privacy]
+ *     description: Controls who can send connection requests to the user
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - connectionRequestPrivacySetting
+ *             properties:
+ *               connectionRequestPrivacySetting:
+ *                 type: string
+ *                 enum: [everyone, mutual]
+ *                 description: Controls who can send connection requests to the user
+ *                 example: "everyone"
+ *     responses:
+ *       200:
+ *         description: Connection request privacy setting updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Connection request updated successfully."
+ *       400:
+ *         description: Bad request - Invalid connection request privacy setting or user ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               invalidSetting:
+ *                 summary: Invalid privacy setting
+ *                 value:
+ *                   message: "Invalid value for connection request privacy setting."
+ *               invalidUserId:
+ *                 summary: Invalid user ID format
+ *                 value:
+ *                   message: "Invalid user ID."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+
+/**
+ * @swagger
+ * /user/saved-posts:
  *   get:
  *     summary: Get user's saved posts
  *     tags: [Posts, Users]
@@ -13259,7 +15515,7 @@
  *                           _id:
  *                             type: string
  *                             example: "65fb2a8e7c5721f123456791"
- *                           name: 
+ *                           name:
  *                             type: string
  *                             example: "Tech Company Inc."
  *                           logo:
@@ -13477,6 +15733,7 @@
  *                   type: string
  *                   example: "Error details"
  */
+
 /**
  * @swagger
  * /api/user/default-mode:
