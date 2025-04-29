@@ -364,6 +364,15 @@ const deleteCompany = async (req, res) => {
         company.isDeleted = true;
         await company.save();
 
+        const user = await userModel.findById(req.user.id);
+
+        const companies = user.companies || [];
+        const updatedCompanies = companies.filter(
+            (company) => company.toString() !== companyId
+        );
+        user.companies = updatedCompanies;
+        await user.save();
+
         res.status(204).json({ status: 'success', data: null });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -497,6 +506,12 @@ const addAdmin = async (req, res) => {
         company.admins.push(userId);
         await company.save();
 
+        const user = await userModel.findById(userId);
+        const companies = user.companies || [];
+        companies.push(companyId);
+        user.companies = companies;
+        await user.save();
+
         res.status(200).json({
             message: 'User added as admin successfully',
             admins: company.admins,
@@ -545,6 +560,15 @@ const removeAdmin = async (req, res) => {
             (admin) => admin.toString() !== userId
         );
         await company.save();
+
+        const user = await userModel.findById(userId);
+
+        const companies = user.companies || [];
+        const updatedCompanies = companies.filter(
+            (company) => company.toString() !== companyId
+        );
+        user.companies = updatedCompanies;
+        await user.save();
 
         res.status(200).json({
             message: 'User removed as admin successfully',
