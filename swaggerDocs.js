@@ -1,8 +1,8 @@
 /**
  * @swagger
- * /api/user/search:
+ * /user/search:
  *   get:
- *     summary: Search for user or company  by query
+ *     summary: Search for  user or company  by query
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -72,12 +72,155 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- */
-
-/**
- *
+ * 
+ * 
  * @swagger
- * /api/user/connections/request/{targetUserId}:
+ * /user/search/users:
+ *   get:
+ *     summary: Search for users by name 
+ *     tags: [Connections & Networking]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: General search query
+ *       - in: query
+ *         name: company
+ *         schema:
+ *           type: string
+ *         description: Filter by company name
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *         description: Filter by industry
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Results per page
+ *     responses:
+ *       200:
+ *         description: List of users matching search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       firstName:
+ *                         type: string
+ *                       lastName:
+ *                         type: string
+ *                       company:
+ *                         type: string
+ *                       industry:
+ *                         type: string
+ *                       profilePicture:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                     page:
+ *                       type: number
+ *                     pages:
+ *                       type: number
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ * 
+ * 
+ * /user/connections:
+ *   get:
+ *     summary: Get user's connections list
+ *     tags: [Connections & Networking]
+ *     description: Retrieve paginated list of user's connections with basic profile information
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 100
+ *         description: Number of connections per page
+ *     responses:
+ *       200:
+ *         description: List of connections retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connections:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: Connection's user ID
+ *                       firstName:
+ *                         type: string
+ *                         description: Connection's first name
+ *                       lastName:
+ *                         type: string
+ *                         description: Connection's last name
+ *                       profilePicture:
+ *                         type: string
+ *                         description: URL to connection's profile picture
+ *                       lastJobTitle:
+ *                         type: string
+ *                         description: Connection's job position
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       description: Total number of connections
+ *                     page:
+ *                       type: integer
+ *                       description: Current page number
+ *                     pages:
+ *                       type: integer
+ *                       description: Total number of pages
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ * /user/connections/request/{targetUserId}:
  *   post:
  *     summary: Send a connection request
  *     tags: [Connections & Networking]
@@ -92,20 +235,14 @@
  *     responses:
  *       200:
  *         description: Connection request sent successfully
- *       403:
- *         description: Cannot send connection request due to other user privacy settings
  *       400:
  *         description: Invalid request or already connected
  *       401:
  *         description: Unauthorized
  *       404:
  *         description: User not found
- */
-
-/**
- *
- * @swagger
- * /api/user/connections/requests:
+ * 
+ * /user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
  *     tags: [Connections & Networking]
@@ -134,11 +271,8 @@
  *                         type: string
  *                       headline:
  *                         type: string
- */
-
-/**
- * @swagger
- * /api/user/connections/requests/{senderId}:
+ *
+ * /user/connections/requests/{senderId}:
  *   patch:
  *     summary: Accept or decline a connection request
  *     tags: [Connections & Networking]
@@ -164,7 +298,7 @@
  *       200:
  *         description: Request handled successfully
  *
- * /api/user/connections/{connectionId}:
+ * /user/connections/{connectionId}:
  *   delete:
  *     summary: Remove a connection
  *     tags: [Connections & Networking]
@@ -180,7 +314,7 @@
  *       200:
  *         description: Connection removed successfully
  *
- * /api/user/follow/{userId}:
+ * /user/follow/{userId}:
  *   post:
  *     summary: Follow a user
  *     tags: [Connections & Networking]
@@ -210,7 +344,7 @@
  *       200:
  *         description: Successfully unfollowed user
  *
- * /api/user/block/{userId}:
+ * /user/block/{userId}:
  *   post:
  *     summary: Block a user
  *     tags: [Connections & Networking]
@@ -240,7 +374,7 @@
  *       200:
  *         description: User unblocked successfully
  *
- * /api/user/blocked:
+ * /user/blocked:
  *   get:
  *     summary: Get list of blocked users
  *     tags: [Connections & Networking]
@@ -268,7 +402,7 @@
  *                       profilePicture:
  *                         type: string
  *
- * /api/user/message-requests:
+ * /user/message-requests:
  *   get:
  *     summary: Get message requests
  *     tags: [Connections & Networking]
@@ -295,7 +429,7 @@
  *       200:
  *         description: Message request sent successfully
  *
- * /api/user/message-requests/{requestId}:
+ * /user/message-requests/{requestId}:
  *   patch:
  *     summary: Accept or decline a message request
  *     tags: [Connections & Networking]
@@ -320,7 +454,126 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
+ */  
+/**
+ * @swagger
+ * /user/connections/related-users:
+ *   get:
+ *     summary: Get related users based on common attributes
+ *     tags: [Connections & Networking]
+ *     description: Retrieves a list of users who share similar attributes with the logged-in user, such as industry, education, job title, or common connections
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 30
+ *         description: Number of users per page
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved related users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Related users retrieved successfully"
+ *                 relatedUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         description: User ID
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       firstName:
+ *                         type: string
+ *                         description: User's first name
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         description: User's last name
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         description: URL to user's profile picture
+ *                         example: "https://example.com/profile.jpg"
+ *                       lastJobTitle:
+ *                         type: string
+ *                         description: User's most recent job title
+ *                         example: "Software Engineer"
+ *                       commonConnectionsCount:
+ *                         type: number
+ *                         description: Number of connections in common
+ *                         example: 25
+ *                       matchScore:
+ *                         type: number
+ *                         description: Relevancy score based on common attributes
+ *                         example: 4.5
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of related users
+ *                       example: 100
+ *                     page:
+ *                       type: number
+ *                       description: Current page number
+ *                       example: 1
+ *                     pages:
+ *                       type: number
+ *                       description: Total number of pages
+ *                       example: 4
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get related users"
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error details"
  */
+
 /**
  * @swagger
  * components:
