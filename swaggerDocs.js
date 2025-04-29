@@ -13199,3 +13199,281 @@
  *                   type: string
  *                   example: "Unauthorized, Admin access required"
  */
+/**
+ * @swagger
+ * /user/saved-posts:
+ *   get:
+ *     summary: Get user's saved posts
+ *     tags: [Posts, Users]
+ *     description: |
+ *       Retrieves all posts saved by the authenticated user with pagination.
+ *       Returns comprehensive post details including creator information, engagement metrics,
+ *       and personalized flags (liked, saved, ownership status).
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of posts per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Saved posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 posts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       postId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456789"
+ *                         description: Unique identifier of the post
+ *                       userId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "65fb2a8e7c5721f123456790"
+ *                         description: ID of the user who created the post (null for company posts)
+ *                       companyId:
+ *                         type: object
+ *                         nullable: true
+ *                         description: Company details (if posted by a company)
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "65fb2a8e7c5721f123456791"
+ *                           name: 
+ *                             type: string
+ *                             example: "Tech Company Inc."
+ *                           logo:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/logo.jpg"
+ *                       firstName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Jane"
+ *                         description: First name of the post creator (null for company posts)
+ *                       lastName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "Doe"
+ *                         description: Last name of the post creator (null for company posts)
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                         description: Headline/job title of the post creator
+ *                       profilePicture:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "https://res.cloudinary.com/example/image/upload/profile.jpg"
+ *                         description: URL to the post creator's profile picture
+ *                       postDescription:
+ *                         type: string
+ *                         example: "Excited to share my recent project!"
+ *                         description: Text content of the post
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://res.cloudinary.com/example/image/upload/post1.jpg"]
+ *                         description: Media files attached to the post
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 10
+ *                           support:
+ *                             type: number
+ *                             example: 5
+ *                           celebrate:
+ *                             type: number
+ *                             example: 8
+ *                           love:
+ *                             type: number
+ *                             example: 12
+ *                           insightful:
+ *                             type: number
+ *                             example: 3
+ *                           funny:
+ *                             type: number
+ *                             example: 2
+ *                           total:
+ *                             type: number
+ *                             example: 40
+ *                         description: Counts of reactions by type
+ *                       commentCount:
+ *                         type: number
+ *                         example: 7
+ *                         description: Number of comments on this post
+ *                       repostCount:
+ *                         type: number
+ *                         example: 3
+ *                         description: Number of times this post has been reposted
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-04-15T14:30:00.000Z"
+ *                         description: When the post was created
+ *                       taggedUsers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "65fb2a8e7c5721f123456792"
+ *                             userType:
+ *                               type: string
+ *                               enum: ["User", "Company"]
+ *                               example: "User"
+ *                             firstName:
+ *                               type: string
+ *                               example: "John"
+ *                             lastName:
+ *                               type: string
+ *                               example: "Smith"
+ *                             companyName:
+ *                               type: string
+ *                               nullable: true
+ *                               example: null
+ *                         description: Users tagged in the post
+ *                       whoCanSee:
+ *                         type: string
+ *                         enum: [anyone, connections]
+ *                         default: anyone
+ *                         example: "anyone"
+ *                         description: Privacy setting for post visibility
+ *                       whoCanComment:
+ *                         type: string
+ *                         enum: [anyone, connections, noOne]
+ *                         default: anyone
+ *                         example: "anyone"
+ *                         description: Setting for who can comment on the post
+ *                       isRepost:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether this post is a repost
+ *                       isSaved:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the requesting user has saved this post (always true for this endpoint)
+ *                       isLiked:
+ *                         type: boolean
+ *                         example: true
+ *                         description: Whether the requesting user has liked this post
+ *                       isMine:
+ *                         type: boolean
+ *                         example: false
+ *                         description: Whether the requesting user is the creator of this post
+ *                       repostId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456793"
+ *                         description: ID of the repost (only present if isRepost is true)
+ *                       reposterId:
+ *                         type: string
+ *                         example: "65fb2a8e7c5721f123456794"
+ *                         description: ID of the user who reposted (only present if isRepost is true)
+ *                       reposterFirstName:
+ *                         type: string
+ *                         example: "Mike"
+ *                         description: First name of the reposter (only present if isRepost is true)
+ *                       reposterLastName:
+ *                         type: string
+ *                         example: "Johnson"
+ *                         description: Last name of the reposter (only present if isRepost is true)
+ *                       reposterProfilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/reposter.jpg"
+ *                         description: Profile picture of the reposter (only present if isRepost is true)
+ *                       reposterHeadline:
+ *                         type: string
+ *                         example: "Product Manager at Tech Co"
+ *                         description: Headline of the reposter (only present if isRepost is true)
+ *                       repostDescription:
+ *                         type: string
+ *                         example: "Great insights here!"
+ *                         description: Text added by the reposter (only present if isRepost is true)
+ *                       repostDate:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-04-16T09:15:00.000Z"
+ *                         description: When the repost was created (only present if isRepost is true)
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of saved posts
+ *                     page:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     limit:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of posts per page
+ *                     pages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages after the current one
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are pages before the current one
+ *       401:
+ *         description: Unauthorized - invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to fetch saved posts"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */

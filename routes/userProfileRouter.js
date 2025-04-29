@@ -95,12 +95,12 @@ router.route('/connections/request/:targetUserId')
     .post(protect, user.sendConnectionRequest);  // Send connection request
 
 router.route('/connections/requests')
-    .get( protect,user.getPendingRequests);  // Get pending connection requests
+    .get(protect, user.getPendingRequests);  // Get pending connection requests
 
 router.route('/connections/requests/:senderId')
     .patch(protect, user.handleConnectionRequest)  // Accept/Decline connection request
-    
-    
+
+
 router.route('/connections')
     .get(protect, user.getConnectionsList);  // Get list of connections
 
@@ -112,8 +112,8 @@ router.route('/follow/:userId')
     .post(protect, user.followEntity)
     .delete(protect, user.unfollowEntity);
 
-    router.route('/blocked')
-        .get(protect, user.getBlockedUsers);
+router.route('/blocked')
+    .get(protect, user.getBlockedUsers);
 // Blocking functionality
 router.route('/block/:userId')
     .post(protect, user.blockUser)
@@ -122,12 +122,13 @@ router.route('/block/:userId')
 
 // Messaging requests for non-connections (as per /user/message-requests in Swagger)
 router.route('/message-requests')
-.get(protect, user.getMessageRequests);  // Get list of message requests
+    .get(protect, user.getMessageRequests);  // Get list of message requests
 
 router.route('/message-requests/:requestId')
-.patch(protect, user.handleMessageRequest)  // Accept/decline message request
-.post(protect, user.sendMessageRequest);// Send message request to non-connection
+    .patch(protect, user.handleMessageRequest)  // Accept/decline message request
+    .post(protect, user.sendMessageRequest);// Send message request to non-connection
 
+router.get('/saved-posts', protect, user.getSavedPosts);
 // Keep existing routes...
 router.route('/education')
     .post(protect, upload.single('file'), user.addEducation)
@@ -149,5 +150,5 @@ router.route('/connections/related-users')
 
 
 
-    
+
 module.exports = router;

@@ -3,12 +3,12 @@ const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
 const impressionModel = require('../models/impressionModel');
-const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences, validateConnectionStatus, handlePagination } = require('../utils/userProfileUtils') 
+const { sortWorkExperience, validateSkillName, checkUserAccessPermission, updateSkillExperienceReferences, validateConnectionStatus, handlePagination } = require('../utils/userProfileUtils')
 const cloudinary = require('../utils/cloudinary');
 const { uploadPicture, uploadVideo, uploadDocument } = require('../utils/filesHandler');
 //import { ObjectId } from 'mongodb';
 const mongoose = require('mongoose')
-const { uploadFile, uploadMultipleImages,deleteFileFromUrl } = require('../utils/cloudinaryUpload');
+const { uploadFile, uploadMultipleImages, deleteFileFromUrl } = require('../utils/cloudinaryUpload');
 const companyModel = require('../models/companyModel');
 const { get } = require('mongoose');
 const customError = require('../utils/customError');
@@ -17,14 +17,14 @@ const { canSendConnectionRequest } = require('../utils/privacyUtils');
 const getUserProfile = async (req, res) => {
     try {
         const userId = req.params.userId;
-        
+
         // Find the user by ID
         const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
-        
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
+
         // Check privacy settings
         const requesterId = req.user.id; // Current authenticated user
         const requester = await userModel.findById(requesterId).select('connectionList blockedUsers profilePrivacySettings');
@@ -32,9 +32,9 @@ const getUserProfile = async (req, res) => {
         if (userId !== requesterId && user.profilePrivacySettings === 'private') {
             return res.status(403).json({ message: 'This profile is private' });
         }
-        
+
         // If profile is set to connections only, check if they're connected
-        if (userId !== requesterId && 
+        if (userId !== requesterId &&
             user.profilePrivacySettings === 'connectionsOnly' &&
             !user.connectionList.includes(requesterId)) {
             return res.status(403).json({ message: 'This profile is only visible to connections' });
@@ -42,10 +42,10 @@ const getUserProfile = async (req, res) => {
         if (userId !== requesterId && user.blockedUsers.includes(requesterId)) {
             return res.status(403).json({ message: 'This profile is not available' });
         }
-        if(requester.blockedUsers.includes(userId)) {
+        if (requester.blockedUsers.includes(userId)) {
             return res.status(403).json({ message: 'This profile is not available' });
         }
-        if(userId.isActive === false) {
+        if (userId.isActive === false) {
             return res.status(403).json({ message: 'This profile is not available' });
         }
         // const accessCheck = await checkUserAccessPermission(user, requesterId);
@@ -55,16 +55,16 @@ const getUserProfile = async (req, res) => {
 
         // ADDED for privacy settings
         const canSendConnection = ((await canSendConnectionRequest(userId, requesterId)) && userId !== requesterId);
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'User profile retrieved successfully',
             user,
             canSendConnectionRequest: canSendConnection,
         });
     } catch (error) {
         console.error('Error retrieving user profile:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to retrieve user profile',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -72,22 +72,22 @@ const getUserProfile = async (req, res) => {
 const getMe = async (req, res) => {
     try {
         const userId = req.user.id;
-        
+
         // Find the user by ID
         const user = await userModel.findById(userId).select('-password -resetPasswordToken -resetPasswordTokenExpiry -verificationToken -refreshToken');
-        
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'User profile retrieved successfully',
             user
         });
     } catch (error) {
         console.error('Error retrieving user profile:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to retrieve user profile',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -96,44 +96,44 @@ const getAllUsers = async (req, res) => {
     try {
         // Extract query parameters for filtering
         const { name, location, industry, page = 1, limit = 10 } = req.query;
-        
+
         // Build query filter
         const filter = {};
-        
+
         if (name) {
             filter.$or = [
                 { firstName: { $regex: name, $options: 'i' } },
                 { lastName: { $regex: name, $options: 'i' } }
             ];
         }
-        
+
         if (location) {
             filter.location = { $regex: location, $options: 'i' };
         }
-        
+
         if (industry) {
             filter.industry = { $regex: industry, $options: 'i' };
         }
-        
+
         // Only return public profiles and the current user's profile
         filter.$or = filter.$or || [];
         filter.$or.push(
             { profilePrivacySettings: 'public' },
             { _id: req.user.id }
         );
-        
+
         // Pagination setup
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        
+
         // Find users with filtering and pagination
         const users = await userModel.find(filter)
             .select('firstName lastName profilePicture location industry mainEducation bio profilePrivacySettings')
             .skip(skip)
             .limit(parseInt(limit));
-            
+
         // Count total matching documents for pagination info
         const total = await userModel.countDocuments(filter);
-        
+
         res.status(200).json({
             message: 'Users retrieved successfully',
             users,
@@ -146,9 +146,9 @@ const getAllUsers = async (req, res) => {
         });
     } catch (error) {
         console.error('Error retrieving users:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to retrieve users',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -162,7 +162,7 @@ const getAllUsers = async (req, res) => {
 const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
     try {
         const userId = req.user.id;
-        
+
         if (!userId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -176,13 +176,13 @@ const handleUserPicture = async (req, res, fieldName, isDelete = false) => {
             }
 
             const { buffer, mimetype, size } = req.file;
-/*
-            try {
-                await validateFile(mimetype, size); // Validate before uploading
-            } catch (validationError) {
-                return res.status(400).json({ message: validationError.message });
-            }
-*/
+            /*
+                        try {
+                            await validateFile(mimetype, size); // Validate before uploading
+                        } catch (validationError) {
+                            return res.status(400).json({ message: validationError.message });
+                        }
+            */
             const uploadResult = await uploadPicture(buffer, mimetype, size);
             updateData[fieldName] = uploadResult.url;
         }
@@ -260,20 +260,20 @@ const getResume = async (req, res) => {
 
         if (!user.resume) {
             return res.status(400).json({ message: 'Resume not uploaded' });
-        } 
+        }
         // Create a Google Docs viewer URL as fallback
         const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(user.resume)}&embedded=true`;
 
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Resume retrieved successfully',
             resume: user.resume,
             googleDocsUrl: googleDocsUrl
         });
     } catch (error) {
         console.error('Error retrieving resume:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to retrieve resume',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -282,27 +282,27 @@ const uploadResume = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
-        
+
         const userId = req.user.id;
-        
+
         // Validate file type (allow PDF, DOC, DOCX)
         const allowedMimeTypes = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         ];
-          
+
         if (!allowedMimeTypes.includes(req.file.mimetype)) {
-            return res.status(400).json({ 
-                message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.' 
+            return res.status(400).json({
+                message: 'Invalid file type. Only PDF, DOC, and DOCX are allowed.'
             });
         }
-        
+
         // Validate file size (limit: 10MB)
         const MAX_FILE_SIZE = 10 * 1024 * 1024;
         if (req.file.size > MAX_FILE_SIZE) {
-            return res.status(400).json({ 
-                message: 'File size too large. Maximum allowed size is 10MB.' 
+            return res.status(400).json({
+                message: 'File size too large. Maximum allowed size is 10MB.'
             });
         }
 
@@ -329,11 +329,11 @@ const uploadResume = async (req, res) => {
 
         res.status(200).json({
             message: 'Resume uploaded successfully',
-            resume:  `https://docs.google.com/viewer?url=${encodeURIComponent(uploadResult.url)}&embedded=true`
+            resume: `https://docs.google.com/viewer?url=${encodeURIComponent(uploadResult.url)}&embedded=true`
         });
     } catch (error) {
         console.error('Error uploading resume:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to upload resume',
             error: error.message,
             details: error.http_code ? `HTTP Code: ${error.http_code}` : 'Unknown error'
@@ -343,48 +343,48 @@ const uploadResume = async (req, res) => {
 
 const deleteResume = async (req, res) => {
     try {
-      const userId = req.user.id;
-      
-      // Find user and get current resume URL
-      const user = await userModel.findById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      if (!user.resume) {
-        return res.status(400).json({ message: 'No resume to delete' });
-      }
-      
-      // Delete file from Cloudinary
-      const deleteResult = await deleteFileFromUrl(user.resume);
-      
-      if (deleteResult.result !== 'ok' && deleteResult.result !== 'no file to delete') {
-        return res.status(500).json({ 
-          message: 'Failed to delete resume from storage',
-          details: deleteResult
+        const userId = req.user.id;
+
+        // Find user and get current resume URL
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.resume) {
+            return res.status(400).json({ message: 'No resume to delete' });
+        }
+
+        // Delete file from Cloudinary
+        const deleteResult = await deleteFileFromUrl(user.resume);
+
+        if (deleteResult.result !== 'ok' && deleteResult.result !== 'no file to delete') {
+            return res.status(500).json({
+                message: 'Failed to delete resume from storage',
+                details: deleteResult
+            });
+        }
+
+        // Update user in database
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { resume: null },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Resume deleted successfully'
         });
-      }
-      
-      // Update user in database
-      const updatedUser = await userModel.findByIdAndUpdate(
-        userId,
-        { resume: null },
-        { new: true }
-      );
-      
-      res.status(200).json({
-        message: 'Resume deleted successfully'
-      });
-      
+
     } catch (error) {
-      console.error('Error deleting resume:', error);
-      res.status(500).json({ 
-        message: 'Failed to delete resume',
-        error: error.message 
-      });
+        console.error('Error deleting resume:', error);
+        res.status(500).json({
+            message: 'Failed to delete resume',
+            error: error.message
+        });
     }
-  };
+};
 
 /*
 ***************************************************
@@ -408,7 +408,7 @@ const validateExperienceData = (data) => {
             throw { status: 400, message: 'End date is required and must be a valid date if you are not currently working' };
         }
     }
-   
+
     if (!data.employmentType || (data.employmentType && !['Full Time', 'Part Time', 'Freelance', 'Self Employed', 'Contract', 'Internship', 'Apprenticeship', 'Seasonal'].includes(data.employmentType))) {
         throw { status: 400, message: 'Invalid employment type' };
     }
@@ -418,7 +418,7 @@ const validateExperienceData = (data) => {
 const addExperience = async (req, res) => {
     try {
         const userId = req.user.id;
-        
+
         const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -512,161 +512,161 @@ const addExperience = async (req, res) => {
 
 const getExperience = async (req, res) => {
     try {
-      const userId = req.user.id;
-      const experienceIndex = parseInt(req.params.index, 10);
-  
-      if (isNaN(experienceIndex) || experienceIndex < 0) {
-        return res.status(400).json({ error: 'Invalid experience index' });
-      }
-  
-      const user = await userModel.findById(userId).select('workExperience');
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      if (experienceIndex >= user.workExperience.length) {
-        return res.status(400).json({ error: 'Experience index out of range' });
-      }
-  
-      res.status(200).json({ experience: user.workExperience[experienceIndex] });
+        const userId = req.user.id;
+        const experienceIndex = parseInt(req.params.index, 10);
+
+        if (isNaN(experienceIndex) || experienceIndex < 0) {
+            return res.status(400).json({ error: 'Invalid experience index' });
+        }
+
+        const user = await userModel.findById(userId).select('workExperience');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (experienceIndex >= user.workExperience.length) {
+            return res.status(400).json({ error: 'Experience index out of range' });
+        }
+
+        res.status(200).json({ experience: user.workExperience[experienceIndex] });
     } catch (error) {
-      console.error('Error fetching experience:', error);
-      res.status(500).json({ error: 'Internal server error', details: error.message });
+        console.error('Error fetching experience:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
-  
+
 const getAllExperiences = async (req, res) => {
     try {
-      const userId = req.user.id;
-      const user = await userModel.findById(userId);
-  
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      res.status(200).json({ experiences: user.workExperience });
+        const userId = req.user.id;
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ experiences: user.workExperience });
     } catch (error) {
-      console.error('Error fetching experiences:', error);
-      res.status(500).json({ message: 'Server error' });
+        console.error('Error fetching experiences:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
-  
+
 const updateExperience = async (req, res) => {
     try {
-      const userId = req.user.id;
-      const experienceIndex = parseInt(req.params.index, 10);
-      const updates = req.body;
-        
-      // Validate dates if provided
-      if (updates.fromDate && isNaN(Date.parse(updates.fromDate)) || updates.toDate && isNaN(Date.parse(updates.toDate))) {
-        return res.status(400).json({ error: 'Invalid Data' });
-      }
-  
-      const user = await userModel.findById(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      if (experienceIndex < 0 || experienceIndex >= user.workExperience.length) {
-      return res.status(404).json({ message: 'Experience not found' });
-      }
-      
-      if (req.file) {
-        try {
-            const fileBuffer = req.file.buffer;
-            const mimeType = req.file.mimetype;
-            const fileSize = req.file.size;
+        const userId = req.user.id;
+        const experienceIndex = parseInt(req.params.index, 10);
+        const updates = req.body;
 
-            // Upload the file and get the URL
-            updates.media = (await uploadPicture(fileBuffer, mimeType, fileSize)).url;
-            console.log('URL: ', updates.media)
-        } catch (error) {
-            return res.status(400).json({ error: "Failed to upload media: " + error.message });
+        // Validate dates if provided
+        if (updates.fromDate && isNaN(Date.parse(updates.fromDate)) || updates.toDate && isNaN(Date.parse(updates.toDate))) {
+            return res.status(400).json({ error: 'Invalid Data' });
         }
-    } 
 
-      const oldExperience = user.workExperience[experienceIndex];
-      const oldSkills = oldExperience.skills || [];
-      const newSkills = updates.skills || []; // Default to empty array if not provided
-  
-      // Update experience entry
-      Object.keys(updates).forEach((key) => {
-        if (updates[key] !== undefined && updates[key] !== null && updates[key] !== "") {
-            oldExperience[key] = updates[key];
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-    });
 
-      user.workExperience[experienceIndex] = oldExperience;
-      
-      const experienceResult = oldExperience;
-      console.log(experienceResult)
-      // Update user.skills array if skills are modified
-      if (updates.skills) {
-        updateSkillExperienceReferences(user, experienceIndex, newSkills, oldSkills);
-      }
-  
-      user.workExperience = sortWorkExperience(user.workExperience);
-  
-      await user.save();
-  
-      res.status(200).json({
-        message: 'Experience updated successfully',
-        experience: experienceResult,
-        sortedWorkExperience: user.workExperience
-        //skills: user.skills
-      });
-  
+        if (experienceIndex < 0 || experienceIndex >= user.workExperience.length) {
+            return res.status(404).json({ message: 'Experience not found' });
+        }
+
+        if (req.file) {
+            try {
+                const fileBuffer = req.file.buffer;
+                const mimeType = req.file.mimetype;
+                const fileSize = req.file.size;
+
+                // Upload the file and get the URL
+                updates.media = (await uploadPicture(fileBuffer, mimeType, fileSize)).url;
+                console.log('URL: ', updates.media)
+            } catch (error) {
+                return res.status(400).json({ error: "Failed to upload media: " + error.message });
+            }
+        }
+
+        const oldExperience = user.workExperience[experienceIndex];
+        const oldSkills = oldExperience.skills || [];
+        const newSkills = updates.skills || []; // Default to empty array if not provided
+
+        // Update experience entry
+        Object.keys(updates).forEach((key) => {
+            if (updates[key] !== undefined && updates[key] !== null && updates[key] !== "") {
+                oldExperience[key] = updates[key];
+            }
+        });
+
+        user.workExperience[experienceIndex] = oldExperience;
+
+        const experienceResult = oldExperience;
+        console.log(experienceResult)
+        // Update user.skills array if skills are modified
+        if (updates.skills) {
+            updateSkillExperienceReferences(user, experienceIndex, newSkills, oldSkills);
+        }
+
+        user.workExperience = sortWorkExperience(user.workExperience);
+
+        await user.save();
+
+        res.status(200).json({
+            message: 'Experience updated successfully',
+            experience: experienceResult,
+            sortedWorkExperience: user.workExperience
+            //skills: user.skills
+        });
+
     } catch (error) {
-      console.error('Error updating experience:', error);
-      res.status(500).json({ message: 'Server error' });
+        console.error('Error updating experience:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
-  
+
 const deleteExperience = async (req, res) => {
     try {
-      const userId = req.user.id;
-      const experienceIndex = parseInt(req.params.index, 10);
-  
-      if (isNaN(experienceIndex) || experienceIndex < 0) {
-        return res.status(400).json({ error: 'Invalid experience index' });
-      }
-  
-      // Fetch user with workExperience and skills
-      const user = await userModel.findById(userId).select('workExperience skills');
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      if (experienceIndex >= user.workExperience.length) {
-        return res.status(400).json({ error: 'Invalid experience index' });
-      }
-  
-      // Remove experience from user.workExperience
-      const deletedExperience = user.workExperience.splice(experienceIndex, 1)[0];
-  
-      // Remove experience index from user's skills
-      user.skills = user.skills.map(skill => {
-        // Remove the experienceIndex from the experience array
-        skill.experience = skill.experience.filter(index => index !== experienceIndex);
-  
-        // Shift down experience indices greater than the deleted index
-        skill.experience = skill.experience.map(index => (index > experienceIndex ? index - 1 : index));
-  
-        return skill;
-      });
-  
-      // Save updated user
-      await user.save();
-  
-      res.status(200).json({
-        message: 'Experience deleted successfully',
-        deletedExperience,
-        updatedSkills: user.skills
-      });
-  
+        const userId = req.user.id;
+        const experienceIndex = parseInt(req.params.index, 10);
+
+        if (isNaN(experienceIndex) || experienceIndex < 0) {
+            return res.status(400).json({ error: 'Invalid experience index' });
+        }
+
+        // Fetch user with workExperience and skills
+        const user = await userModel.findById(userId).select('workExperience skills');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (experienceIndex >= user.workExperience.length) {
+            return res.status(400).json({ error: 'Invalid experience index' });
+        }
+
+        // Remove experience from user.workExperience
+        const deletedExperience = user.workExperience.splice(experienceIndex, 1)[0];
+
+        // Remove experience index from user's skills
+        user.skills = user.skills.map(skill => {
+            // Remove the experienceIndex from the experience array
+            skill.experience = skill.experience.filter(index => index !== experienceIndex);
+
+            // Shift down experience indices greater than the deleted index
+            skill.experience = skill.experience.map(index => (index > experienceIndex ? index - 1 : index));
+
+            return skill;
+        });
+
+        // Save updated user
+        await user.save();
+
+        res.status(200).json({
+            message: 'Experience deleted successfully',
+            deletedExperience,
+            updatedSkills: user.skills
+        });
+
     } catch (error) {
-      console.error('Error deleting experience:', error);
-      res.status(500).json({ error: 'Internal server error', details: error.message });
+        console.error('Error deleting experience:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 };
 
@@ -691,8 +691,8 @@ const addSkill = async (req, res) => {
 
         // Check if skill already exists and fetch user
         const [skillExists, user] = await Promise.all([
-            userModel.exists({ 
-                _id: userId, 
+            userModel.exists({
+                _id: userId,
                 "skills.skillName": { $regex: new RegExp(`^${skillName}$`, "i") }
             }),
             userModel.findById(userId, "education skills workExperience") // Fetch necessary fields
@@ -714,37 +714,37 @@ const addSkill = async (req, res) => {
             ? experienceIndexes.filter(index => Number.isInteger(index) && index >= 0 && index < user.workExperience.length)
             : [];
 
-            // Add skill to the user
-            const updatedUser = await userModel.findByIdAndUpdate(
-                userId,
-                { $push: { skills: { skillName, endorsements: [], education: validIndexes, experience: validExperienceIndexes } } },
-                { new: true, select: 'skills education workExperience', lean: true }
-            );
+        // Add skill to the user
+        const updatedUser = await userModel.findByIdAndUpdate(
+            userId,
+            { $push: { skills: { skillName, endorsements: [], education: validIndexes, experience: validExperienceIndexes } } },
+            { new: true, select: 'skills education workExperience', lean: true }
+        );
 
-            // Update corresponding education & work experience entries
-            const updateEducationPromises = validIndexes.map(index =>
-                userModel.updateOne(
-                    { _id: userId },
-                    { $addToSet: { [`education.${index}.skills`]: skillName } }
-                )
-            );
+        // Update corresponding education & work experience entries
+        const updateEducationPromises = validIndexes.map(index =>
+            userModel.updateOne(
+                { _id: userId },
+                { $addToSet: { [`education.${index}.skills`]: skillName } }
+            )
+        );
 
-            const updateWorkExperiencePromises = validExperienceIndexes.map(index =>
-                userModel.updateOne(
-                    { _id: userId },
-                    { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
-                )
-            );
+        const updateWorkExperiencePromises = validExperienceIndexes.map(index =>
+            userModel.updateOne(
+                { _id: userId },
+                { $addToSet: { [`workExperience.${index}.skills`]: skillName } }
+            )
+        );
 
-            await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
+        await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
 
-            // Get the correct skill entry
-            const newSkill = updatedUser.skills.find(s => s.skillName.toLowerCase() === skillName.toLowerCase());
+        // Get the correct skill entry
+        const newSkill = updatedUser.skills.find(s => s.skillName.toLowerCase() === skillName.toLowerCase());
 
-            res.status(200).json({ 
-                message: 'Skill added successfully', 
-                skill: newSkill
-            });
+        res.status(200).json({
+            message: 'Skill added successfully',
+            skill: newSkill
+        });
 
     } catch (error) {
         console.error('Error adding skill:', error);
@@ -758,7 +758,7 @@ const getSkill = async (req, res) => {
     try {
         const userId = req.user.id;
         const { skillName } = req.params;
-        
+
         // Use projection to get only the matching skill
         const user = await userModel.findById(userId, {
             skills: { $elemMatch: { skillName: new RegExp(`^${skillName}$`, "i") } }
@@ -830,8 +830,8 @@ const updateSkill = async (req, res) => {
                 return res.status(400).json({ error: 'Skill name is the same' });
             }
             */
-           // check if the new skill name exists for another skill
-            const duplicateExists = user.skills.some((skill, index) => 
+            // check if the new skill name exists for another skill
+            const duplicateExists = user.skills.some((skill, index) =>
                 skill.skillName.toLowerCase() === newSkillName.toLowerCase() && index !== skillIndex
             );
 
@@ -848,7 +848,7 @@ const updateSkill = async (req, res) => {
                 return res.status(400).json({ error: 'Invalid education indexes format' });
             }
 
-            const validEducationIndexes = educationIndexes.filter(index => 
+            const validEducationIndexes = educationIndexes.filter(index =>
                 Number.isInteger(index) && index >= 0 && index < user.education.length
             );
 
@@ -865,7 +865,7 @@ const updateSkill = async (req, res) => {
                 return res.status(400).json({ error: 'Invalid experience indexes format' });
             }
 
-            const validExperienceIndexes = experienceIndexes.filter(index => 
+            const validExperienceIndexes = experienceIndexes.filter(index =>
                 Number.isInteger(index) && index >= 0 && index < user.workExperience.length
             );
 
@@ -889,7 +889,7 @@ const updateSkill = async (req, res) => {
         );
 
         // Update linked education and work experience skills
-        const updateEducationPromises = educationIndexes 
+        const updateEducationPromises = educationIndexes
             ? educationIndexes.map(index =>
                 userModel.updateOne(
                     { _id: userId },
@@ -898,7 +898,7 @@ const updateSkill = async (req, res) => {
             )
             : [];
 
-        const updateWorkExperiencePromises = experienceIndexes 
+        const updateWorkExperiencePromises = experienceIndexes
             ? experienceIndexes.map(index =>
                 userModel.updateOne(
                     { _id: userId },
@@ -909,11 +909,11 @@ const updateSkill = async (req, res) => {
 
         await Promise.all([...updateEducationPromises, ...updateWorkExperiencePromises]);
 
-        res.status(200).json({ 
-            message: 'Skill updated successfully', 
+        res.status(200).json({
+            message: 'Skill updated successfully',
             skills: updatedUser.skills
         });
-        
+
     } catch (error) {
         console.error('Error updating skill:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -953,16 +953,16 @@ const deleteSkill = async (req, res) => {
         await userModel.updateMany(
             { _id: userId },
             {
-                $pull: { 
+                $pull: {
                     "education.$[].skills": { $regex: new RegExp(`^${skillName}$`, "i") },
                     "workExperience.$[].skills": { $regex: new RegExp(`^${skillName}$`, "i") }
                 }
             }
         );
 
-        res.status(200).json({ 
-            message: 'Skill deleted successfully', 
-            deletedSkill: skillToDelete 
+        res.status(200).json({
+            message: 'Skill deleted successfully',
+            deletedSkill: skillToDelete
         });
 
     } catch (error) {
@@ -1001,7 +1001,7 @@ const addEndorsement = async (req, res) => {
             { new: true }
         );
 
-        const updatedSkill = user.skills.find(skill => 
+        const updatedSkill = user.skills.find(skill =>
             new RegExp(`^${skillName}$`, "i").test(skill.skillName)
         );
 
@@ -1019,7 +1019,7 @@ const addEndorsement = async (req, res) => {
 const deleteEndorsement = async (req, res) => {
     try {
         const userId = req.user.id;
-        
+
         let { skillOwnerId } = req.body;
         const skillName = req.params.skillName;
         skillOwnerId = new mongoose.Types.ObjectId(skillOwnerId);
@@ -1033,10 +1033,10 @@ const deleteEndorsement = async (req, res) => {
         }
 
         if (user.skills.length > 0) {
-        const skill = user.skills[0];
-        if (!skill.endorsements.includes(userId)) {
-            return res.status(404).json({ error: "No endorsement found from this user for this skill" });
-        }
+            const skill = user.skills[0];
+            if (!skill.endorsements.includes(userId)) {
+                return res.status(404).json({ error: "No endorsement found from this user for this skill" });
+            }
         }
         else {
             return res.status(404).json({ error: "No endorsement found from this user for this skill" });
@@ -1067,33 +1067,33 @@ const deleteEndorsement = async (req, res) => {
 const updateSkillsReferences = async (user, educationIndex, newSkills = [], oldSkills = []) => {
     // Remove education index from skills that are no longer associated
     for (const skill of oldSkills) {
-      if (!newSkills.includes(skill)) {
-        const skillEntry = user.skills.find(s => s.name.toLowerCase() === skill.toLowerCase());
-        if (skillEntry) {
-          skillEntry.education = skillEntry.education.filter(index => index !== educationIndex);
+        if (!newSkills.includes(skill)) {
+            const skillEntry = user.skills.find(s => s.name.toLowerCase() === skill.toLowerCase());
+            if (skillEntry) {
+                skillEntry.education = skillEntry.education.filter(index => index !== educationIndex);
+            }
         }
-      }
     }
-  
+
     // Add education index to newly added skills
     for (const skill of newSkills) {
-      const existingSkill = user.skills.find(s => s.name.toLowerCase() === skill.toLowerCase());
-      if (existingSkill) {
-        if (!existingSkill.education.includes(educationIndex)) {
-          existingSkill.education.push(educationIndex);
+        const existingSkill = user.skills.find(s => s.name.toLowerCase() === skill.toLowerCase());
+        if (existingSkill) {
+            if (!existingSkill.education.includes(educationIndex)) {
+                existingSkill.education.push(educationIndex);
+            }
+        } else {
+            user.skills.push({
+                name: skill,
+                education: [educationIndex],
+                experience: [],
+                endorsements: []
+            });
         }
-      } else {
-        user.skills.push({ 
-          name: skill, 
-          education: [educationIndex], 
-          experience: [], 
-          endorsements: [] 
-        });
-      }
     }
-  
+
     await user.save();
-  };
+};
 
 
 
@@ -1122,7 +1122,7 @@ const addEducation = async (req, res) => {
                 const fileBuffer = req.file.buffer;
                 const mimeType = req.file.mimetype;
                 const fileSize = req.file.size;
-    
+
                 // Upload the file and get the URL
                 educationData.media = (await uploadPicture(fileBuffer, mimeType, fileSize)).url;
             } catch (error) {
@@ -1289,7 +1289,7 @@ const deleteEducation = async (req, res) => {
                 skillEntry.education = skillEntry.education.filter(index => index !== educationIndex);
 
                 // Adjust indices for remaining education entries in this skill
-                skillEntry.education = skillEntry.education.map(index => 
+                skillEntry.education = skillEntry.education.map(index =>
                     index > educationIndex ? index - 1 : index
                 );
             }
@@ -1328,7 +1328,7 @@ const editIntro = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        const requiredFields = ['firstName', 'lastName', 'location', 'industry', 'mainEducation',"headLine"];
+        const requiredFields = ['firstName', 'lastName', 'location', 'industry', 'mainEducation', "headLine"];
         const missingFields = requiredFields.filter(field => req.body[field] === undefined || req.body[field] === null);
 
         if (missingFields.length > 0) {
@@ -1344,7 +1344,7 @@ const editIntro = async (req, res) => {
                 $set: {
                     firstName,
                     lastName,
-                    headline:headLine,
+                    headline: headLine,
                     additinalName,
                     website,
                     location,
@@ -1389,13 +1389,13 @@ const updatePrivacySettings = async (req, res) => {
     try {
         const userId = req.user.id;
         const { profilePrivacySettings } = req.body;
-        
+
         if (!profilePrivacySettings) {
-            return res.status(400).json({ 
-                error: 'profilePrivacySettings is required' 
+            return res.status(400).json({
+                error: 'profilePrivacySettings is required'
             });
         }
-        
+
         // Validate that the value is one of the allowed enum values
         const allowedValues = ["public", "private", "connectionsOnly"];
         if (!allowedValues.includes(profilePrivacySettings)) {
@@ -1439,12 +1439,12 @@ const followEntity = async (req, res) => {
         const followerId = req.user.id; // Current authenticated user
         const targetId = req.params.userId; // Entity to follow
         const { entityType = 'User' } = req.body; // Default to User if not specified
-        
+
         // Validate entity type
         const validEntityTypes = ['User', 'Company'];
         if (!validEntityTypes.includes(entityType)) {
-            return res.status(400).json({ 
-                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            return res.status(400).json({
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}`
             });
         }
         // Get follower user
@@ -1487,8 +1487,8 @@ const followEntity = async (req, res) => {
         }
 
         // Check if target user blocked the follower (only applicable for User entities)
-        if (entityType === 'User' && 
-            targetEntity.blockedUsers && 
+        if (entityType === 'User' &&
+            targetEntity.blockedUsers &&
             targetEntity.blockedUsers.includes(followerId)) {
             return res.status(400).json({ message: 'Cannot follow this user' });
         }
@@ -1521,9 +1521,9 @@ const followEntity = async (req, res) => {
         res.status(200).json({ message: `${entityType} followed successfully` });
     } catch (error) {
         console.error('Error following entity:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to follow entity',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -1533,12 +1533,12 @@ const unfollowEntity = async (req, res) => {
         const followerId = req.user.id; // Current authenticated user
         const targetId = req.params.userId; // Entity to unfollow
         const { entityType = 'User' } = req.body; // Default to User if not specified
-        
+
         // Validate entity type
         const validEntityTypes = ['User', 'Company'];
         if (!validEntityTypes.includes(entityType)) {
-            return res.status(400).json({ 
-                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}` 
+            return res.status(400).json({
+                message: `Invalid entity type. Must be one of: ${validEntityTypes.join(', ')}`
             });
         }
 
@@ -1582,7 +1582,7 @@ const unfollowEntity = async (req, res) => {
             const followerIndex = targetEntity.followers.findIndex(
                 follow => follow.entity.toString() === followerId && follow.entityType === 'User'
             );
-            
+
             if (followerIndex !== -1) {
                 targetEntity.followers.splice(followerIndex, 1);
             }
@@ -1597,31 +1597,31 @@ const unfollowEntity = async (req, res) => {
         res.status(200).json({ message: `${entityType} unfollowed successfully` });
     } catch (error) {
         console.error('Error unfollowing entity:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Failed to unfollow entity',
-            error: error.message 
+            error: error.message
         });
     }
 };
 const editContactInfo = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { 
-            phone, 
-            phoneType, 
-            address, 
+        const {
+            phone,
+            phoneType,
+            address,
             birthDay,
-            website 
+            website
         } = req.body;
 
         // Build the update object with only provided fields
         const updateFields = {};
-        
+
         // Handle phone updates
         if (phone !== undefined) {
             updateFields['contactInfo.phone'] = phone;
         }
-        
+
         // Handle phoneType updates with validation
         if (phoneType !== undefined) {
             const validPhoneTypes = ["Home", "Work", "Mobile"];
@@ -1633,12 +1633,12 @@ const editContactInfo = async (req, res) => {
             }
             updateFields['contactInfo.phoneType'] = phoneType;
         }
-        
+
         // Handle address updates
         if (address !== undefined) {
             updateFields['contactInfo.address'] = address;
         }
-        
+
         // Handle birthday updates with validation
         if (birthDay) {
             if (birthDay.day !== undefined) {
@@ -1650,10 +1650,10 @@ const editContactInfo = async (req, res) => {
                 }
                 updateFields['contactInfo.birthDay.day'] = birthDay.day;
             }
-            
+
             if (birthDay.month !== undefined) {
-                const validMonths = ["January", "February", "March", "April", "May", "June", 
-                                     "July", "August", "September", "October", "November", "December"];
+                const validMonths = ["January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"];
                 if (birthDay.month !== null && !validMonths.includes(birthDay.month)) {
                     return res.status(400).json({
                         error: 'Invalid month value',
@@ -1663,13 +1663,13 @@ const editContactInfo = async (req, res) => {
                 updateFields['contactInfo.birthDay.month'] = birthDay.month;
             }
         }
-        
+
         // Handle website updates with validation
         if (website) {
             if (website.url !== undefined) {
                 updateFields['contactInfo.website.url'] = website.url;
             }
-            
+
             if (website.type !== undefined) {
                 const validWebsiteTypes = ["Personal", "Company", "Blog", "RSS Feed", "Portfolio", "Other"];
                 if (website.type !== null && !validWebsiteTypes.includes(website.type)) {
@@ -1681,7 +1681,7 @@ const editContactInfo = async (req, res) => {
                 updateFields['contactInfo.website.type'] = website.type;
             }
         }
-        
+
         // If no fields were provided for update, return an error
         if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({
@@ -1689,23 +1689,23 @@ const editContactInfo = async (req, res) => {
                 message: 'Please provide at least one contact information field to update'
             });
         }
-        
+
         // Find user and update contact information
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { $set: updateFields },
             { new: true, runValidators: true }
         ).select('contactInfo');
-        
+
         if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
+
         res.status(200).json({
             message: 'Contact information updated successfully',
             contactInfo: updatedUser.contactInfo
         });
-        
+
     } catch (error) {
         console.error('Error updating contact information:', error);
         res.status(500).json({
@@ -1725,7 +1725,7 @@ const editAbout = async (req, res) => {
 
         // Validate skills array length
         if (about.skills && Array.isArray(about.skills) && about.skills.length > 5) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'Skills array cannot contain more than 5 items'
             });
         }
@@ -1739,7 +1739,7 @@ const editAbout = async (req, res) => {
         // Create a set of existing skill names for quick lookup
         const existingSkillNames = new Set(user.skills.map(skill => skill.skillName));
         const skillsToAdd = [];
-        
+
         // Check if there are new skills in the about section to add to the main skills array
         if (about.skills && Array.isArray(about.skills)) {
             about.skills.forEach(skill => {
@@ -1770,7 +1770,7 @@ const editAbout = async (req, res) => {
             { $set: updateOps },
             { new: true, runValidators: true }
         );
-        
+
         res.status(200).json({
             message: 'About section updated successfully',
             about: updatedUser.about,
@@ -1786,6 +1786,135 @@ const editAbout = async (req, res) => {
     }
 };
 
+const getSavedPosts = async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { page = 1, limit = 10 } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      
+      // Get user with saved posts
+      const user = await userModel.findById(userId)
+        .select('savedPosts')
+        .lean();
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Get total count of saved posts
+      const totalPosts = user.savedPosts?.length || 0;
+      
+      if (totalPosts === 0) {
+        return res.status(200).json({
+          posts: [],
+          pagination: {
+            total: 0,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            pages: 0,
+            hasNextPage: false,
+            hasPrevPage: false
+          }
+        });
+      }
+      
+      // Get paginated saved posts
+      const paginatedPostIds = user.savedPosts.slice(skip, skip + parseInt(limit));
+      
+      // Fetch full post details with population
+      const posts = await postModel.find({
+        _id: { $in: paginatedPostIds },
+        isActive: true
+      })
+      .populate("userId", "firstName lastName headline profilePicture")
+      .populate("companyId", "name logo tagLine address industry organizationSize organizationType")
+      .lean();
+      
+      // Check user's like status for each post
+      const likePromises = posts.map(post => {
+        return impressionModel.findOne({
+          targetId: post._id,
+          userId,
+        }).lean();
+      });
+      
+      const likeResults = await Promise.all(likePromises);
+      
+      // Format posts for response
+      const formattedPosts = await Promise.all(posts.map(async (post, index) => {
+        const commentCount = await commentModel.countDocuments({ postId: post._id });
+        
+        // Check if post is a repost
+        const repost = await repostModel
+          .findOne({
+            postId: post._id,
+            isActive: true
+          })
+          .populate("userId", "firstName lastName profilePicture headline")
+          .lean();
+        
+        return {
+          postId: post._id,
+          userId: post.userId ? post.userId._id : null,
+          companyId: post.companyId ? post.companyId : null,
+          firstName: post.userId ? post.userId.firstName : null,
+          lastName: post.userId ? post.userId.lastName : null,
+          headline: post.userId ? post.userId.headline : "",
+          profilePicture: post.userId ? post.userId.profilePicture : null,
+          postDescription: post.description,
+          attachments: post.attachments,
+          impressionCounts: post.impressionCounts,
+          commentCount: commentCount || 0,
+          repostCount: post.repostCount || 0,
+          createdAt: post.createdAt,
+          taggedUsers: post.taggedUsers,
+          whoCanSee: post.whoCanSee || 'anyone',
+          whoCanComment: post.whoCanComment || 'anyone',
+          isRepost: !!repost,
+          isSaved: true, // Always true for saved posts
+          isLiked: !!likeResults[index],
+          isMine: (post.userId && post.userId._id.toString() === userId) || false,
+          
+          // Include repost details if this post is a repost
+          ...(repost && {
+            repostId: repost._id,
+            reposterId: repost.userId._id,
+            reposterFirstName: repost.userId.firstName,
+            reposterLastName: repost.userId.lastName,
+            reposterProfilePicture: repost.userId.profilePicture,
+            reposterHeadline: repost.userId.headline || "",
+            repostDescription: repost.description,
+            repostDate: repost.createdAt,
+          }),
+        };
+      }));
+      
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(totalPosts / parseInt(limit));
+      const hasNextPage = parseInt(page) < totalPages;
+      const hasPrevPage = parseInt(page) > 1;
+      
+      res.status(200).json({
+        posts: formattedPosts,
+        pagination: {
+          total: totalPosts,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: totalPages,
+          hasNextPage,
+          hasPrevPage
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error fetching saved posts:', error);
+      res.status(500).json({
+        message: 'Failed to fetch saved posts',
+        error: error.message
+      });
+    }
+  };
+
 const getUserActivity = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -1796,18 +1925,18 @@ const getUserActivity = async (req, res) => {
         if (!userId) {
             return res.status(400).json({ message: 'User ID is required' });
         }
-        
+
         // Validate filter
         const validFilters = ['all', 'posts', 'reposts', 'comments'];
         if (!validFilters.includes(filter)) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Invalid filter',
-                validFilters 
+                validFilters
             });
         }
         // Check if user blocked the requester
         // Check if user exists
-        const user = await userModel.findById(userId); 
+        const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -1820,24 +1949,24 @@ const getUserActivity = async (req, res) => {
             return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
         }
 
-            
+
 
         // Parse pagination parameters
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skipIndex = (pageNum - 1) * limitNum;
-        
+
         // Arrays to store activity data and post IDs
         let activities = [];
         let postIds = new Set();
-        
+
         // 1. Get user's posts if needed
         if (filter === 'all' || filter === 'posts') {
-            const userPosts = await postModel.find({ 
-                userId, 
-                isActive: true 
+            const userPosts = await postModel.find({
+                userId,
+                isActive: true
             }).select('_id createdAt updatedAt').lean();
-            
+
             userPosts.forEach(post => {
                 activities.push({
                     postId: post._id,
@@ -1848,14 +1977,14 @@ const getUserActivity = async (req, res) => {
                 postIds.add(post._id.toString());
             });
         }
-        
+
         // 2. Get user's reposts if needed
         if (filter === 'all' || filter === 'reposts') {
-            const userReposts = await repostModel.find({ 
-                userId, 
-                isActive: true 
+            const userReposts = await repostModel.find({
+                userId,
+                isActive: true
             }).select('_id postId description createdAt').lean();
-            
+
             userReposts.forEach(repost => {
                 activities.push({
                     postId: repost.postId,
@@ -1867,14 +1996,14 @@ const getUserActivity = async (req, res) => {
                 postIds.add(repost.postId.toString());
             });
         }
-        
+
         // 3. Get user's comments if needed
         if (filter === 'all' || filter === 'comments') {
-            const userComments = await commentModel.find({ 
-                userId, 
-                isActive: true 
+            const userComments = await commentModel.find({
+                userId,
+                isActive: true
             }).select('_id postId text createdAt').lean();
-            
+
             userComments.forEach(comment => {
                 activities.push({
                     postId: comment.postId,
@@ -1886,55 +2015,59 @@ const getUserActivity = async (req, res) => {
                 postIds.add(comment.postId.toString());
             });
         }
-        
+
         // Sort activities by date (newest first)
         activities.sort((a, b) => new Date(b.activityDate) - new Date(a.activityDate));
-        
+
         // Count total activities for pagination
         const totalActivities = activities.length;
-        
+
         // Apply pagination to activities array
         const paginatedActivities = activities.slice(skipIndex, skipIndex + limitNum);
-        
+
         // Get the post IDs for this page
-        const paginatedPostIds = paginatedActivities.map(activity => 
+        const paginatedPostIds = paginatedActivities.map(activity =>
             new mongoose.Types.ObjectId(activity.postId)
         );
-        
+
         // Fetch all post details for the current page
-        const posts = await postModel.find({ 
-            _id: { $in: paginatedPostIds }, 
-            isActive: true 
+        const posts = await postModel.find({
+            _id: { $in: paginatedPostIds },
+            isActive: true
         })
-        .populate('userId', 'firstName lastName headline profilePicture')
-        .lean();
-        
+            .populate('userId', 'firstName lastName headline profilePicture')
+            .populate(
+                "companyId",
+                "name logo tagLine address industry organizationSize organizationType"
+            )
+            .lean();
+
         // Create a map for quick lookup
         const postMap = {};
         posts.forEach(post => {
             postMap[post._id.toString()] = post;
         });
-        
+
         // Check if current user has saved these posts
         const currentUser = await userModel.findById(currentUserId).select('savedPosts');
         const savedPostsSet = new Set((currentUser.savedPosts || []).map(id => id.toString()));
         const likePromises = paginatedActivities.map(activity => {
             const postId = activity.postId;
             if (!postId) return Promise.resolve(false);
-        
+
             return impressionModel.findOne({
                 targetId: postId,
                 userId: currentUserId,
             }).lean()  // Add lean() to convert to plain object
-              .then(result => ({ 
-                  postId: postId.toString(), 
-                  isLiked: result  // This now contains the full impression document or null
-              }));
+                .then(result => ({
+                    postId: postId.toString(),
+                    isLiked: result  // This now contains the full impression document or null
+                }));
         });
-        
+
         // Wait for all like status checks to complete
         const likeResults = await Promise.all(likePromises);
-        
+
         // Create a lookup map for quick access
         const likeStatusMap = {};
         likeResults.forEach(item => {
@@ -1944,10 +2077,10 @@ const getUserActivity = async (req, res) => {
         const formattedPosts = paginatedActivities.map(activity => {
             const post = postMap[activity.postId.toString()];
             if (!post) return null; // Skip if post no longer exists or is inactive
-            
+
             let isRepost = false;
             let repost = null;
-            
+
             // If this is a repost activity by the user we're looking at
             if (activity.activityType === 'repost') {
                 isRepost = true;
@@ -1967,11 +2100,13 @@ const getUserActivity = async (req, res) => {
             // Format post response exactly like in getPost function
             const postResponse = {
                 postId: post._id,
-                userId: post.userId._id,
-                firstName: post.userId.firstName,
-                lastName: post.userId.lastName,
-                headline: post.userId.headline || "",
-                profilePicture: post.userId.profilePicture,
+                postId: post._id,
+                userId: post.userId ? post.userId._id : null,
+                companyId: post.companyId ? post.companyId : null,
+                firstName: post.userId ? post.userId.firstName : null,
+                lastName: post.userId ? post.userId.lastName : null,
+                headline: post.userId ? post.userId.headline : "",
+                profilePicture: post.userId ? post.userId.profilePicture : null,
                 postDescription: post.description,
                 attachments: post.attachments,
                 impressionCounts: post.impressionCounts,
@@ -1989,7 +2124,7 @@ const getUserActivity = async (req, res) => {
                 activityType: activity.activityType,
                 activityDate: activity.activityDate
             };
-            
+
             // Include repost details if applicable (exactly like in getPost function)
             if (isRepost && repost) {
                 postResponse.repostId = repost._id;
@@ -2001,7 +2136,7 @@ const getUserActivity = async (req, res) => {
                 postResponse.repostDescription = repost.description;
                 postResponse.repostDate = repost.createdAt;
             }
-            
+
             // Add comment details if this activity is a comment (similar structure to repost)
             if (activity.activityType === 'comment') {
                 postResponse.commentId = activity.commentId;
@@ -2013,15 +2148,15 @@ const getUserActivity = async (req, res) => {
                 postResponse.commenterProfilePicture = user.profilePicture;
                 postResponse.commenterHeadline = user.headline || "";
             }
-            
+
             return postResponse;
         }).filter(Boolean); // Remove any null entries
-        
+
         // Calculate pagination metadata
         const totalPages = Math.ceil(totalActivities / limitNum);
         const hasNextPage = pageNum < totalPages;
         const hasPrevPage = pageNum > 1;
-        
+
         // Return response
         res.status(200).json({
             posts: formattedPosts,
@@ -2034,7 +2169,7 @@ const getUserActivity = async (req, res) => {
                 hasPrevPage
             }
         });
-        
+
     } catch (error) {
         console.error('Error getting user activity:', error);
         res.status(500).json({
@@ -2145,7 +2280,7 @@ const sendConnectionRequest = async (req, res) => {
             userModel.exists({ _id: targetUserId, receivedConnectionRequests: userId })
         ]);
 
-        if (userWithSentRequest  && targetUserWithReceivedRequest) {
+        if (userWithSentRequest && targetUserWithReceivedRequest) {
             return res.status(400).json({ message: 'Connection request already sent' });
         }
 
@@ -2611,5 +2746,6 @@ module.exports = {
     sendMessageRequest,
     getMessageRequests,
     handleMessageRequest,
-    getRelatedUsers
+    getRelatedUsers,
+    getSavedPosts
 };
