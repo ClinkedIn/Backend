@@ -1,7 +1,7 @@
 const directChatModel = require('../models/directChatModel');
 const groupChatModel = require('../models/chatGroupModel');
 const userModel = require('../models/userModel');
-
+const admin = require("firebase-admin");
 const customError = require ('../utils/customError');
 const mongoose = require('mongoose');
 
@@ -620,33 +620,58 @@ const updateGroupChat = async (req, res) => {
 
 const markChatAsRead = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const chatId = req.params.chatId;
-        // decrement unread count for the chat
-        const user = await userModel.findById(userId);
-        if (!user) {
-            throw new customError('User not found', 404);
-        }
-        // Find the chat in user's chats
-        const userChat = user.chats.find(c => c.chatId.toString() === chatId);
-        if (!userChat) {
-            throw new customError('Chat not found in user\'s chats', 404);
-        }
-        // Update unread count and last read time
-        userChat.unreadCount = 0;
-        userChat.lastReadAt = new Date();
-        await user.save();
-        res.status(200).json({ message: 'Chat marked as read successfully' });
-
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
+      const userId = req.user.id;
+      const chatId = req.params.chatId;
+  
+      // Find the user in MongoDB
+      const user = await userModel.findById(userId);
+      if (!user) {
+        throw new customError('User not found', 404);
+      }
+  
+      // Find the chat in the user's chats
+      const userChat = user.chats.find((c) => c.chatId.toString() === chatId);
+      if (!userChat) {
+        throw new customError("Chat not found in user's chats", 404);
+      }
+  
+      // Update unread count and last read time in MongoDB
+      userChat.unreadCount = 0; // Set unread count to 0
+      userChat.lastReadAt = new Date();
+      await user.save();
+  
+      // Update Firebase
+      try {
+        const chatFirebaseDoc = admin.firestore().collection('conversations').doc(chatId);
+  
+        // Check if the chat document exists in Firebase
+        const chatDoc = await chatFirebaseDoc.get();
+        if (chatDoc.exists) {
+          // Update forceUnread to false and unread count to 0 for the logged-in user
+          await chatFirebaseDoc.update({
+            [`forceUnread.${userId}`]: false, // Set forceUnread to false
+            [`unreadCounts.${userId}`]: 0, // Set unread count to 0 for the logged-in user
+          });
+          console.log(`Updated forceUnread and unread count for user ${userId} in chat ${chatId}`);
         } else {
-            console.error('Error marking chat as read:', err);
-            res.status(500).json({ message: 'Internal server error' });
+          console.warn(`Chat document not found in Firebase for chat ID: ${chatId}`);
         }
+      } catch (firebaseErr) {
+        console.error('Error updating Firebase:', firebaseErr);
+        // Continue with the response as MongoDB update was successful
+      }
+  
+      res.status(200).json({ message: 'Chat marked as read successfully' });
+    } catch (err) {
+      if (err instanceof customError) {
+        res.status(err.statusCode).json({ message: err.message });
+      } else {
+        console.error('Error marking chat as read:', err);
+        res.status(500).json({ message: 'Internal server error' });
+      }
     }
-}
+};
+
 
 /*
 @desc Mark a chat as unread
@@ -658,29 +683,55 @@ const markChatAsUnread = async (req, res) => {
     try {
         const userId = req.user.id;
         const chatId = req.params.chatId;
-        // decrement unread count for the chat
+    
+        // Find the user in MongoDB
         const user = await userModel.findById(userId);
         if (!user) {
-            throw new customError('User not found', 404);
+          throw new customError('User not found', 404);
         }
-        // Find the chat in user's chats
-        const userChat = user.chats.find(c => c.chatId.toString() === chatId);
+    
+        // Find the chat in the user's chats
+        const userChat = user.chats.find((c) => c.chatId.toString() === chatId);
         if (!userChat) {
-            throw new customError('Chat not found in user\'s chats', 404);
+          throw new customError("Chat not found in user's chats", 404);
         }
-        // Update unread count
-        userChat.unreadCount += 1;
+    
+        // Update unread count and last read time in MongoDB
+        userChat.unreadCount = 1; // Set unread count to 1
+        userChat.lastReadAt = new Date();
         await user.save();
-        res.status(200).json({ message: 'Chat marked as unread successfully' });
-
-    } catch (err) {
-        if (err instanceof customError) {
-            res.status(err.statusCode).json({ message: err.message });
-        } else {
-            console.error('Error marking chat as unread:', err);
-            res.status(500).json({ message: 'Internal server error' });
+        console.log(`Updated unread count for user ${userId} in chat ${chatId}`);
+    
+        // Update Firebase
+        try {
+          const chatFirebaseDoc = admin.firestore().collection('conversations').doc(chatId);
+    
+          // Check if the chat document exists in Firebase
+          const chatDoc = await chatFirebaseDoc.get();
+          if (chatDoc.exists) {
+            // Update forceUnread array and unread count for the logged-in user
+            await chatFirebaseDoc.update({
+              [`forceUnread.${userId}`]: true, // Add the user to the forceUnread array
+              [`unreadCounts.${userId}`]: 1, // Set unread count to 1 for the logged-in user
+            });
+            console.log(`Updated forceUnread and unread count for user ${userId} in chat ${chatId}`);
+          } else {
+            console.warn(`Chat document not found in Firebase for chat ID: ${chatId}`);
+          }
+        } catch (firebaseErr) {
+          console.error('Error updating Firebase:', firebaseErr);
+          // Continue with the response as MongoDB update was successful
         }
-    }
+    
+        res.status(200).json({ message: 'Chat marked as unrearead successfully' });
+      } catch (err) {
+        if (err instanceof customError) {
+          res.status(err.statusCode).json({ message: err.message });
+        } else {
+          console.error('Error marking chat as read:', err);
+          res.status(500).json({ message: 'Internal server error' });
+        }
+      }
 }
 
 

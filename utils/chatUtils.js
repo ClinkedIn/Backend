@@ -296,26 +296,46 @@ const calculateTotalUnreadCount = async (userId) => {
  */
 const markMessageReadByUser = async (messageId, userId) => {
     try {
-        const messageExists = await MessageModel.exists({ _id: messageId });
-        if (!messageExists) {
-            throw new customError('Message not found', 404);
+      // Find the message and check if it already has been read by this user
+      const message = await MessageModel.findById(messageId);
+      if (!message) {
+        throw new customError("Message not found", 404);
+      }
+  
+      if (message.readBy.includes(userId)) {
+        return message;
+      }
+  
+      const updatedMessage = await MessageModel.findByIdAndUpdate(
+        messageId,
+        { $addToSet: { readBy: userId } },
+        { new: true }
+      );
+  
+      if (message.type === "direct") {
+        const chat = await directChatModel.findById(message.chatId);
+        if (chat) {
+          const user = await userModel.findById(userId);
+          if (user && user.chats) {
+            const chatIndex = user.chats.findIndex(
+              c => c.chatId.toString() === message.chatId.toString() && c.chatType === "DirectChat"
+            );
+            
+            if (chatIndex !== -1 && user.chats[chatIndex].unreadCount > 0) {
+              user.chats[chatIndex].unreadCount -= 1;
+              user.chats[chatIndex].lastReadAt = new Date();
+              await user.save();
+            }
+          }
         }
-        
-        await MessageModel.updateOne(
-            { _id: messageId },
-            { $addToSet: { readBy: userId } }
-        );
-
-        return { 
-            success: true
-        };
+      }
+      
+      return updatedMessage;
     } catch (error) {
-        if (error instanceof customError) {
-            throw error;
-        }
-        throw new customError('Failed to mark message as read', 500);
+      console.error("Error marking message as read:", error);
+      throw error;
     }
-};
+  };
 
 
 module.exports = {

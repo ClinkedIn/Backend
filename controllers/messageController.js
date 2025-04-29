@@ -4,6 +4,8 @@ const directChatModel = require("../models/directChatModel");
 const chatGroupModel = require("../models/chatGroupModel");
 const mongoose = require("mongoose");
 const customError = require("../utils/customError");
+// connect to firebase
+const admin = require("firebase-admin");
 
 const {
   validateUser,
@@ -24,6 +26,7 @@ const {
 const { sendNotification } = require("../utils/Notification");
 
 // Create a new message.
+
 const sendMessage = async (req, res) => {
   try {
     const sender = req.user.id;
@@ -90,6 +93,75 @@ const sendMessage = async (req, res) => {
 
     await updateUnreadCount(receiverId, chatId, "DirectChat");
 
+    const conversationId = chatId.toString(); // Use the MongoDB chatId
+    
+    console.log("Message URL: ", savedMessage.messageAttachment)
+
+    // Add Message to Firestore using Admin SDK
+    const messageDataForFirestore = {
+      senderId: sender,
+      text: messageText || "",
+      mediaUrl: savedMessage.messageAttachment || [],
+      mediaType: [],
+      timestamp: admin.firestore.FieldValue.serverTimestamp(), // Server timestamp
+      readBy: {[sender]: true} // Sender has implicitly read it
+    };
+    if (replyTo) {
+      messageDataForFirestore.replyToId = replyTo;
+    }
+
+    const messageId = savedMessage._id.toString();
+
+    // Add message to Firestore
+    await admin.firestore()
+      .collection('conversations')
+      .doc(conversationId)
+      .collection('messages')
+      .doc(messageId)  // Use the MongoDB ID here
+      .set(messageDataForFirestore);
+
+    console.log("Message added to Firestore conversation:", conversationId);
+
+    // Update conversation metadata
+    const conversationUpdateData = {
+      lastMessage: {
+        text: messageText || "(attachment)",
+        senderId: sender,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      },
+      lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      participants: [sender, receiverId].sort(),
+      typing: {
+        [sender]: false,
+        [receiverId]: false
+      }
+    };
+
+    // Get current unread counts
+    const convDoc = await admin.firestore()
+      .collection('conversations')
+      .doc(conversationId)
+      .get();
+    
+    const currentUnreadCounts = convDoc.exists ? (convDoc.data()?.unreadCounts || {}) : {};
+    const receiverUnreadCount = (currentUnreadCounts[receiverId] || 0) + 1;
+
+    // Update unread count
+    conversationUpdateData.unreadCounts = {
+      ...currentUnreadCounts,
+      [receiverId]: receiverUnreadCount,
+      [sender]: 0 // Reset sender's unread count
+    };
+
+    // Update Firestore conversation document
+    await admin.firestore()
+      .collection('conversations')
+      .doc(conversationId)
+      .set(conversationUpdateData, { merge: true });
+
+    console.log("Firestore conversation metadata updated:", conversationId);
+
+
     const chat = await chatModel.findByIdAndUpdate(
       chatId,
       { $push: { messages: savedMessage._id } },
@@ -129,6 +201,7 @@ const sendMessage = async (req, res) => {
   }
 };
 
+
 // Update a message. patch request. only message text could be updated
 const editMessage = async (req, res) => {
   try {
@@ -141,7 +214,6 @@ const editMessage = async (req, res) => {
     validateMessageOwner(messageId, req.user.id);
 
     // Check if message isDeleted = true deleted
-
     const updatedMessage = await MessageModel.findByIdAndUpdate(
       messageId,
       { messageText },
@@ -156,6 +228,47 @@ const editMessage = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Cannot update a deleted message" });
+    }
+
+    // Add this code to update message in Firestore
+    const conversationId = updatedMessage.chatId.toString();
+    
+    // We need to find the message in Firestore first
+    const messagesSnapshot = await admin.firestore()
+      .collection('conversations')
+      .doc(conversationId)
+      .collection('messages')
+      .where('senderId', '==', updatedMessage.sender.toString())
+      // You might need additional filters to find the exact message
+      .orderBy('timestamp', 'desc')
+      .limit(20)  // Adjust limit as needed
+      .get();
+    
+    // Find the message with matching text or timestamp close to our MongoDB message
+    let messageDoc;
+    messagesSnapshot.forEach(doc => {
+      // Look for identifying characteristics to find the right message
+      // This is a simple approach; you might need to improve the matching logic
+      if (!messageDoc) {
+        messageDoc = doc;
+      }
+    });
+    
+    if (messageDoc) {
+      // Update the message text in Firestore
+      await admin.firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageDoc.id)
+        .update({
+          text: messageText,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      
+      console.log("Message updated in Firestore:", messageDoc.id);
+    } else {
+      console.warn("Could not find corresponding Firestore message to update");
     }
 
     res
@@ -184,18 +297,45 @@ const deleteMessage = async (req, res) => {
 
     const deletedMessage = await MessageModel.findByIdAndUpdate(
       messageId,
-      { isDeleted: true },
+      {
+        isDeleted: true,
+        messageText: "This message is deleted",
+        messageAttachment: [] // Clear attachments
+      },
       { new: true }
     );
+
     if (!deletedMessage) {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // if the message was unread and deleted, should we update the unread count ????
+    // Update the message in Firebase
+    try {
+      const conversationId = deletedMessage.chatId.toString();
 
-    res
-      .status(200)
-      .json({ message: "Message deleted successfully", data: deletedMessage });
+      // Update the message in Firestore
+      await admin.firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          text: "This message is deleted",
+          mediaUrl: [],
+          mediaType: [],
+          isDeleted: true,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+      console.log(`Message ${messageId} marked as deleted in Firestore`);
+    } catch (firebaseErr) {
+      console.error("Error updating message in Firestore:", firebaseErr);
+    }
+
+    res.status(200).json({
+      message: "Message deleted successfully",
+      data: deletedMessage
+    });
   } catch (err) {
     if (err instanceof customError) {
       res.status(err.statusCode).json({ message: err.message });
@@ -221,7 +361,7 @@ const blockUserFromMessaging = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const blockedUser = userModel.findById(blockedUserId);
+    const blockedUser = await userModel.findById(blockedUserId);
     if (!blockedUser) {
       return res.status(404).json({ message: "Blocked user not found" });
     }
@@ -230,8 +370,34 @@ const blockUserFromMessaging = async (req, res) => {
       return res.status(400).json({ message: "User is already blocked" });
     }
     
+    // Update MongoDB
     user.blockedFromMessaging.push(blockedUserId);
     await user.save();
+
+    try {
+      // Update Firebase - add to the blockedUsers array
+      const userFirebaseDoc = admin.firestore().collection('user').doc(userId);
+      
+      // Check if user document exists
+      const userDoc = await userFirebaseDoc.get();
+      
+      if (userDoc.exists) {
+        // User exists, update the blockedUsers array
+        await userFirebaseDoc.update({
+          blockedUsers: admin.firestore.FieldValue.arrayUnion(blockedUserId)
+        });
+      } else {
+        // User doesn't exist in Firebase, create it with blockedUsers
+        await userFirebaseDoc.set({
+          blockedUsers: [blockedUserId],
+        });
+      }
+      
+      console.log(`User ${blockedUserId} blocked successfully in Firebase`);
+    } catch (firebaseErr) {
+      console.error("Error updating blocked users in Firebase:", firebaseErr);
+      // Continue with response as MongoDB update was successful
+    }
     
     res.status(200).json({ message: "User blocked successfully" });
   } catch (err) {
@@ -246,6 +412,7 @@ const blockUserFromMessaging = async (req, res) => {
   }
 };
 
+
 const unblockUserFromMessaging = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -256,11 +423,34 @@ const unblockUserFromMessaging = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Update MongoDB
     user.blockedFromMessaging = user.blockedFromMessaging.filter(
       (id) => id.toString() !== blockedUserId.toString()
     );
-
     await user.save();
+    
+    try {
+      // Update Firebase - remove from blockedUsers array
+      const userFirebaseDoc = admin.firestore().collection('user').doc(userId);
+      
+      // Check if user document exists
+      const userDoc = await userFirebaseDoc.get();
+      
+      if (userDoc.exists) {
+        // Remove user from the blockedUsers array
+        await userFirebaseDoc.update({
+          blockedUsers: admin.firestore.FieldValue.arrayRemove(blockedUserId)
+        });
+        
+        console.log(`User ${blockedUserId} unblocked successfully in Firebase`);
+      } else {
+        console.warn(`User document not found in Firebase for ID: ${userId}`);
+      }
+    } catch (firebaseErr) {
+      console.error("Error updating unblock in Firebase:", firebaseErr);
+      // Continue with response as MongoDB update was successful
+    }
+    
     const updatedUser = await userModel.findById(userId);
 
     res.status(200).json({
@@ -274,6 +464,7 @@ const unblockUserFromMessaging = async (req, res) => {
       .json({ message: "Internal server error", error: err.message });
   }
 };
+
 
 const getTotalUnreadCount = async (req, res) => {
   try {
