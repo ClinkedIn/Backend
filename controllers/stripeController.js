@@ -63,7 +63,7 @@ const createCheckoutSession = async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: lineItems,
-            success_url: `${process.env.CLIENT_URL}/success`,
+            success_url: `${process.env.CLIENT_URL}/subscription-status`,
             cancel_url: `${process.env.CLIENT_URL}/cancel`,
             mode: paymentMode, // Use the payment mode directly
             client_reference_id: userId,

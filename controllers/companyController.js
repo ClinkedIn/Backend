@@ -8,6 +8,7 @@ const {
     uploadMultipleImages,
     deleteFileFromUrl,
 } = require('../utils/cloudinaryUpload');
+const { uploadPostAttachments } = require("../utils/postUtils");
 const APIFeatures = require('../utils/apiFeatures');
 const slugify = require('slugify');
 // Create a new company

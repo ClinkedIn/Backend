@@ -10,7 +10,7 @@ const upload = require('../middlewares/multer');
 router.route('/users')
     .get(protect, searchController.searchUsers);
 router.route('/jobs')
-    .get(searchController.searchJobs);
+    .get(protect, searchController.searchJobs);
 module.exports = router;
 router.route('/posts')
     .get(protect, postController.searchPostsByKeyword);

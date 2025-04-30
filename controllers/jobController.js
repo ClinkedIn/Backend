@@ -217,7 +217,30 @@ const getAllJobs = async (req, res) => {
             .find()
             .populate('companyId', 'name logo industry location')
             .sort({ createdAt: -1 });
-        res.status(200).json(jobs);
+
+        // Get the user's saved jobs
+        const userId = req.user.id;
+        const user = await userModel.findById(userId).select('savedJobs');
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Create a Set of saved job IDs for efficient lookup
+        const savedJobsSet = new Set(
+            user.savedJobs ? user.savedJobs.map(id => id.toString()) : []
+        );
+        
+        // Add isSaved property to each job
+        const jobsWithSavedStatus = jobs.map(job => {
+            const jobObj = job.toObject ? job.toObject() : job;
+            return {
+                ...jobObj,
+                isSaved: savedJobsSet.has(job._id.toString())
+            };
+        });
+        
+        res.status(200).json(jobsWithSavedStatus);
     } catch (error) {
         console.error('Error getting jobs:', error);
         res.status(500).json({
@@ -231,10 +254,13 @@ const getAllJobs = async (req, res) => {
 const getJob = async (req, res) => {
     try {
         const job = await jobModel.findById(req.params.jobId);
+        const userId = req.user.id; // This comes from auth middleware
+        const user = await userModel.findById(userId)
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
-        res.status(200).json(job);
+        const isSaved = user.savedJobs.includes(job._id)? true : false;
+        return res.status(200).json({ ...job.toObject(), isSaved });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -284,11 +310,16 @@ const updateJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
     try {
-        // Using findByIdAndUpdate to soft delete instead of findByIdAndDelete
-
         const userId = req.user.id;
+        const jobId = req.params.jobId;
 
-        const job = await jobModel.findById(req.params.jobId);
+        // First find the job to get its details before deletion
+        const job = await jobModel.findById(jobId);
+        
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+
         const company = await companyModel.findById(job.companyId);
 
         const isOwner = company.userId && company.userId.toString() === userId;
@@ -301,22 +332,24 @@ const deleteJob = async (req, res) => {
             });
         }
 
-        const deletedJob = await jobModel.findByIdAndUpdate(
-            req.params.jobId,
-            { isActive: false },
-            { new: true } // Return the updated document
-        );
+        // Store job information before deletion
+        const jobToDelete = {
+            id: job._id,
+            title: job.title
+        };
 
-        if (!deletedJob) {
-            return res.status(404).json({ message: 'Job not found' });
+        // Use proper query format with deleteOne
+        const deleteResult = await jobModel.deleteOne({ _id: jobId });
+
+        // Check if anything was actually deleted
+        if (deleteResult.deletedCount === 0) {
+            return res.status(404).json({ message: 'Job not found or already deleted' });
         }
 
+        // Return success with the job information we saved earlier
         res.status(200).json({
             message: 'Job deleted successfully',
-            deletedJob: {
-                id: deletedJob._id,
-                title: deletedJob.title,
-            },
+            deletedJob: jobToDelete
         });
     } catch (error) {
         console.error('Error deleting job:', error);
