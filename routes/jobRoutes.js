@@ -19,14 +19,6 @@ router.route('/saved')
 router.route('/my-applications')
     .get(protect,jobController.getMyApplications)
 
-// Mark an applicant as accepted for the job.
-router.route('/jobId/applications/:userId/accept')
-    .put(protect,jobController.acceptApplicant);
-
-// Mark an applicant as rejected for the job.
-router.route('/jobId/applications/:userId/reject')
-    .put(protect,jobController.rejectApplicant);
-
 // get all jobs created by a specific company.
 router.route('/company/:companyId')
     .get(protect,jobController.getJobsByCompany)
@@ -34,6 +26,14 @@ router.route('/company/:companyId')
     // get/search , Provide filtering/search capabilities (e.g., by workplace type, job location, job type).
     // Request: A GET request where query parameters (like ?workplace_type=Remote&job_type=full time) are used to filter jobs.
     // Response: A list of jobs that match the search criteria.
+// Mark an applicant as accepted for the job.
+router.route('/:jobId/applications/:userId/accept')
+    .put(protect,jobController.acceptApplicant);
+
+// Mark an applicant as rejected for the job.
+router.route('/:jobId/applications/:userId/reject')
+    .put(protect,jobController.rejectApplicant);
+
 router.route('/:jobId/save')
     .post(protect,jobController.saveJob)
     .delete(protect,jobController.unsaveJob)

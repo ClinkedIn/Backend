@@ -84,7 +84,16 @@ const searchJobs = async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skipIndex = (pageNum - 1) * limitNum;
-        
+        const userId = req.user.id;
+        const user = await userModel.findById(userId).select('savedJobs');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const savedJobsSet = new Set(
+            user.savedJobs ? user.savedJobs.map(id => id.toString()) : []
+        );
         // Build the match stage for aggregation pipeline
         const matchStage = {
             isActive: true // Only return active jobs
@@ -248,6 +257,7 @@ const searchJobs = async (req, res) => {
                 mustHave: q.mustHave,
                 idealAnswer: q.idealAnswer
             })),
+            isSaved: savedJobsSet.has(job._id.toString()),
             createdAt: job.createdAt,
             updatedAt: job.updatedAt
         }));
