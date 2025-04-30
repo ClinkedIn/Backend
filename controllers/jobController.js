@@ -310,11 +310,16 @@ const updateJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
     try {
-        // Using findByIdAndUpdate to soft delete instead of findByIdAndDelete
-
         const userId = req.user.id;
+        const jobId = req.params.jobId;
 
-        const job = await jobModel.findById(req.params.jobId);
+        // First find the job to get its details before deletion
+        const job = await jobModel.findById(jobId);
+        
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+
         const company = await companyModel.findById(job.companyId);
 
         const isOwner = company.userId && company.userId.toString() === userId;
@@ -327,20 +332,24 @@ const deleteJob = async (req, res) => {
             });
         }
 
-        const deletedJob = await jobModel.deleteOne(
-            req.params.jobId,
-        );
+        // Store job information before deletion
+        const jobToDelete = {
+            id: job._id,
+            title: job.title
+        };
 
-        if (!deletedJob) {
-            return res.status(404).json({ message: 'Job not found' });
+        // Use proper query format with deleteOne
+        const deleteResult = await jobModel.deleteOne({ _id: jobId });
+
+        // Check if anything was actually deleted
+        if (deleteResult.deletedCount === 0) {
+            return res.status(404).json({ message: 'Job not found or already deleted' });
         }
 
+        // Return success with the job information we saved earlier
         res.status(200).json({
             message: 'Job deleted successfully',
-            deletedJob: {
-                id: deletedJob._id,
-                title: deletedJob.title,
-            },
+            deletedJob: jobToDelete
         });
     } catch (error) {
         console.error('Error deleting job:', error);
