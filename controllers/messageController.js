@@ -103,6 +103,7 @@ const sendMessage = async (req, res) => {
       text: messageText || "",
       mediaUrl: savedMessage.messageAttachment || [],
       mediaType: [],
+      readBy: {[sender]: true , [receiverId] : false},
       timestamp: admin.firestore.FieldValue.serverTimestamp(), // Server timestamp
       readBy: {[sender]: true} // Sender has implicitly read it
     };
@@ -207,85 +208,61 @@ const editMessage = async (req, res) => {
   try {
     const messageId = req.params.messageId;
     const { messageText } = req.body;
+
     if (!messageText) {
       throw new customError("Message text is required", 400);
     }
 
     validateMessageOwner(messageId, req.user.id);
 
-    // Check if message isDeleted = true deleted
+    const message = await MessageModel.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+    if (message.isDeleted) {
+      return res.status(400).json({ message: "Cannot update a deleted message" });
+    }
+
     const updatedMessage = await MessageModel.findByIdAndUpdate(
       messageId,
-      { messageText },
+      { messageText, updatedAt: Date.now() },
       { new: true }
     );
 
-    if (!updatedMessage) {
-      return res.status(404).json({ message: "Message not found" });
-    }
+    console.log(`Attempting to update Firestore message ${messageId} in conversation ${updatedMessage.chatId}`);
 
-    if (updatedMessage.isDeleted) {
-      return res
-        .status(400)
-        .json({ message: "Cannot update a deleted message" });
-    }
-
-    // Add this code to update message in Firestore
+    // Firestore reference
     const conversationId = updatedMessage.chatId.toString();
-    
-    // We need to find the message in Firestore first
-    const messagesSnapshot = await admin.firestore()
+    const messageDocRef = admin.firestore()
       .collection('conversations')
       .doc(conversationId)
       .collection('messages')
-      .where('senderId', '==', updatedMessage.sender.toString())
-      // You might need additional filters to find the exact message
-      .orderBy('timestamp', 'desc')
-      .limit(20)  // Adjust limit as needed
-      .get();
-    
-    // Find the message with matching text or timestamp close to our MongoDB message
-    let messageDoc;
-    messagesSnapshot.forEach(doc => {
-      // Look for identifying characteristics to find the right message
-      // This is a simple approach; you might need to improve the matching logic
-      if (!messageDoc) {
-        messageDoc = doc;
-      }
-    });
-    
-    if (messageDoc) {
-      // Update the message text in Firestore
-      await admin.firestore()
-        .collection('conversations')
-        .doc(conversationId)
-        .collection('messages')
-        .doc(messageDoc.id)
-        .update({
-          text: messageText,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      
-      console.log("Message updated in Firestore:", messageDoc.id);
-    } else {
-      console.warn("Could not find corresponding Firestore message to update");
-    }
+      .doc(messageId);
 
-    res
-      .status(200)
-      .json({
-        message: "Message updated successfully",
-        updatedMessage: updatedMessage,
-      });
+    await messageDocRef.update({
+      text: messageText,
+      editedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log("Message updated successfully in Firestore.");
+
+    const conversationRef = admin.firestore().collection("conversations").doc(conversationId);
+    await conversationRef.update({
+      "lastMessage.text": messageText,
+      "lastMessage.timestamp": admin.firestore.FieldValue.serverTimestamp(),
+      "lastUpdatedAt": admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.status(200).json({
+      message: "Message updated successfully",
+      updatedMessage,
+    });
+
   } catch (err) {
-    if (err instanceof customError) {
-      res.status(err.statusCode).json({ message: err.message });
-    } else {
-      console.error("Error updating message:", err);
-      res
-        .status(500)
-        .json({ message: "Internal server error", error: err.message });
-    }
+    console.error("Error updating message:", err);
+    res.status(err instanceof customError ? err.statusCode : 500).json({
+      message: err.message || "Internal server error",
+    });
   }
 };
 
