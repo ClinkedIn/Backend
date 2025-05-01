@@ -88,7 +88,7 @@ const getUserProfile = async (req, res) => {
         // if (!accessCheck.hasAccess) {
         //     return res.status(accessCheck.statusCode || 403).json({ message: accessCheck.message });
         // }
-
+        const isConnected = user.connectionList.includes(requesterId);
         // ADDED for privacy settings
         const canSendConnection =
             (await canSendConnectionRequest(userId, requesterId)) &&
@@ -97,6 +97,7 @@ const getUserProfile = async (req, res) => {
             message: 'User profile retrieved successfully',
             user,
             canSendConnectionRequest: canSendConnection,
+            isConnected,
         });
     } catch (error) {
         console.error('Error retrieving user profile:', error);
