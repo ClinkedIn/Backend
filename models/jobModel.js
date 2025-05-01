@@ -40,6 +40,7 @@ const jobSchema = new mongoose.Schema({
   accepted: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users accepted
   rejected: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Users rejected
   isActive: { type: Boolean, default: true }, // Job status
+  isFlagged: { type: Boolean, default: false }, // Job status
 }, { timestamps: true }); // Adds createdAt & updatedAt timestamps
 jobSchema.index({ companyId: 1 }); // Index for quick access to jobs by company
 module.exports = mongoose.model("Job", jobSchema);
