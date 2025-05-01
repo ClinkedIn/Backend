@@ -14205,7 +14205,7 @@
  * /api/admin/reports/{reportId}:
  *   get:
  *     summary: Get a specific report
- *     tags: [Admin - Reports]
+ *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -14390,22 +14390,175 @@
  * @swagger
  * /api/admin/jobs:
  *   get:
- *     summary: Get flagged jobs
+ *     summary: Get flagged active and inactive jobs
  *     tags: [Admin]
- *     description: Retrieve all flagged job postings for moderation
+ *     description: Retrieve all flagged job postings grouped by active status for moderation
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter jobs by active status (optional)
+ *         example: true
  *     responses:
  *       200:
  *         description: Flagged jobs retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of flagged jobs
+ *                       example: 10
+ *                     activeCount:
+ *                       type: number
+ *                       description: Number of active flagged jobs
+ *                       example: 7
+ *                     inactiveCount:
+ *                       type: number
+ *                       description: Number of inactive flagged jobs
+ *                       example: 3
+ *                     jobs:
+ *                       type: object
+ *                       properties:
+ *                         active:
+ *                           type: array
+ *                           description: List of active flagged jobs
+ *                           items:
+ *                             $ref: '#/components/schemas/Job'
+ *                         inactive:
+ *                           type: array
+ *                           description: List of inactive flagged jobs
+ *                           items:
+ *                             $ref: '#/components/schemas/Job'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error message"
  */
-
+/**
+ * @swagger
+ * /api/admin/jobs/flag/{jobId}:
+ *   patch:
+ *     summary: Flag a job posting
+ *     tags: [Admin]
+ *     description: Mark a job posting as flagged for review. Only accessible by admin users.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: ID of the job to flag
+ *     responses:
+ *       200:
+ *         description: Job successfully flagged
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Job has been flagged successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobId:
+ *                       type: string
+ *                       format: ObjectId
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     title:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     isFlagged:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: Invalid job ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid job ID format"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized as an admin"
+ *       404:
+ *         description: Job not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "fail"
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to flag job"
+ */
 /**
  * @swagger
  * /api/admin/jobs/{jobId}:
