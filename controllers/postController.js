@@ -41,7 +41,19 @@ const createPost = async (req, res) => {
   try {
     const userId = req.user.id; // From authentication middleware
     let { description, taggedUsers, whoCanSee, whoCanComment } = req.body;
+    let processedTaggedUsers = [];
+    if (taggedUsers && taggedUsers.length > 0) {
+      // If taggedUsers is a string, try to parse it as JSON
+      const parsedUsers =
+        typeof taggedUsers === "string" ? JSON.parse(taggedUsers) : taggedUsers;
 
+      processedTaggedUsers = parsedUsers.map((user) => ({
+        userId: user.userId,
+        userType: user.userType || "User",
+        firstName: user.firstName,
+        lastName: user.lastName
+      }));
+    }
     // Validate required fields
     if (!description || description.trim() === "") {
       return res.status(400).json({ message: "Post description is required" });
@@ -52,7 +64,7 @@ const createPost = async (req, res) => {
       userId,
       description,
       attachments: [],
-      taggedUsers: taggedUsers || [],
+      taggedUsers: processedTaggedUsers || [],
       whoCanSee: whoCanSee || "anyone",
       whoCanComment: whoCanComment || "anyone",
     };
