@@ -19,8 +19,12 @@ router.route('/jobs')
     .get(protect, checkAdmin, adminController.getFlaggedJobs);
     
 
+    router.route('/jobs/flag/:jobId')
+    .patch(protect, checkAdmin, adminController.flagJob);
+        
 router.route('/jobs/:jobId')
     .delete(protect, checkAdmin,  adminController.removeJob);
+    
     
 
 // Analytics
