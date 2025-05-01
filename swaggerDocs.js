@@ -11107,13 +11107,7 @@
  */
 
 // *********************************** Connections APIs ******************************************//
-/**
- * @swagger
- * tags:
- *   - name: Connections
- *     description: Managing connections and connection requests
- */
-/**
+
 /**
  * @swagger
  * /api/user/connections/request/{targetUserId}:
