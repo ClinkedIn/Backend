@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "devStart": "nodemon server.js",
+    "dev": "nodemon server.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch"
   },
