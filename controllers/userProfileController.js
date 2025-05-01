@@ -378,7 +378,7 @@ const uploadResume = async (req, res) => {
         console.log('Uploading file with mimetype:', req.file.mimetype);
 
         // Use 'raw' resource type for documents instead of 'document'
-        const uploadResult = await uploadFile(req.file.buffer, 'raw');
+        const uploadResult = await uploadFile(req.file.buffer, req.file.mimeType);
 
         if (!uploadResult || !uploadResult.url) {
             throw new Error('Failed to get upload URL from Cloudinary');
