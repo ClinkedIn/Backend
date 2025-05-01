@@ -6,7 +6,8 @@ const createCheckoutSession = async (req, res) => {
     try {
         const paymentMode = "subscription" // Change default to subscription
         const userId = req.user.id;
-
+        const successUrl = req.body.successUrl || `${process.env.CLIENT_URL}/subscription-status`;
+        const cancelUrl = req.body.cancelUrl || `${process.env.CLIENT_URL}/cancel`;
         // Check for existing subscription
         const existingSubscription = await subscriptionModel.findOne({
             userId,
@@ -63,8 +64,8 @@ const createCheckoutSession = async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: lineItems,
-            success_url: `${process.env.CLIENT_URL}/subscription-status`,
-            cancel_url: `${process.env.CLIENT_URL}/cancel`,
+            success_url: successUrl,
+            cancel_url: cancelUrl,
             mode: paymentMode, // Use the payment mode directly
             client_reference_id: userId,
             payment_intent_data: paymentMode === "payment" ? {
