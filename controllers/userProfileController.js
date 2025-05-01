@@ -375,10 +375,10 @@ const uploadResume = async (req, res) => {
             });
         }
 
-        console.log('Uploading file with mimetype:', req.file.mimetype);
+        console.log('Uploading file with mimetype:', 'pdf');
 
         // Use 'raw' resource type for documents instead of 'document'
-        const uploadResult = await uploadFile(req.file.buffer, req.file.mimeType);
+        const uploadResult = await uploadFile(req.file.buffer, 'raw');
 
         if (!uploadResult || !uploadResult.url) {
             throw new Error('Failed to get upload URL from Cloudinary');
@@ -388,7 +388,9 @@ const uploadResume = async (req, res) => {
 
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { resume: uploadResult.url },
+            { resume: `https://docs.google.com/viewer?url=${encodeURIComponent(
+                uploadResult.url
+            )}&embedded=true` },
             { new: true }
         );
 
