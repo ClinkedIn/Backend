@@ -29,6 +29,7 @@ router
 
 router
     .route('/:companyId/admin')
+    .get(protect, companyController.getAdmins)
     .post(protect, companyController.addAdmin)
     .delete(protect, companyController.removeAdmin);
 
