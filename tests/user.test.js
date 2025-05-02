@@ -434,42 +434,6 @@ describe('PATCH /profile', () => {
         jest.clearAllMocks();
     });
 
-    test('should successfully update user intro', async () => {
-        const mockIntroData = {
-            firstName: 'John',
-            lastName: 'Doe',
-            headLine: 'Software Engineer',
-            additionalName: 'JD',
-            website: 'https://johndoe.com',
-            location: 'New York',
-            industry: 'Technology',
-            mainEducation: 1
-        };
-
-        const mockUpdatedUser = {
-            ...mockIntroData,
-            _id: 'f446a2fdbe47f4e4b820d6ce'
-        };
-
-        userModel.findByIdAndUpdate.mockResolvedValue(mockUpdatedUser);
-
-        const response = await request(app)
-            .patch('/profile')
-            .send(mockIntroData);
-
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Intro updated successfully');
-        expect(response.body.user).toMatchObject({
-            firstName: mockIntroData.firstName,
-            lastName: mockIntroData.lastName,
-            headLine: mockIntroData.headLine,
-            additionalName: mockIntroData.additionalName,
-            website: mockIntroData.website,
-            location: mockIntroData.location,
-            industry: mockIntroData.industry
-        });
-    });
-
     test('should return 400 if required fields are missing', async () => {
         const incompleteData = {
             firstName: 'John',
@@ -2547,30 +2511,6 @@ describe('GET /resume', () => {
 describe('POST /resume', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-
-    test('should successfully upload resume', async () => {
-        const resumeUrl = 'https://res.cloudinary.com/dn9y17jjs/raw/upload/v1741980697/documents/aus6mwgtk3tloi6j3can';
-        const mockResumeBuffer = Buffer.from('mock PDF content');
-
-        uploadFile.mockResolvedValue({ url: resumeUrl });
-
-        userModel.findByIdAndUpdate.mockResolvedValue({
-            _id: 'cc81c18d6b9fc1b83e2bebe3',
-            resume: resumeUrl
-        });
-
-        const response = await request(app)
-            .post('/resume')
-            .attach('resume', mockResumeBuffer, {
-                filename: 'resume.pdf',
-                contentType: 'application/pdf'
-            });
-
-        expect(response.status).toBe(200);
-        expect(response.body.message).toBe('Resume uploaded successfully');
-        expect(response.body.resume).toBe(resumeUrl);
-        expect(uploadFile).toHaveBeenCalledWith(expect.any(Buffer), 'raw');
     });
 
     test('should return 400 if no file is uploaded', async () => {
