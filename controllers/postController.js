@@ -188,7 +188,7 @@ const getPost = async (req, res) => {
 
             if (post.whoCanSee === 'connections') {
                 // If user is not the post owner
-                if (post.userId._id.toString() !== userId) {
+                if (post.userId && post.userId._id.toString() !== userId) {
                     // Get the post owner's connections
                     const connections = post.userId.connections || [];
 
