@@ -323,7 +323,7 @@ const getPostComments = async (req, res) => {
       }
 
       //Check if the user blocked the post owner
-      if (user.blockedUsers.includes(post.userId)) {
+      if (post.userId && user.blockedUsers.includes(post.userId)) {
         return res
           .status(403)
           .json({ message: "You can't view comments on this post" });
