@@ -1791,7 +1791,7 @@ const followEntity = async (req, res) => {
         // Check if already following
         const alreadyFollowing = followerUser.following.some(
             (follow) =>
-                follow.entity.toString() === targetId ||
+                follow.entity.toString() === targetId &&
                 follow.entityType === entityType
         );
         // If following a user, prevent following again
