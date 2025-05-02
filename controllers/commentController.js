@@ -278,6 +278,7 @@ const getPostComments = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
     const userId = req.user.id;
+    
     // Validate post ID
     if (!postId) {
       return res.status(400).json({ message: "Post ID is required" });
@@ -295,6 +296,7 @@ const getPostComments = async (req, res) => {
       isActive: true,
       parentComment: null, // Ensuring we only count top-level comments
     });
+    
     // Check if post is set to connections only and the user is not connected
     const user = await userModel.findById(req.user.id);
     if (
@@ -306,6 +308,7 @@ const getPostComments = async (req, res) => {
         message: "You can only view comments on posts from your connections",
       });
     }
+    
     //c check if the user is blocked by the post owner
     const postOwner = await userModel.findById(post.userId);
     if (postOwner.blockedUsers.includes(req.user.id)) {
@@ -313,12 +316,14 @@ const getPostComments = async (req, res) => {
         .status(403)
         .json({ message: "You can't view comments on this post" });
     }
+    
     //Check if the user blocked the post owner
     if (user.blockedUsers.includes(post.userId)) {
       return res
         .status(403)
         .json({ message: "You can't view comments on this post" });
     }
+    
     // Find comments for the post with pagination
     // Only get top-level comments (not replies)
     const comments = await commentModel
@@ -331,7 +336,21 @@ const getPostComments = async (req, res) => {
       .skip(skipIndex)
       .limit(limit);
 
-    // Enhance comments with user information
+    // Get all user impressions for these comments in a single query
+    const commentIds = comments.map(comment => comment._id);
+    const userImpressions = await impressionModel.find({
+      targetId: { $in: commentIds },
+      userId: userId,
+      targetType: "Comment"
+    }).lean();
+
+    // Create a map of impressions by comment ID for quick lookup
+    const impressionMap = {};
+    userImpressions.forEach(impression => {
+      impressionMap[impression.targetId.toString()] = impression;
+    });
+
+    // Enhance comments with user information and isLiked status
     const commentsWithUserInfo = await Promise.all(
       comments.map(async (comment) => {
         const user = await userModel.findById(
@@ -339,12 +358,19 @@ const getPostComments = async (req, res) => {
           "firstName lastName headline profilePicture"
         );
 
+        // Check if user has liked this comment
+        const isLiked = !!impressionMap[comment._id.toString()];
+        
         return {
           ...comment.toObject(),
           firstName: user?.firstName,
           lastName: user?.lastName,
           headline: user?.headline,
           profilePicture: user?.profilePicture,
+          isLiked: {
+            like: isLiked,
+            type : impressionMap[comment._id.toString()]?.type || null,
+          }
         };
       })
     );
@@ -438,6 +464,7 @@ const deleteComment = async (req, res) => {
 const getCommentReplies = async (req, res) => {
   try {
     const { commentId } = req.params;
+    const userId = req.user.id; // Get the current user's ID
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
@@ -469,7 +496,21 @@ const getCommentReplies = async (req, res) => {
       .skip(skipIndex)
       .limit(limit);
 
-    // Enhance replies with user information
+    // Get all user impressions for these replies in a single query
+    const replyIds = replies.map(reply => reply._id);
+    const userImpressions = await impressionModel.find({
+      targetId: { $in: replyIds },
+      userId: userId,
+      targetType: "Comment"
+    }).lean();
+
+    // Create a map of impressions by reply ID for quick lookup
+    const impressionMap = {};
+    userImpressions.forEach(impression => {
+      impressionMap[impression.targetId.toString()] = impression;
+    });
+
+    // Enhance replies with user information and isLiked status
     const repliesWithUserInfo = await Promise.all(
       replies.map(async (reply) => {
         const user = await userModel.findById(
@@ -477,12 +518,19 @@ const getCommentReplies = async (req, res) => {
           "firstName lastName headline profilePicture"
         );
 
+        // Check if user has liked this reply
+        const isLiked = !!impressionMap[reply._id.toString()];
+        
         return {
           ...reply.toObject(),
           firstName: user?.firstName,
           lastName: user?.lastName,
           headline: user?.headline,
           profilePicture: user?.profilePicture,
+          isLiked: {
+            like: isLiked,
+            type : impressionMap[comment._id.toString()]?.type || null,
+          }
         };
       })
     );
