@@ -72,12 +72,12 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
- * 
+ *
+ *
  * @swagger
  * /user/search/users:
  *   get:
- *     summary: Search for users by name 
+ *     summary: Search for users by name
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -147,8 +147,8 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
- * 
+ *
+ *
  * /user/connections:
  *   get:
  *     summary: Get user's connections list
@@ -241,7 +241,7 @@
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ *
  * /user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
@@ -454,7 +454,7 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
- */  
+ */
 /**
  * @swagger
  * /user/connections/related-users:
@@ -5620,8 +5620,6 @@
  *     summary: Create a new company
  *     tags: [Companies]
  *     description: Create a new company profile. Requires authentication. The creator becomes the owner and admin.
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -5777,8 +5775,6 @@
  *     summary: Retrieve all companies
  *     tags: [Companies]
  *     description: Retrieve a paginated list of all companies with filtering, sorting, and pagination options.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -5877,8 +5873,6 @@
  *     summary: Retrieve a specific company
  *     tags: [Companies]
  *     description: Retrieve details of a company by its ID or address slug. Also tracks visitor analytics.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -5964,8 +5958,6 @@
  *     summary: Update a company
  *     tags: [Companies]
  *     description: Update a company's details. Only the owner or admin can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6095,8 +6087,6 @@
  *     summary: Delete a company
  *     tags: [Companies]
  *     description: Soft delete a company profile (marks as deleted but doesn't remove from database). Only the owner or admin can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6337,12 +6327,128 @@
 /**
  * @swagger
  * /api/companies/{companyId}/admin:
+ *   get:
+ *     summary: Get company administrators
+ *     tags: [Companies]
+ *     description: Retrieve a paginated list of administrators for a specific company. Only available to company owner and admins.
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of admins per page (max 50)
+ *     responses:
+ *       200:
+ *         description: Company admins retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Admins fetched successfully"
+ *                 admins:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1234/profile.jpg"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Corp"
+ *                       mainEducation:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                             example: "Stanford University"
+ *                           degree:
+ *                             type: string
+ *                             example: "Master of Science"
+ *                           fieldOfStudy:
+ *                             type: string
+ *                             example: "Computer Science"
+ *                       bio:
+ *                         type: string
+ *                         example: "Experienced software engineer with focus on cloud technologies"
+ *                       role:
+ *                         type: string
+ *                         enum: [owner, admin]
+ *                         example: "admin"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 15
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       example: 2
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to see admins of this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized to see admins of this company"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
  *   post:
  *     summary: Add a company admin
  *     tags: [Companies]
  *     description: Add a user as an admin to the company. Only the company owner can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6410,8 +6516,6 @@
  *     summary: Remove a company admin
  *     tags: [Companies]
  *     description: Remove a user from company admin role. Only the company owner can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6483,8 +6587,6 @@
  *     summary: Create a company post
  *     tags: [Companies, Posts]
  *     description: Create a new post for a company. Only the company owner or admins can create posts.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6676,8 +6778,6 @@
  *     summary: Get company posts
  *     tags: [Companies, Posts]
  *     description: Retrieve paginated posts for a specific company. Includes reaction data for the current user.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6879,8 +6979,6 @@
  *     summary: Retrieve company analytics
  *     tags: [Companies]
  *     description: Get detailed analytics about company visitors and followers over time. Only accessible to company owner and admins.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -11131,7 +11229,7 @@
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ *
  * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
