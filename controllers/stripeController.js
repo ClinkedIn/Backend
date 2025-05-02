@@ -7,7 +7,7 @@ const createCheckoutSession = async (req, res) => {
         const paymentMode = "subscription" // Change default to subscription
         const userId = req.user.id;
         const successUrl = req.body.successUrl || `${process.env.CLIENT_URL}/subscription-status`;
-        const cancelUrl = req.body.cancelUrl || `${process.env.CLIENT_URL}/cancel`;
+        const cancelUrl = req.body.cancelUrl || `${process.env.CLIENT_URL}/subscription-status`;
         // Check for existing subscription
         const existingSubscription = await subscriptionModel.findOne({
             userId,
