@@ -228,6 +228,7 @@ const getPost = async (req, res) => {
         });
         const commentCount = await commentModel.countDocuments({
             postId: postId,
+            isActive: true,
         });
         // Check if post is a repost
         const repost = await repostModel
@@ -591,6 +592,7 @@ const getAllPosts = async (req, res) => {
                 const isRepost = !!repostInfo;
                 const commentCount = await commentModel.countDocuments({
                     postId: post._id,
+                    isActive: true,
                 });
                 // For posts that have multiple reposters, use the most relevant one
                 // (e.g., first one in the array, which could be sorted by date if needed)
@@ -1509,6 +1511,7 @@ const searchPostsByKeyword = async (req, res) => {
             posts.map(async (post) => {
                 const commentCount = await commentModel.countDocuments({
                     postId: post._id,
+                    isActive: true,
                 });
                 const isSaved = savedPostsSet.has(post._id.toString());
                 const isLiked = await impressionModel.findOne({
