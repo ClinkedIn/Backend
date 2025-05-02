@@ -723,6 +723,7 @@ const getSavedJobs = async (req, res) => {
             jobLocation: job.jobLocation,
             jobType: job.jobType,
             description: job.description,
+            isSaved: true,
             createdAt: job.createdAt,
             updatedAt: job.updatedAt,
         }));

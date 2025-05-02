@@ -16272,3 +16272,175 @@
  *                   type: string
  *                   example: "Error details"
  */
+/**
+ * @swagger
+ * /comments/reply/{commentId}:
+ *   get:
+ *     summary: Get replies to a specific comment
+ *     tags: [Comments]
+ *     description: |
+ *       Retrieves all replies to a specific parent comment with pagination.
+ *       Returns replies sorted by most recent first along with author information.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the parent comment to get replies for
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of replies per page
+ *     responses:
+ *       200:
+ *         description: Replies retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Replies retrieved successfully"
+ *                 replies:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       userId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c80"
+ *                       postId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c90"
+ *                       parentComment:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c95"
+ *                       content:
+ *                         type: string
+ *                         example: "This is a reply to the original comment"
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 5
+ *                           total:
+ *                             type: number
+ *                             example: 5
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://example.com/attachment.jpg"]
+ *                       isActive:
+ *                         type: boolean
+ *                         example: true
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-06-22T14:30:00.000Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-06-22T14:30:00.000Z"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalReplies:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of replies for this comment
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of replies per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages after the current one
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are pages before the current one
+ *       400:
+ *         description: Bad request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
+ *       401:
+ *         description: Unauthorized - Missing or invalid authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get replies"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */
