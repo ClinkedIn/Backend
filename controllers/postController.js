@@ -147,8 +147,12 @@ const getPost = async (req, res) => {
             _id: postId,
             isActive: true,
         });
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
         // Get the post and check if it's active
-        if (post.userId != null) {
+        if (post.userId) {
             console.log('Post:', post.userId);
             post = await postModel
                 .findOne({
@@ -159,7 +163,7 @@ const getPost = async (req, res) => {
                     'userId',
                     'firstName lastName headline profilePicture connections'
                 );
-        } else if (post.companyId != null) {
+        } else if (post.companyId) {
             post = await postModel
                 .findOne({
                     _id: postId,
@@ -177,7 +181,7 @@ const getPost = async (req, res) => {
         }
 
         // Check privacy settings - if post is connections only (OR BLOCKED)
-        if (post.userId != null) {
+        if (post.userId) {
             // ADDED
             const isUserBlocked = await isBlocked(post.userId._id, userId);
             if (isUserBlocked) {
