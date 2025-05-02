@@ -538,7 +538,7 @@ const getCommentReplies = async (req, res) => {
           profilePicture: user?.profilePicture,
           isLiked: {
             like: isLiked,
-            type: impressionMap[comment._id.toString()]?.type || null,
+            type: impressionMap[reply._id.toString()]?.type || null,
           },
         };
       })
