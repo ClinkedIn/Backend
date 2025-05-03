@@ -33,7 +33,6 @@ const sendMessage = async (req, res) => {
     const { type, messageText, replyTo } = req.body;
     let { receiverId, chatId: providedChatId } = req.body;
     const messageAttachment = req.files;
-
     // Validate inputs
     const senderModel = await userModel.findById(sender);
         if (!senderModel) {
@@ -97,6 +96,9 @@ const sendMessage = async (req, res) => {
     
     console.log("Message URL: ", savedMessage.messageAttachment)
 
+    const receiver = await userModel.findById(receiverId);
+    const receiverfirebase = receiver;
+
     // Add Message to Firestore using Admin SDK
     const messageDataForFirestore = {
       senderId: sender,
@@ -105,7 +107,6 @@ const sendMessage = async (req, res) => {
       mediaType: [],
       readBy: {[sender]: true , [receiverId] : false},
       timestamp: admin.firestore.FieldValue.serverTimestamp(), // Server timestamp
-      readBy: {[sender]: true} // Sender has implicitly read it
     };
     if (replyTo) {
       messageDataForFirestore.replyToId = replyTo;
@@ -130,9 +131,22 @@ const sendMessage = async (req, res) => {
         senderId: sender,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
       },
+      
       lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
       participants: [sender, receiverId].sort(),
+      fullName:{
+        [sender]: senderModel.firstName + " " + senderModel.lastName,
+        [receiverId]: receiverfirebase.firstName + " " + receiverfirebase.lastName
+      },
+      profilePicture:{
+        [sender]: senderModel.profilePicture,
+        [receiverId]: receiverfirebase.profilePicture
+      },
       typing: {
+        [sender]: false,
+        [receiverId]: false
+      },
+      forceUnread: {
         [sender]: false,
         [receiverId]: false
       }
@@ -178,7 +192,7 @@ const sendMessage = async (req, res) => {
     }
 
     // send notification to receiver
-    const receiver = await userModel.findById(receiverId);
+    
     sendNotification(senderModel, receiver, "message", savedMessage)
       .then(() => {
         console.log("Notification sent successfully");
