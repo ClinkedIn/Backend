@@ -6,7 +6,8 @@ const createCheckoutSession = async (req, res) => {
     try {
         const paymentMode = "subscription" // Change default to subscription
         const userId = req.user.id;
-
+        const successUrl = req.body.successUrl || `${process.env.CLIENT_URL}/subscription-status`;
+        const cancelUrl = req.body.cancelUrl || `${process.env.CLIENT_URL}/subscription-status`;
         // Check for existing subscription
         const existingSubscription = await subscriptionModel.findOne({
             userId,
@@ -63,8 +64,8 @@ const createCheckoutSession = async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: lineItems,
-            success_url: `${process.env.CLIENT_URL}/subscription-status`,
-            cancel_url: `${process.env.CLIENT_URL}/cancel`,
+            success_url: successUrl,
+            cancel_url: cancelUrl,
             mode: paymentMode, // Use the payment mode directly
             client_reference_id: userId,
             payment_intent_data: paymentMode === "payment" ? {
@@ -80,45 +81,6 @@ const createCheckoutSession = async (req, res) => {
     } catch (error) {
         console.error("Error creating checkout session:", error);
         res.status(500).json({ error: error.message }); // Send the actual error message for debugging
-    }
-};
-
-const getUserSubscription = async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        const subscription = await subscriptionModel.findOne({ userId, status: 'active' });
-
-        if (!subscription) {
-            return res.status(404).json({ message: 'No active subscription found' });
-        }
-
-        // Get the latest data from Stripe
-        let stripeSubscription = null;
-        if (subscription.stripeSubscriptionId) {
-            stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
-        }
-
-        res.json({
-            subscription: {
-                id: subscription._id,
-                stripeSubscriptionId: subscription.stripeSubscriptionId,
-                planType: subscription.planType,
-                status: subscription.status,
-                expiryDate: subscription.expiryDate,
-                createdAt: subscription.createdAt,
-                // Add other relevant fields
-
-                // Include Stripe-specific details if available
-                stripeDetails: stripeSubscription ? {
-                    currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-                    cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end
-                } : null
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching subscription details:', error);
-        res.status(500).json({ error: 'Failed to fetch subscription details' });
     }
 };
 
@@ -273,7 +235,5 @@ const checkPaymentStatus = async (req, res) => {
 module.exports = {
     createCheckoutSession,
     cancelSubscription,
-    getUserSubscription,
     handleWebhook,
-    checkPaymentStatus
 };

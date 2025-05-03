@@ -266,45 +266,165 @@ const getJob = async (req, res) => {
     }
 };
 
-// Update a job by ID
 const updateJob = async (req, res) => {
     try {
         const userId = req.user.id;
+        const jobId = req.params.jobId;
 
-        const job = await jobModel.findById(req.params.jobId);
+        // Validate job ID format
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+            return res.status(400).json({ message: 'Invalid job ID format' });
+        }
+
+        // Find the job to update
+        const job = await jobModel.findById(jobId);
         if (!job) {
             return res.status(404).json({ message: 'Job not found' });
         }
-        const company = await companyModel.findById(job.companyId);
 
+        // Verify company and permissions
+        const company = await companyModel.findById(job.companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Check user permissions
         const isOwner = company.userId && company.userId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
             return res.status(403).json({
-                message:
-                    'Unauthorized. You can only update jobs for companies you own or administer',
+                message: 'Unauthorized. You can only update jobs for companies you own or administer'
             });
         }
 
-        job.companyId = req.body.companyId || job.companyId;
-        job.workplaceType = req.body.workplaceType || job.workplaceType;
-        job.jobLocation = req.body.jobLocation || job.jobLocation;
-        job.jobType = req.body.jobType || job.jobType;
-        job.description = req.body.description || job.description;
-        job.applicationEmail =
-            req.body.applicationEmail || job.applicationEmail;
-        job.screeningQuestions =
-            req.body.screeningQuestions || job.screeningQuestions;
-        job.autoRejectMustHave =
-            req.body.autoRejectMustHave !== undefined
-                ? req.body.autoRejectMustHave
-                : job.autoRejectMustHave;
-        job.rejectPreview = req.body.rejectPreview || job.rejectPreview;
-        const updatedJob = await job.save();
-        res.status(200).json(updatedJob);
+        // Validate workplace type if provided
+        if (req.body.workplaceType) {
+            const validWorkplaceTypes = ['Onsite', 'Hybrid', 'Remote'];
+            if (!validWorkplaceTypes.includes(req.body.workplaceType)) {
+                return res.status(400).json({
+                    message: 'Workplace type must be one of: Onsite, Hybrid, Remote'
+                });
+            }
+        }
+
+        // Validate job type if provided
+        if (req.body.jobType) {
+            const validJobTypes = [
+                'Full Time', 'Part Time', 'Contract', 'Temporary',
+                'Other', 'Volunteer', 'Internship'
+            ];
+            if (!validJobTypes.includes(req.body.jobType)) {
+                return res.status(400).json({
+                    message: 'Job type must be one of: Full Time, Part Time, Contract, Temporary, Other, Volunteer, Internship'
+                });
+            }
+        }
+
+        // Validate email format if provided
+        if (req.body.applicationEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(req.body.applicationEmail)) {
+                return res.status(400).json({
+                    message: 'Please provide a valid application email address'
+                });
+            }
+        }
+
+        // Validate screening questions if provided
+        if (req.body.screeningQuestions) {
+            if (!Array.isArray(req.body.screeningQuestions)) {
+                return res.status(400).json({
+                    message: 'Screening questions must be an array'
+                });
+            }
+
+            const validQuestionTypes = [
+                'Background Check', "Driver's License", 'Drug Test',
+                'Education', 'Expertise with Skill', 'Hybrid Work',
+                'Industry Experience', 'Language', 'Location',
+                'Onsite Work', 'Remote Work', 'Urgent Hiring Need',
+                'Visa Status', 'Work Authorization', 'Work Experience',
+                'Custom Question'
+            ];
+
+            for (const question of req.body.screeningQuestions) {
+                if (!question.question) {
+                    return res.status(400).json({
+                        message: 'Each screening question must have a question field'
+                    });
+                }
+
+                if (!validQuestionTypes.includes(question.question)) {
+                    return res.status(400).json({
+                        message: `Invalid question type: ${question.question}. Must be one of the valid types.`
+                    });
+                }
+
+                if (question.mustHave !== undefined && typeof question.mustHave !== 'boolean') {
+                    return res.status(400).json({
+                        message: 'mustHave field must be a boolean value'
+                    });
+                }
+            }
+        }
+
+        // Create update object, handling nulls and empty values correctly
+        const updateData = {};
+        
+        // Only include fields that are actually in the request body
+        if ('title' in req.body) updateData.title = req.body.title;
+        if ('industry' in req.body) updateData.industry = req.body.industry;
+        if ('workplaceType' in req.body) updateData.workplaceType = req.body.workplaceType;
+        if ('jobLocation' in req.body) updateData.jobLocation = req.body.jobLocation;
+        if ('jobType' in req.body) updateData.jobType = req.body.jobType;
+        if ('description' in req.body) updateData.description = req.body.description;
+        if ('applicationEmail' in req.body) updateData.applicationEmail = req.body.applicationEmail;
+        if ('screeningQuestions' in req.body) updateData.screeningQuestions = req.body.screeningQuestions;
+        if ('autoRejectMustHave' in req.body) updateData.autoRejectMustHave = req.body.autoRejectMustHave;
+        if ('rejectPreview' in req.body) updateData.rejectPreview = req.body.rejectPreview;
+        if ('isActive' in req.body) updateData.isActive = req.body.isActive;
+
+        // Update the job with the filtered data
+        const updatedJob = await jobModel.findByIdAndUpdate(
+            jobId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).populate('companyId', 'name logo industry location');
+
+        // Return formatted response
+        res.status(200).json({
+            message: 'Job updated successfully',
+            job: {
+                id: updatedJob._id,
+                title: updatedJob.title,
+                company: {
+                    id: company._id,
+                    name: company.name,
+                    logo: company.logo,
+                    industry: company.industry,
+                    location: company.location
+                },
+                industry: updatedJob.industry,
+                workplaceType: updatedJob.workplaceType,
+                jobLocation: updatedJob.jobLocation,
+                jobType: updatedJob.jobType,
+                description: updatedJob.description,
+                applicationEmail: updatedJob.applicationEmail,
+                screeningQuestions: updatedJob.screeningQuestions,
+                autoRejectMustHave: updatedJob.autoRejectMustHave,
+                rejectPreview: updatedJob.rejectPreview,
+                isActive: updatedJob.isActive,
+                createdAt: updatedJob.createdAt,
+                updatedAt: updatedJob.updatedAt
+            }
+        });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        console.error('Error updating job:', error);
+        res.status(500).json({ 
+            message: 'Failed to update job',
+            error: error.message 
+        });
     }
 };
 
@@ -603,6 +723,7 @@ const getSavedJobs = async (req, res) => {
             jobLocation: job.jobLocation,
             jobType: job.jobType,
             description: job.description,
+            isSaved: true,
             createdAt: job.createdAt,
             updatedAt: job.updatedAt,
         }));
@@ -940,6 +1061,9 @@ const getJobApplications = async (req, res) => {
                 email: app.userId.email,
                 profilePicture: app.userId.profilePicture,
                 headline: app.userId.headline,
+                resume: app.userId.resume,
+                education: app.userId.education,
+                workExperience: app.userId.workExperience,
             },
             contactEmail: app.contactEmail,
             contactPhone: app.contactPhone,

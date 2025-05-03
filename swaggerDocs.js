@@ -72,12 +72,12 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
- * 
+ *
+ *
  * @swagger
  * /user/search/users:
  *   get:
- *     summary: Search for users by name 
+ *     summary: Search for users by name
  *     tags: [Connections & Networking]
  *     security:
  *       - BearerAuth: []
@@ -147,8 +147,8 @@
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
- * 
+ *
+ *
  * /user/connections:
  *   get:
  *     summary: Get user's connections list
@@ -241,7 +241,7 @@
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ *
  * /user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
@@ -454,7 +454,7 @@
  *     responses:
  *       200:
  *         description: Message request handled successfully
- */  
+ */
 /**
  * @swagger
  * /user/connections/related-users:
@@ -5620,8 +5620,6 @@
  *     summary: Create a new company
  *     tags: [Companies]
  *     description: Create a new company profile. Requires authentication. The creator becomes the owner and admin.
- *     security:
- *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -5777,8 +5775,6 @@
  *     summary: Retrieve all companies
  *     tags: [Companies]
  *     description: Retrieve a paginated list of all companies with filtering, sorting, and pagination options.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -5877,8 +5873,6 @@
  *     summary: Retrieve a specific company
  *     tags: [Companies]
  *     description: Retrieve details of a company by its ID or address slug. Also tracks visitor analytics.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -5964,8 +5958,6 @@
  *     summary: Update a company
  *     tags: [Companies]
  *     description: Update a company's details. Only the owner or admin can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6095,8 +6087,6 @@
  *     summary: Delete a company
  *     tags: [Companies]
  *     description: Soft delete a company profile (marks as deleted but doesn't remove from database). Only the owner or admin can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6337,12 +6327,128 @@
 /**
  * @swagger
  * /api/companies/{companyId}/admin:
+ *   get:
+ *     summary: Get company administrators
+ *     tags: [Companies]
+ *     description: Retrieve a paginated list of administrators for a specific company. Only available to company owner and admins.
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of admins per page (max 50)
+ *     responses:
+ *       200:
+ *         description: Company admins retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Admins fetched successfully"
+ *                 admins:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "615f5c6e1a2b3c4d5e6f7g8h"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/example/image/upload/v1234/profile.jpg"
+ *                       location:
+ *                         type: string
+ *                         example: "San Francisco, CA"
+ *                       industry:
+ *                         type: string
+ *                         example: "Technology"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Corp"
+ *                       mainEducation:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           school:
+ *                             type: string
+ *                             example: "Stanford University"
+ *                           degree:
+ *                             type: string
+ *                             example: "Master of Science"
+ *                           fieldOfStudy:
+ *                             type: string
+ *                             example: "Computer Science"
+ *                       bio:
+ *                         type: string
+ *                         example: "Experienced software engineer with focus on cloud technologies"
+ *                       role:
+ *                         type: string
+ *                         enum: [owner, admin]
+ *                         example: "admin"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                       example: 15
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     pages:
+ *                       type: integer
+ *                       example: 2
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Not authorized to see admins of this company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You are not authorized to see admins of this company"
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Internal server error
  *   post:
  *     summary: Add a company admin
  *     tags: [Companies]
  *     description: Add a user as an admin to the company. Only the company owner can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6410,8 +6516,6 @@
  *     summary: Remove a company admin
  *     tags: [Companies]
  *     description: Remove a user from company admin role. Only the company owner can perform this action.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6483,8 +6587,6 @@
  *     summary: Create a company post
  *     tags: [Companies, Posts]
  *     description: Create a new post for a company. Only the company owner or admins can create posts.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6676,8 +6778,6 @@
  *     summary: Get company posts
  *     tags: [Companies, Posts]
  *     description: Retrieve paginated posts for a specific company. Includes reaction data for the current user.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -6879,8 +6979,6 @@
  *     summary: Retrieve company analytics
  *     tags: [Companies]
  *     description: Get detailed analytics about company visitors and followers over time. Only accessible to company owner and admins.
- *     security:
- *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: companyId
@@ -11107,13 +11205,7 @@
  */
 
 // *********************************** Connections APIs ******************************************//
-/**
- * @swagger
- * tags:
- *   - name: Connections
- *     description: Managing connections and connection requests
- */
-/**
+
 /**
  * @swagger
  * /api/user/connections/request/{targetUserId}:
@@ -11137,7 +11229,7 @@
  *         description: Unauthorized
  *       404:
  *         description: User not found
- * 
+ *
  * /api/user/connections/requests:
  *   get:
  *     summary: Get pending connection requests
@@ -12522,7 +12614,7 @@
 
 /**
  * @swagger
- * /api/posts/{postId}/reposts:
+ * /api/posts/{postId}/repost:
  *   get:
  *     summary: Get reposts of a specific post
  *     tags: [Posts]
@@ -14205,7 +14297,7 @@
  * /api/admin/reports/{reportId}:
  *   get:
  *     summary: Get a specific report
- *     tags: [Admin - Reports]
+ *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -14390,22 +14482,175 @@
  * @swagger
  * /api/admin/jobs:
  *   get:
- *     summary: Get flagged jobs
+ *     summary: Get flagged active and inactive jobs
  *     tags: [Admin]
- *     description: Retrieve all flagged job postings for moderation
+ *     description: Retrieve all flagged job postings grouped by active status for moderation
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: Filter jobs by active status (optional)
+ *         example: true
  *     responses:
  *       200:
  *         description: Flagged jobs retrieved successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Job'
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: number
+ *                       description: Total number of flagged jobs
+ *                       example: 10
+ *                     activeCount:
+ *                       type: number
+ *                       description: Number of active flagged jobs
+ *                       example: 7
+ *                     inactiveCount:
+ *                       type: number
+ *                       description: Number of inactive flagged jobs
+ *                       example: 3
+ *                     jobs:
+ *                       type: object
+ *                       properties:
+ *                         active:
+ *                           type: array
+ *                           description: List of active flagged jobs
+ *                           items:
+ *                             $ref: '#/components/schemas/Job'
+ *                         inactive:
+ *                           type: array
+ *                           description: List of inactive flagged jobs
+ *                           items:
+ *                             $ref: '#/components/schemas/Job'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error message"
  */
-
+/**
+ * @swagger
+ * /api/admin/jobs/flag/{jobId}:
+ *   patch:
+ *     summary: Flag a job posting
+ *     tags: [Admin]
+ *     description: Mark a job posting as flagged for review. Only accessible by admin users.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: jobId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: ID of the job to flag
+ *     responses:
+ *       200:
+ *         description: Job successfully flagged
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Job has been flagged successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobId:
+ *                       type: string
+ *                       format: ObjectId
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     title:
+ *                       type: string
+ *                       example: "Software Engineer"
+ *                     isFlagged:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: Invalid job ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid job ID format"
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       403:
+ *         description: Forbidden - user is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized as an admin"
+ *       404:
+ *         description: Job not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "fail"
+ *                 message:
+ *                   type: string
+ *                   example: "Job not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to flag job"
+ */
 /**
  * @swagger
  * /api/admin/jobs/{jobId}:
@@ -16122,6 +16367,178 @@
  *                   type: string
  *                   example: "Failed to update display mode"
  *                 details:
+ *                   type: string
+ *                   example: "Error details"
+ */
+/**
+ * @swagger
+ * /comments/reply/{commentId}:
+ *   get:
+ *     summary: Get replies to a specific comment
+ *     tags: [Comments]
+ *     description: |
+ *       Retrieves all replies to a specific parent comment with pagination.
+ *       Returns replies sorted by most recent first along with author information.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the parent comment to get replies for
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of replies per page
+ *     responses:
+ *       200:
+ *         description: Replies retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Replies retrieved successfully"
+ *                 replies:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c85"
+ *                       userId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c80"
+ *                       postId:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c90"
+ *                       parentComment:
+ *                         type: string
+ *                         example: "60d21b4667d0d8992e610c95"
+ *                       content:
+ *                         type: string
+ *                         example: "This is a reply to the original comment"
+ *                       impressionCounts:
+ *                         type: object
+ *                         properties:
+ *                           like:
+ *                             type: number
+ *                             example: 5
+ *                           total:
+ *                             type: number
+ *                             example: 5
+ *                       attachments:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["https://example.com/attachment.jpg"]
+ *                       isActive:
+ *                         type: boolean
+ *                         example: true
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-06-22T14:30:00.000Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-06-22T14:30:00.000Z"
+ *                       firstName:
+ *                         type: string
+ *                         example: "John"
+ *                       lastName:
+ *                         type: string
+ *                         example: "Doe"
+ *                       headline:
+ *                         type: string
+ *                         example: "Software Engineer at Tech Company"
+ *                       profilePicture:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalReplies:
+ *                       type: number
+ *                       example: 25
+ *                       description: Total number of replies for this comment
+ *                     totalPages:
+ *                       type: number
+ *                       example: 3
+ *                       description: Total number of pages
+ *                     currentPage:
+ *                       type: number
+ *                       example: 1
+ *                       description: Current page number
+ *                     pageSize:
+ *                       type: number
+ *                       example: 10
+ *                       description: Number of replies per page
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether there are more pages after the current one
+ *                     hasPrevPage:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Whether there are pages before the current one
+ *       400:
+ *         description: Bad request - Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment ID is required"
+ *       401:
+ *         description: Unauthorized - Missing or invalid authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Comment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Comment not found"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Failed to get replies"
+ *                 error:
  *                   type: string
  *                   example: "Error details"
  */

@@ -49,42 +49,42 @@ exports.getReport = async (req, res) => {
     try {
         // console.log(req.params.reportId);
         const report = await Report.findOne({ _id: req.params.reportId })
-        .populate({
-        path: 'userId',
-        select: 'firstName lastName email'
-    })
+            .populate({
+                path: 'userId',
+                select: 'firstName lastName email'
+            });
         // console.log(report.reportedType);
 
-        let  upreport = {};
+        let upreport = {};
         if (report.reportedType === 'User') {
-            
-            const reportedUser = await User.findById(report.reportedId, 'firstName lastName email');
-             upreport = {
-                 reportedUser: reportedUser,
-                 report: report
-            }
-            
-        } else if (report.reportedType === 'Post') {
-            const reportedPost = await Post.findById(report.reportedId, 'attachments description')
-             upreport = {
-                 reportedPost: reportedPost,
-                 report: report
-            }
-        }
-        
-        
-    if (!report) {
-        return res.status(404).json({
-            status: 'fail',
-            message: 'Report not found'
-        });
-    }
 
-    res.status(200).json({
-        status: 'success',
-        data: upreport
-    });
-            
+            const reportedUser = await User.findById(report.reportedId, 'firstName lastName email');
+            upreport = {
+                reportedUser: reportedUser,
+                report: report
+            };
+
+        } else if (report.reportedType === 'Post') {
+            const reportedPost = await Post.findById(report.reportedId, 'attachments description');
+            upreport = {
+                reportedPost: reportedPost,
+                report: report
+            };
+        }
+
+
+        if (!report) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Report not found'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: upreport
+        });
+
     } catch (error) {
         res.status(500).json({
             status: 'error',
@@ -157,12 +157,35 @@ exports.deleteReport = async (req, res) => {
 // Job management
 exports.getFlaggedJobs = async (req, res) => {
     try {
-        const flaggedJobs = await Job.find({ isFlagged: true })
-            .populate('companyId', 'name');
+        const { isActive } = req.query; // Get isActive from query params
+        let query = { isFlagged: true };
+
+        // Add isActive filter if specified
+        if (isActive !== undefined) {
+            query.isActive = isActive === 'true';
+        }
+
+        const flaggedJobs = await Job.find(query)
+            .populate('companyId', 'name')
+            .sort({ createdAt: -1 }); // Sort by newest first
+
+        // Group jobs by status
+        const jobsByStatus = {
+            active: flaggedJobs.filter(job => job.isActive),
+            inactive: flaggedJobs.filter(job => !job.isActive)
+        };
 
         res.status(200).json({
             status: 'success',
-            data: flaggedJobs
+            data: {
+                total: flaggedJobs.length,
+                activeCount: jobsByStatus.active.length,
+                inactiveCount: jobsByStatus.inactive.length,
+                jobs: {
+                    active: jobsByStatus.active,
+                    inactive: jobsByStatus.inactive
+                }
+            }
         });
     } catch (error) {
         res.status(500).json({
@@ -171,7 +194,6 @@ exports.getFlaggedJobs = async (req, res) => {
         });
     }
 };
-
 
 exports.removeJob = async (req, res) => {
     try {
@@ -202,7 +224,37 @@ exports.removeJob = async (req, res) => {
     }
 };
 
+exports.flagJob = async (req, res) => {
+    try {
+        const job = await Job.findById(req.params.jobId);
 
+        if (!job) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Job not found'
+            });
+        }
+
+        // Update the job's isFlagged status
+        job.isFlagged = true;
+        await job.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Job has been flagged successfully',
+            data: {
+                jobId: job._id,
+                title: job.title,
+                isFlagged: job.isFlagged
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
 
 exports.getAnalyticsOverview = async (req, res) => {
     ;

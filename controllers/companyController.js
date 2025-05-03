@@ -8,7 +8,7 @@ const {
     uploadMultipleImages,
     deleteFileFromUrl,
 } = require('../utils/cloudinaryUpload');
-const { uploadPostAttachments } = require("../utils/postUtils");
+const { uploadPostAttachments } = require('../utils/postUtils');
 const APIFeatures = require('../utils/apiFeatures');
 const slugify = require('slugify');
 // Create a new company
@@ -577,6 +577,124 @@ const removeAdmin = async (req, res) => {
         });
     } catch (error) {
         console.error('Error removing admin:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Get company admins
+const getAdmins = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert query parameters to numbers with validation
+        const pageNum = Math.max(1, parseInt(page) || 1);
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 10)); // Limit between 1 and 50
+        const skipIndex = (pageNum - 1) * limitNum;
+
+        // Verify company exists
+        const company = await companyModel.findById(companyId);
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        // Get total count for pagination
+        const totalAdmins = company.admins.length;
+
+        // Apply pagination to admins array
+        const paginatedAdminIds = company.admins
+            .slice(skipIndex, skipIndex + limitNum)
+            .map((id) => id.toString());
+
+        // Fetch user details in a single query
+        const adminDetails = await userModel
+            .find(
+                {
+                    _id: { $in: paginatedAdminIds },
+                    isActive: true,
+                },
+                {
+                    firstName: 1,
+                    lastName: 1,
+                    profilePicture: 1,
+                    location: 1,
+                    industry: 1,
+                    mainEducation: 1,
+                    'about.description': 1,
+                    profilePrivacySettings: 1,
+                    education: 1,
+                    headline: 1,
+                }
+            )
+            .lean();
+
+        // Create a map for quick lookup of user details
+        const userMap = {};
+        adminDetails.forEach((user) => {
+            userMap[user._id.toString()] = user;
+        });
+
+        // Create the enhanced admins array
+        const enhancedAdmins = paginatedAdminIds.map((adminId) => {
+            const adminDetails = userMap[adminId] || null;
+
+            if (!adminDetails) {
+                // Handle missing users
+                return {
+                    id: adminId,
+                    status: 'inactive',
+                };
+            }
+
+            // Get the main education if specified
+            let mainEducationDetails = null;
+            if (
+                adminDetails.mainEducation !== null &&
+                adminDetails.education &&
+                adminDetails.education.length > adminDetails.mainEducation
+            ) {
+                mainEducationDetails =
+                    adminDetails.education[adminDetails.mainEducation];
+            }
+
+            // Check if this admin is also the owner
+            const isOwner = company.ownerId.toString() === adminId;
+
+            // Return enhanced admin info
+            return {
+                id: adminId,
+                firstName: adminDetails.firstName,
+                lastName: adminDetails.lastName,
+                profilePicture: adminDetails.profilePicture,
+                location: adminDetails.location,
+                industry: adminDetails.industry,
+                headline: adminDetails.headline || null,
+                mainEducation: mainEducationDetails,
+                bio: adminDetails.about?.description || null,
+                profilePrivacySettings: adminDetails.profilePrivacySettings,
+                role: isOwner ? 'owner' : 'admin',
+            };
+        });
+
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalAdmins / limitNum);
+        const hasNextPage = pageNum < totalPages;
+        const hasPrevPage = pageNum > 1;
+
+        res.status(200).json({
+            message: 'Admins fetched successfully',
+            admins: enhancedAdmins,
+            pagination: {
+                total: totalAdmins,
+                page: pageNum,
+                limit: limitNum,
+                pages: totalPages,
+                hasNextPage,
+                hasPrevPage,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching admins:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -1229,6 +1347,7 @@ module.exports = {
     unfollowCompany,
     addAdmin,
     removeAdmin,
+    getAdmins,
     getFollowers,
     getCompanyAnalytics,
     getCompanyPosts,
