@@ -388,9 +388,11 @@ const uploadResume = async (req, res) => {
 
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { resume: `https://docs.google.com/viewer?url=${encodeURIComponent(
-                uploadResult.url
-            )}&embedded=true` },
+            {
+                resume: `https://docs.google.com/viewer?url=${encodeURIComponent(
+                    uploadResult.url
+                )}&embedded=true`,
+            },
             { new: true }
         );
 
@@ -1623,6 +1625,35 @@ const deleteEducation = async (req, res) => {
     }
 };
 
+const getCompanies = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Find user and populate the companies field to get full company data
+        const user = await userModel.findById(userId).populate({
+            path: 'companies',
+            model: 'Company',
+            select: 'name address industry organizationSize organizationType website tagLine logo location',
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.companies || user.companies.length === 0) {
+            return res.status(404).json({ message: 'No companies found' });
+        }
+
+        res.status(200).json({
+            message: 'Companies fetched successfully',
+            companies: user.companies,
+        });
+    } catch (error) {
+        console.error('Error fetching companies:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 /*
  ************************************************
  *********** Intro ************
@@ -1643,10 +1674,7 @@ const editIntro = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        const requiredFields = [
-            'firstName',
-            'lastName'
-        ];
+        const requiredFields = ['firstName', 'lastName'];
         const missingFields = requiredFields.filter(
             (field) => req.body[field] === undefined || req.body[field] === null
         );
@@ -3318,4 +3346,5 @@ module.exports = {
     getSavedPosts,
     setDefaultMode,
     getDefaultMode,
+    getCompanies,
 };
