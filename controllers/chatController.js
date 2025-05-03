@@ -226,7 +226,7 @@ const getDirectChat = async (req, res) => {
         // Get other user's details
         const otherUser = otherUserId ? 
             await userModel.findById(otherUserId)
-                .select('firstName lastName profilePicture headLine') : null;
+                .select('firstName lastName profilePicture headLine email') : null;
             
         // Reset unread count for this chat
         const userChat = user.chats.find(c => 

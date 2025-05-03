@@ -489,13 +489,60 @@ const markMessageAsRead = async (req, res) => {
     const messageId = req.params.messageId;
     const userId = req.user.id;
 
-    const  updatedMessage  = await markMessageReadByUser(
+    // Update MongoDB
+    const updatedMessage = await markMessageReadByUser(
       messageId,
       userId
     );
 
+    if (!updatedMessage) {
+      throw new customError('Message not found', 404);
+    }
+
+    // Update in Firebase
+    try {
+      const conversationId = updatedMessage.chatId.toString();
+      
+      // Update readBy field in the message document
+      await admin.firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId)
+        .update({
+          [`readBy.${userId}`]: true,
+          readAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+      console.log(`Message ${messageId} marked as read in Firestore`);
+
+      // Get current conversation data to update unread counts
+      const conversationDoc = await admin.firestore()
+        .collection('conversations')
+        .doc(conversationId)
+        .get();
+        
+      if (conversationDoc.exists) {
+        const conversationData = conversationDoc.data();
+        const currentUnreadCounts = conversationData.unreadCounts || {};
+        
+        // Update unread counts in the conversation document
+        await admin.firestore()
+          .collection('conversations')
+          .doc(conversationId)
+          .update({
+            [`unreadCounts.${userId}`]: 0,
+            [`forceUnread.${userId}`]: false
+          });
+          
+        console.log(`Unread count reset for user ${userId} in conversation ${conversationId}`);
+      }
+    } catch (firebaseErr) {
+      console.error("Error updating message read status in Firebase:", firebaseErr);
+    }
+
     res.status(200).json({
-      message: "Message marked as read successfully",
+      message: "Message marked as read successfully"
     });
   } catch (err) {
     if (err instanceof customError) {
