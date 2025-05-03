@@ -12614,7 +12614,7 @@
 
 /**
  * @swagger
- * /api/posts/{postId}/reposts:
+ * /api/posts/{postId}/repost:
  *   get:
  *     summary: Get reposts of a specific post
  *     tags: [Posts]
