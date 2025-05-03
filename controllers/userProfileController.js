@@ -1645,11 +1645,7 @@ const editIntro = async (req, res) => {
         // Validate required fields
         const requiredFields = [
             'firstName',
-            'lastName',
-            'location',
-            'industry',
-            'mainEducation',
-            'headLine',
+            'lastName'
         ];
         const missingFields = requiredFields.filter(
             (field) => req.body[field] === undefined || req.body[field] === null
