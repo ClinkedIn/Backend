@@ -33,7 +33,7 @@ const createDirectChat = async (req, res) => {
         if (existingChat) {
             return res.status(200).json({
                 message: 'Chat already exists',
-                chatId: existingChat._id
+                chatId: existingChat
             });
         }
         
@@ -74,6 +74,22 @@ const createDirectChat = async (req, res) => {
                 secondUser: otherUserId,
                 createdAt: newChat.createdAt,
                 updatedAt: newChat.updatedAt
+            }
+        });
+
+        // update in firebase
+        const chatFirebaseDoc = admin.firestore().collection('conversations').doc(newChat._id.toString());
+        await chatFirebaseDoc.set({
+            firstUser: userId,
+            secondUser: otherUserId,
+            messages: [],
+            unreadCounts: {
+                [userId]: 0,
+                [otherUserId]: 0
+            },
+            forceUnread: {
+                [userId]: false,
+                [otherUserId]: false
             }
         });
     }
@@ -733,9 +749,6 @@ const markChatAsUnread = async (req, res) => {
         }
       }
 }
-
-
-
 
 
 module.exports = {
