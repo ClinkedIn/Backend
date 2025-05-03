@@ -148,7 +148,7 @@ const sendMessage = async (req, res) => {
       },
       forceUnread: {
         [sender]: false,
-        [sender]: false
+        [receiverId]: false
       }
     };
 
