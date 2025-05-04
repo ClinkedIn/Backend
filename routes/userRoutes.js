@@ -13,7 +13,7 @@ router
   .route("/resend-confirmation-email")
   .get(protect, userController.resendConfirmationEmail);
 
-router.route("/confirm-email").get(protect, userController.confirmEmail);
+router.route("/confirm-email").post(protect, userController.confirmEmail);
 router.route("/login").post(userController.login);
 router.route("/logout").post(protect, userController.logout);
 router.route("/forgot-password").post(userController.forgotPassword);
