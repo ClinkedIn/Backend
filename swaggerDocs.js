@@ -7777,7 +7777,7 @@
 /**
  * @swagger
  * /api/user/confirm-email:
- *   get:
+ *   post:
  *     summary: Confirm user email
  *     description: Confirms a user's email address using a one-time password (OTP).
  *     tags: [Users]
