@@ -230,6 +230,13 @@ const userSchema = new mongoose.Schema(
     passwordResetOTPExpiresAt: { type: Date, default: undefined },
     isActive: { type: Boolean, default: true },
     notificationPauseExpiresAt: { type: Date, default: null },
+    latestMessages: {
+      type: [{
+        messageId: { type: mongoose.Schema.Types.ObjectId, ref: "ChatMessage" },
+        createdAt: { type: Date }
+      }],
+      default: []
+    }
   },
   { timestamps: true }
 ); // Adds createdAt & updatedAt automatically

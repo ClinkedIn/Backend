@@ -3141,7 +3141,7 @@ const handleMessageRequest = async (req, res) => {
                         },
                         unreadCounts: {
                             [userId]: 0,
-                            [requestId]: 0
+                            [requestId]: 1
                         }
                     };
             
