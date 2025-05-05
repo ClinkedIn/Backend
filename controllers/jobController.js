@@ -507,7 +507,7 @@ const acceptApplicant = async (req, res) => {
                 .json({ message: 'User has not applied for this job' });
         }
         const updatedApplication = await jobApplicationModel.findOneAndUpdate(
-            { jobId: jobId, userId: applyingUserId },
+            { jobId: job._id, userId: applyingUserId },
             { 
                 status: 'accepted',
                 lastViewed: new Date()
@@ -555,7 +555,7 @@ const rejectApplicant = async (req, res) => {
                 .json({ message: 'User has not applied for this job' });
         }
         const updatedApplication = await jobApplicationModel.findOneAndUpdate(
-            { jobId: jobId, userId: applyingUserId },
+            { jobId: job._id, userId: applyingUserId },
             { 
                 status: 'rejected',
                 lastViewed: new Date()
