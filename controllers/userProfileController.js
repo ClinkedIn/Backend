@@ -3,6 +3,7 @@ const postModel = require('../models/postModel');
 const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
 const impressionModel = require('../models/impressionModel');
+const directChatModel = require('../models/directChatModel');
 const {
     sortWorkExperience,
     validateSkillName,
@@ -3037,24 +3038,65 @@ const handleMessageRequest = async (req, res) => {
         const { action } = req.body;
         const userId = req.user.id;
 
+        // Validate action
         if (!['accept', 'decline'].includes(action)) {
-            return res.status(400).json({ message: 'Invalid action' });
+            return res.status(400).json({ message: 'Invalid action. Must be either "accept" or "decline"' });
         }
 
+        // Verify both users exist
+        const [user, requester] = await Promise.all([
+            userModel.findById(userId),
+            userModel.findById(requestId)
+        ]);
+
+        if (!user || !requester) {
+            return res.status(404).json({ message: 'User or requester not found' });
+        }
+
+        // Verify the message request exists
+        if (!user.messageRequests.includes(requestId)) {
+            return res.status(404).json({ message: 'Message request not found' });
+        }
+
+        // Remove the message request regardless of action
         await userModel.findByIdAndUpdate(userId, {
-            $pull: { messageRequests: requestId },
+            $pull: { messageRequests: requestId }
         });
 
         if (action === 'accept') {
-            // Add logic here for enabling messaging between users
-            // This might involve updating a separate messages collection or permissions
+            // If accepting, create a direct chat between users if it doesn't exist
+            const existingChat = await directChatModel.findOne({
+                members: { $all: [userId, requestId] }
+            });
+
+            if (!existingChat) {
+                // Create new direct chat
+                await directChatModel.create({
+                    members: [userId, requestId],
+                    messages: []
+                });
+            }
+
+            // Update both users' chat lists if needed
+            await Promise.all([
+                userModel.findByIdAndUpdate(userId, {
+                    $pull: { blockedUsers: requestId } // Remove from blocked users if previously blocked
+                }),
+                userModel.findByIdAndUpdate(requestId, {
+                    $pull: { blockedUsers: userId }
+                })
+            ]);
         }
 
         res.status(200).json({
-            message: `Message request ${action}ed successfully`,
+            message: `Message request ${action}ed successfully`
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error handling message request:', error);
+        res.status(500).json({
+            message: 'Failed to handle message request',
+            error: error.message
+        });
     }
 };
 
