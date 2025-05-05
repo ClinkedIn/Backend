@@ -143,8 +143,8 @@ router.route('/:userId')
 router.route('/connections/related-users')
     .get(protect, user.getRelatedUsers);
 
-router.route('/connections/pending-requests')
-    .get(protect, user.getRelatedUsers);
+// router.route('/connections/pending-requests')
+//     .get(protect, user.getPendingRequests);
 
 
 

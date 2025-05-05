@@ -2567,6 +2567,8 @@ const getRelatedUsers = async (req, res) => {
     }
 };
 
+
+
 module.exports = {
     getAllUsers,
     getMe,
@@ -2619,5 +2621,5 @@ module.exports = {
     sendMessageRequest,
     getMessageRequests,
     handleMessageRequest,
-    getRelatedUsers
+    getRelatedUsers,
 };
