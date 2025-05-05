@@ -2384,7 +2384,9 @@ const handleMessageRequest = async (req, res) => {
 
         // Validate action
         if (!['accept', 'decline'].includes(action)) {
-            return res.status(400).json({ message: 'Invalid action. Must be either "accept" or "decline"' });
+            return res.status(400).json({
+                message: 'Invalid action. Must be either "accept" or "decline"'
+            });
         }
 
         // Verify both users exist
@@ -2410,13 +2412,17 @@ const handleMessageRequest = async (req, res) => {
         if (action === 'accept') {
             // If accepting, create a direct chat between users if it doesn't exist
             const existingChat = await directChatModel.findOne({
-                members: { $all: [userId, requestId] }
+                $or: [
+                    { firstUser: userId, secondUser: requestId },
+                    { firstUser: requestId, secondUser: userId }
+                ]
             });
 
             if (!existingChat) {
-                // Create new direct chat
+                // Create new direct chat with proper firstUser and secondUser fields
                 await directChatModel.create({
-                    members: [userId, requestId],
+                    firstUser: userId,
+                    secondUser: requestId,
                     messages: []
                 });
             }
@@ -2424,7 +2430,7 @@ const handleMessageRequest = async (req, res) => {
             // Update both users' chat lists if needed
             await Promise.all([
                 userModel.findByIdAndUpdate(userId, {
-                    $pull: { blockedUsers: requestId } // Remove from blocked users if previously blocked
+                    $pull: { blockedUsers: requestId }
                 }),
                 userModel.findByIdAndUpdate(requestId, {
                     $pull: { blockedUsers: userId }
