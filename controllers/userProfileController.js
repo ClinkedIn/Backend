@@ -4,6 +4,9 @@ const commentModel = require('../models/commentModel');
 const repostModel = require('../models/repostModel');
 const impressionModel = require('../models/impressionModel');
 const directChatModel = require('../models/directChatModel');
+const MessageModel = require("../models/chatMessageModel");
+const admin = require("firebase-admin");
+
 const {
     sortWorkExperience,
     validateSkillName,
@@ -3117,12 +3120,111 @@ const handleMessageRequest = async (req, res) => {
             });
 
             if (!existingChat) {
-                // Create new direct chat with proper firstUser and secondUser fields
-                await directChatModel.create({
-                    firstUser: userId,
-                    secondUser: requestId,
-                    messages: []
+                const messageText = '';
+                const newMessage = new MessageModel({
+                    sender: userId,
+                    chatId: null, 
+                    type: 'direct',
+                    messageText: messageText,
+                    messageAttachment: [],
+                    replyTo: null,
+                    readBy: []
                 });
+
+                // check if old chat exist
+                let newChat = await directChatModel.findOne({
+                        $or: [
+                            { firstUser: userId, secondUser: requestId },
+                            { firstUser: requestId, secondUser: userId }
+                        ]
+                    });
+
+                if (!newChat) {
+                        newChat = await directChatModel.create({
+                        firstUser: userId,
+                        secondUser: requestId,
+                        messages: [newMessage._id]
+                    });
+                    console.log("New chat created:", newChat._id);
+                }
+                const conversationId = newChat._id.toString();
+                newMessage.chatId = newChat._id;
+                await newMessage.save();
+            
+                // chat in firebase
+                try {
+                    const senderModel = await userModel.findById(userId);
+                    const receiver = await userModel.findById(requestId);
+
+                    // Update conversation metadata
+                    const conversationUpdateData = {
+                        lastMessage: {
+                            text: messageText,
+                            senderId: userId,
+                            timestamp: admin.firestore.FieldValue.serverTimestamp()
+                        },
+                        lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                        participants: [userId, requestId].sort(),
+                        fullName: {
+                            [userId]: senderModel.firstName + " " + senderModel.lastName,
+                            [requestId]: receiver.firstName + " " + receiver.lastName
+                        },
+                        profilePicture: {
+                            [userId]: senderModel.profilePicture,
+                            [requestId]: receiver.profilePicture
+                        },
+                        typing: {
+                            [userId]: false,
+                            [requestId]: false
+                        },
+                        forceUnread: {
+                            [userId]: false,
+                            [requestId]: false
+                        },
+                        unreadCounts: {
+                            [userId]: 0,
+                            [requestId]: 1
+                        }
+                    };
+            
+                    // Update Firestore conversation document
+                    await admin.firestore()
+                        .collection('conversations')
+                        .doc(conversationId)
+                        .set(conversationUpdateData, { merge: true });
+            
+                    console.log("Firestore conversation metadata updated:", conversationId);
+            
+                    const messageDataForFirestore = {
+                        senderId: userId,
+                        text: messageText,
+                        mediaUrl: [],
+                        mediaType: [],
+                        readBy: { [userId]: true, [requestId]: false }, // Sender is read
+                        timestamp: admin.firestore.FieldValue.serverTimestamp()
+                    };
+            
+                    await admin.firestore()
+                        .collection('conversations')
+                        .doc(conversationId)
+                        .collection('messages')
+                        .doc(newMessage._id.toString())  // Use the MongoDB ID here
+                        .set(messageDataForFirestore);
+
+                    const updatedSender = await userModel.findByIdAndUpdate(
+                        userId,
+                        { $push: { chats: { chatId: newChat._id, chatType: 'DirectChat' } } }
+                    );
+                    const updatedReciever = await userModel.findByIdAndUpdate(
+                        requestId,
+                        { $push: { chats: { chatId: newChat._id, chatType: 'DirectChat' } } }
+                    );
+            
+                    console.log("Message added to Firestore conversation:", conversationId);
+
+                } catch (error) {
+                    console.error("Firebase update error:", error);
+                }
             }
 
             // Update both users' chat lists if needed

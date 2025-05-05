@@ -39,6 +39,27 @@ const sendMessage = async (req, res) => {
             throw new customError('User not found', 404);
       }
 
+      // Free Plan Limit
+      if (!senderModel.isPremium) {
+        const now = new Date();
+        const todayStart = new Date(now.setHours(0, 0, 0, 0));
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayEnd.getDate() + 1);
+        const messagesSentToday = (senderModel.latestMessages || [])
+          .filter(message => {
+            if (!message || !message.createdAt) return false;
+            const messageDate = new Date(message.createdAt);
+            return messageDate >= todayStart && messageDate < todayEnd;
+          }).length;
+      
+        if (messagesSentToday == 5) {
+          return res.status(400).json({
+            message: "Free users are limited to 5 messages per day",
+          });
+        }
+        await senderModel.save();
+      }
+
       if (type !== 'direct') {
         throw new customError('Invalid chat type', 400);
     }
@@ -176,7 +197,6 @@ const sendMessage = async (req, res) => {
 
     console.log("Firestore conversation metadata updated:", conversationId);
 
-
     const chat = await chatModel.findByIdAndUpdate(
       chatId,
       { $push: { messages: savedMessage._id } },
@@ -191,8 +211,17 @@ const sendMessage = async (req, res) => {
         });
     }
 
+    // Kepp Track Of Messages Limit
+    if (!senderModel.isPremium) {
+      senderModel.latestMessages.push({
+        messageId: savedMessage._id,
+        createdAt: savedMessage.createdAt
+      });
+      senderModel.latestMessages = senderModel.latestMessages.slice(0, 5);
+      await senderModel.save();
+    }
+
     // send notification to receiver
-    
     sendNotification(senderModel, receiver, "message", savedMessage)
       .then(() => {
         console.log("Notification sent successfully");
