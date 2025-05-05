@@ -2792,6 +2792,48 @@ const sendConnectionRequest = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+const cancelConnectionRequest = async (req, res) => {
+    try {
+      const { targetUserId } = req.params;
+      const userId = req.user.id;
+  
+      // First check if the request exists
+      const [userWithSentRequest, targetUserWithReceivedRequest] = await Promise.all([
+        userModel.exists({
+          _id: userId,
+          sentConnectionRequests: targetUserId,
+        }),
+        userModel.exists({
+          _id: targetUserId,
+          receivedConnectionRequests: userId,
+        }),
+      ]);
+  
+      if (!userWithSentRequest || !targetUserWithReceivedRequest) {
+        return res.status(404).json({ 
+          message: 'Connection request not found or already canceled' 
+        });
+      }
+  
+      // Remove the connection request from both users in parallel
+      await Promise.all([
+        userModel.findByIdAndUpdate(targetUserId, {
+          $pull: { receivedConnectionRequests: userId },
+        }),
+        userModel.findByIdAndUpdate(userId, {
+          $pull: { sentConnectionRequests: targetUserId },
+        }),
+      ]);
+  
+      // Return success response
+      res.status(200).json({
+        message: 'Connection request canceled successfully',
+      });
+    } catch (error) {
+      console.error('Error canceling connection request:', error);
+      res.status(500).json({ message: error.message });
+    }
+  };
 const getPendingRequests = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -3497,4 +3539,5 @@ module.exports = {
     setDefaultMode,
     getDefaultMode,
     getCompanies,
+    cancelConnectionRequest,
 };
