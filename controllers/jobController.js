@@ -500,7 +500,6 @@ const acceptApplicant = async (req, res) => {
                     'Unauthorized. You can only accept application for jobs in companies you own or administer',
             });
         }
-        jobApplicationModel.findOneAndUpdate('')
         const applyingUserId = req.params.userId;
         if (!job.applicants.includes(applyingUserId)) {
             return res
