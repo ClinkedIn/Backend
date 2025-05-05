@@ -500,13 +500,21 @@ const acceptApplicant = async (req, res) => {
                     'Unauthorized. You can only accept application for jobs in companies you own or administer',
             });
         }
-
+        jobApplicationModel.findOneAndUpdate('')
         const applyingUserId = req.params.userId;
         if (!job.applicants.includes(applyingUserId)) {
             return res
                 .status(400)
                 .json({ message: 'User has not applied for this job' });
         }
+        const updatedApplication = await jobApplicationModel.findOneAndUpdate(
+            { jobId: jobId, userId: applyingUserId },
+            { 
+                status: 'accepted',
+                lastViewed: new Date()
+            },
+            { new: true }
+        );
         // Remove from applicants and add to accepted if not already present
         job.applicants = job.applicants.filter(
             (id) => id.toString() !== applyingUserId
@@ -547,6 +555,14 @@ const rejectApplicant = async (req, res) => {
                 .status(400)
                 .json({ message: 'User has not applied for this job' });
         }
+        const updatedApplication = await jobApplicationModel.findOneAndUpdate(
+            { jobId: jobId, userId: applyingUserId },
+            { 
+                status: 'rejected',
+                lastViewed: new Date()
+            },
+            { new: true }
+        );
         // Remove from applicants and add to rejected if not already present
         job.applicants = job.applicants.filter(
             (id) => id.toString() !== applyingUserId
