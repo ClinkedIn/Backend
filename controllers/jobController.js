@@ -35,7 +35,7 @@ const createJob = async (req, res) => {
         }
 
         // Check if user is authorized to post for this company
-        const isOwner = company.userId && company.userId.toString() === userId;
+        const isOwner = company.ownerId && company.ownerId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
@@ -289,7 +289,7 @@ const updateJob = async (req, res) => {
         }
 
         // Check user permissions
-        const isOwner = company.userId && company.userId.toString() === userId;
+        const isOwner = company.ownerId && company.ownerId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
@@ -442,7 +442,7 @@ const deleteJob = async (req, res) => {
 
         const company = await companyModel.findById(job.companyId);
 
-        const isOwner = company.userId && company.userId.toString() === userId;
+        const isOwner = company.ownerId && company.ownerId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
@@ -491,7 +491,7 @@ const acceptApplicant = async (req, res) => {
         }
         const company = await companyModel.findById(job.companyId);
 
-        const isOwner = company.userId && company.userId.toString() === userId;
+        const isOwner = company.ownerId && company.ownerId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
@@ -539,7 +539,7 @@ const rejectApplicant = async (req, res) => {
         }
         const company = await companyModel.findById(job.companyId);
 
-        const isOwner = company.userId && company.userId.toString() === userId;
+        const isOwner = company.ownerId && company.ownerId.toString() === userId;
         const isAdmin = company.admins && company.admins.includes(userId);
 
         if (!isOwner && !isAdmin) {
@@ -1020,7 +1020,7 @@ const getJobApplications = async (req, res) => {
         //Check if user has permission (company representative)
         if (
             !company.admins.includes(userId) &&
-            company.userId.toString() !== userId
+            company.ownerId.toString() !== userId
         ) {
             return res.status(403).json({
                 message:
