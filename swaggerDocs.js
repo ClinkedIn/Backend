@@ -16542,3 +16542,88 @@
  *                   type: string
  *                   example: "Error details"
  */
+/**
+ * @swagger
+ * /api/user/connections/request/{targetUserId}:
+ *   delete:
+ *     summary: Cancel a pending connection request
+ *     tags: [Connections & Networking]
+ *     description: Cancels a previously sent connection request that hasn't been accepted or declined yet
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: targetUserId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: ObjectId
+ *         description: ID of the user to whom the connection request was sent
+ *         example: "65fb2a8e7c5721f123456789"
+ *     responses:
+ *       200:
+ *         description: Connection request canceled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Connection request canceled successfully"
+ *                 targetUser:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "65fb2a8e7c5721f123456789"
+ *                     firstName:
+ *                       type: string
+ *                       example: "Jane"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *       400:
+ *         description: Invalid request - No pending connection request exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Connection request not found or already canceled"
+ *       401:
+ *         description: Unauthorized - User not logged in
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Not authorized, no token"
+ *       404:
+ *         description: Target user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Error canceling connection request"
+ *                 error:
+ *                   type: string
+ *                   example: "Error details"
+ */

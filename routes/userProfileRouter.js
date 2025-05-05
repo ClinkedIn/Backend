@@ -102,8 +102,8 @@ router.route('/search/users').get(protect, user.searchUsersByName); // Specific 
 // Connection management (as per /connections endpoints in Swagger)
 router
     .route('/connections/request/:targetUserId')
-    .post(protect, user.sendConnectionRequest); // Send connection request
-
+    .post(protect, user.sendConnectionRequest) // Send connection request
+    .delete(protect, user.cancelConnectionRequest); // Cancel connection request
 router.route('/connections/requests').get(protect, user.getPendingRequests); // Get pending connection requests
 
 router
