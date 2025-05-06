@@ -21,6 +21,9 @@ const searchUsers = async (req, res) => {
         // Create search regex - case insensitive search
         const searchRegex = new RegExp(name, 'i');
         
+        // Split the search term to check for full name searches
+        const nameParts = name.trim().split(/\s+/);
+        
         // Create query with OR conditions for first and last name
         const query = {
             $or: [
@@ -29,6 +32,27 @@ const searchUsers = async (req, res) => {
             ],
             isActive: true // Only return active users
         };
+        
+        // Add combined name search if there are multiple parts
+        if (nameParts.length > 1) {
+            // Add search for first part as first name and second part as last name
+            query.$or.push({
+                $and: [
+                    { firstName: new RegExp(nameParts[0], 'i') },
+                    { lastName: new RegExp(nameParts[1], 'i') }
+                ]
+            });
+            
+            // Also check reversed (in case last name is entered first)
+            if (nameParts.length === 2) {
+                query.$or.push({
+                    $and: [
+                        { firstName: new RegExp(nameParts[1], 'i') },
+                        { lastName: new RegExp(nameParts[0], 'i') }
+                    ]
+                });
+            }
+        }
         
         // Get total count for pagination metadata
         const totalUsers = await userModel.countDocuments(query);
