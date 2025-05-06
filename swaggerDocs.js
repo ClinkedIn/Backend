@@ -15955,7 +15955,7 @@
 
 /**
  * @swagger
- * /user/saved-posts:
+ * /api/user/saved-posts:
  *   get:
  *     summary: Get user's saved posts
  *     tags: [Posts, Users]
@@ -16234,16 +16234,61 @@
 
 /**
  * @swagger
+ * /api/user/connections/MyBendingRequests:
+ *   get:
+ *     summary: Get My Pending Connection Requests
+ *     description: Retrieve a list of connection requests sent by the authenticated user that are still pending.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved the list of pending connection requests.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pendingRequests:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Array of user IDs representing the pending connection requests sent by the user.
+ *       '404':
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       '500':
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error message
+ */
+
+/**
+ * @swagger
  * /api/user/default-mode:
  *   get:
  *     summary: Get user's UI display mode preference
+ *     description: Retrieves the current user's default UI display mode (light or dark).
  *     tags: [User Settings]
- *     description: Retrieves the current user's default UI display mode (light or dark)
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: User's display mode retrieved successfully
+ *         description: User's display mode retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -16253,9 +16298,9 @@
  *                   type: string
  *                   enum: [light, dark]
  *                   example: "dark"
- *                   description: User's current display mode preference
+ *                   description: User's current display mode preference.
  *       401:
- *         description: Unauthorized - invalid or missing token
+ *         description: Unauthorized - invalid or missing token.
  *         content:
  *           application/json:
  *             schema:
@@ -16265,7 +16310,7 @@
  *                   type: string
  *                   example: "Not authorized, no token"
  *       404:
- *         description: User not found
+ *         description: User not found.
  *         content:
  *           application/json:
  *             schema:
@@ -16275,7 +16320,7 @@
  *                   type: string
  *                   example: "User not found"
  *       500:
- *         description: Server error
+ *         description: Server error.
  *         content:
  *           application/json:
  *             schema:
@@ -16289,8 +16334,8 @@
  *                   example: "Error details"
  *   patch:
  *     summary: Update user's UI display mode preference
+ *     description: Sets the authenticated user's default UI mode to either light or dark.
  *     tags: [User Settings]
- *     description: Sets the authenticated user's default UI mode to either light or dark
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -16306,10 +16351,10 @@
  *                 type: string
  *                 enum: [light, dark]
  *                 example: "dark"
- *                 description: The UI mode preference to set
+ *                 description: The UI mode preference to set.
  *     responses:
  *       200:
- *         description: Display mode updated successfully
+ *         description: Display mode updated successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -16322,9 +16367,9 @@
  *                   type: string
  *                   enum: [light, dark]
  *                   example: "dark"
- *                   description: The updated display mode value
+ *                   description: The updated display mode value.
  *       400:
- *         description: Invalid mode value
+ *         description: Invalid mode value.
  *         content:
  *           application/json:
  *             schema:
@@ -16337,7 +16382,7 @@
  *                   type: string
  *                   example: "Mode must be either \"light\" or \"dark\""
  *       401:
- *         description: Unauthorized - invalid or missing token
+ *         description: Unauthorized - invalid or missing token.
  *         content:
  *           application/json:
  *             schema:
@@ -16347,7 +16392,7 @@
  *                   type: string
  *                   example: "Not authorized, no token"
  *       404:
- *         description: User not found
+ *         description: User not found.
  *         content:
  *           application/json:
  *             schema:
@@ -16357,7 +16402,7 @@
  *                   type: string
  *                   example: "User not found"
  *       500:
- *         description: Server error
+ *         description: Server error.
  *         content:
  *           application/json:
  *             schema:

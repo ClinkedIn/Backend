@@ -2859,6 +2859,34 @@ const getPendingRequests = async (req, res) => {
     }
 };
 
+const getMyPendingRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        //return sentConnectionRequests
+
+        const user = await userModel
+            .findById(userId)
+            .populate(
+            {
+                path: 'receivedConnectionRequests',
+                select: 'id firstName lastName ', // Populate fields you want to return
+            })
+            .select('sentConnectionRequests');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        return res.status(200).json({
+            pendingRequests: user.sentConnectionRequests,
+        });
+    } catch (error) {
+        console.error('Error getting my pending requests:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
 const handleConnectionRequest = async (req, res) => {
     try {
         const { senderId } = req.params;
@@ -3540,4 +3568,5 @@ module.exports = {
     getDefaultMode,
     getCompanies,
     cancelConnectionRequest,
+    getMyPendingRequests
 };

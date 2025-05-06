@@ -150,4 +150,7 @@ router.route('/:userId').get(protect, user.getUserProfile);
 
 router.route('/connections/related-users').get(protect, user.getRelatedUsers);
 
+// TODO: add route to return my bending requests
+router.route('/connections/MyBendingRequests').get(protect, user.getMyPendingRequests);
+
 module.exports = router;
