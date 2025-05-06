@@ -474,7 +474,7 @@ const getAllPosts = async (req, res) => {
         // Get current user's connections and following
         const currentUser = await userModel
             .findById(userId)
-            .select('connections following savedPosts');
+            .select('connectionList following savedPosts');
 
         if (!currentUser) {
             return res.status(404).json({ message: 'User not found' });
